@@ -1,6 +1,7 @@
 # Property Listing Web Component Migration Plan
 
 ## Architecture Target
+
 - Domain: `src/domain/` (`listing.ts`, `address-normalizer.ts`, `location-resolver.ts`, `listing-filter.ts`)
 - Application: `src/application/` (`listing-controller.ts`)
 - Ports: `src/ports/` (`listing-feed.ts`, `details-dialog.ts`)
@@ -10,6 +11,7 @@
 - Root: `src/index.tsx`
 
 ## Execution Phases
+
 1. Phase 1: Extract domain types and New Brunswick region configuration (`src/domain/listing.ts`, `src/config/regions.ts`).
 2. Phase 2: Implement address normalization & location resolution (`src/domain/address-normalizer.ts`, `src/domain/location-resolver.ts`).
 3. Phase 3: Implement pure listing filter & sort functions (`src/domain/listing-filter.ts`).
