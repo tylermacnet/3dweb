@@ -1,0 +1,42 @@
+[tools]
+node = "latest"
+
+[tasks.build]
+description = "Bundle the web component and its CSS"
+run = "npm exec -- esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js"
+
+[tasks.watch]
+description = "Watch source files and rebuild the bundle"
+run = "npm exec -- esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --watch"
+
+[tasks.serve]
+description = "Serve the public directory locally"
+run = "npm exec -- esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000"
+
+[tasks.dev]
+description = "Build, watch, and serve the website locally"
+run = "npm exec -- esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000 --watch"
+
+[tasks.format]
+description = "Format source files"
+run = "npm exec -- prettier --write ."
+
+[tasks.format-check]
+description = "Check source formatting"
+run = "npm exec -- prettier --check ."
+
+[tasks.lint]
+description = "Lint TypeScript source"
+run = "npm exec -- oxlint ."
+
+[tasks.typecheck]
+description = "Type-check the project"
+run = "npm exec -- tsc --noEmit"
+
+[tasks.test]
+description = "Run the test suite"
+run = "node --test"
+
+[tasks.check]
+description = "Run all checks and create a production bundle"
+depends = ["format-check", "lint", "typecheck", "test", "build"]

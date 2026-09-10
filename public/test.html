@@ -1,0 +1,1578 @@
+<!-- Sitecloud CMS Embed: Property Listings Feed 
+
+-->
+
+<!--
+**Core Brand Tokens**
+
+| **Token Name** | **Hex Code** | **Visual Origin** | **Role** |
+| --- | --- | --- | --- |
+| **Deep Navy** | `#0F2C59` | Logo digit "3" | Primary brand identity & heavy structural elements |
+| **Mid Blue** | `#1D4ED8` | Inner "D" gradient | Interactive states, links, and secondary buttons |
+| **Vivid Sky** | `#0284C7` | Outer "D" curve | Light-theme accents and call-to-action triggers |
+| **Bright Cyan** | `#38BDF8` | Sky line highlight | Dark-theme call-to-action triggers & active states |
+| **Charcoal** | `#0F172A` | Background canvas | Dark theme base & high-contrast light theme text |
+| **Off-White** | `#F8FAFC` | Skyline / Text | Light theme base & high-contrast dark theme text |
+
+**Light Theme System**
+
+| **UI Element** | **Color & Hex** | **WCAG Contrast Ratio** | **Compliance Level** |
+| --- | --- | --- | --- |
+| **Page Canvas** | Off-White (`#F8FAFC`) | Baseline | --- |
+| **Card / Container** | White (`#FFFFFF`) | Baseline | --- |
+| **Body Text** | Charcoal (`#0F172A`) | 19.3:1 vs Canvas | Pass (AAA) |
+| **Secondary Text** | Slate Gray (`#475569`) | 7.1:1 vs Canvas | Pass (AAA) |
+| **Primary Buttons** | Deep Navy (`#0F2C59`) + White Text | 15.1:1 | Pass (AAA) |
+| **Text Links** | Mid Blue (`#1D4ED8`) | 7.1:1 vs White | Pass (AAA) |
+| **Accents / Badges** | Sky Tint (`#E0F2FE`) + Navy Text | 10.5:1 | Pass (AAA) |
+
+**Dark Theme System**
+
+| **UI Element** | **Color & Hex** | **WCAG Contrast Ratio** | **Compliance Level** |
+| --- | --- | --- | --- |
+| **Page Canvas** | Charcoal (`#0F172A`) | Baseline | --- |
+| **Card / Container** | Dark Slate (`#1E293B`) | Baseline | --- |
+| **Body Text** | Off-White (`#F8FAFC`) | 15.6:1 vs Canvas | Pass (AAA) |
+| **Secondary Text** | Muted Slate (`#94A3B8`) | 6.5:1 vs Canvas | Pass (AA) |
+| **Primary Buttons** | Bright Cyan (`#38BDF8`) + Charcoal Text | 9.3:1 | Pass (AAA) |
+| **Text Links** | Sky Blue (`#7DD3FC`) | 11.8:1 vs Canvas | Pass (AAA) |
+| **Card Borders** | Slate Line (`#334155`) | 3.1:1 (UI Components) | Pass (AA) |
+
+**Implementation Guidelines**
+
+-   **Avoid Direct Logo Transfer:** In the original logo, `#0F2C59` sits directly on `#0F172A`, failing contrast tests (1.7:1). In dark mode UI, swap primary brand authority to **Bright Cyan (`#38BDF8`)** for interactive text and buttons to maintain visual pop.
+
+-   **Focus Ring Indicator:** Use **Mid Blue (`#1D4ED8`)** on light theme and **Bright Cyan (`#38BDF8`)** on dark theme with a minimum 2px outline width and 2px offset to guarantee focus visibility.
+-->
+
+<style>
+  /* Custom Properties Architecture: Single Source of Truth */
+  .sc-listings-wrapper {
+    /* Design Tokens: Layout & Spacing Defaults */
+    --sc-space-2xs: 0.25rem; /* 4px  */
+    --sc-space-xs: 0.375rem; /* 6px  */
+    --sc-space-sm: 0.5rem; /* 8px  */
+    --sc-space-md: 0.75rem; /* 12px */
+    --sc-space-lg: 1rem; /* 16px */
+    --sc-space-xl: 1.25rem; /* 20px */
+    --sc-space-2xl: 2.5rem; /* 40px */
+
+    --sc-radius-md: 0.5rem; /* 8px */
+    --sc-radius-lg: 0.75rem; /* 12px */
+
+    /* Palette Tokens */
+    --sc-brand-primary: #0284c7;
+    --sc-brand-primary-hover: #0369a1;
+    --sc-surface-bg: #ffffff;
+    --sc-surface-alt: #f8fafc;
+    --sc-border-color: #cbd5e1;
+    --sc-border-light: #e2e8f0;
+    --sc-text-main: #0f172a;
+    --sc-text-muted: #64748b;
+    --sc-text-label: #475569;
+    --sc-state-danger: #ef4444;
+    --sc-state-danger-bg: #fef2f2;
+
+    /* Typography & Component Scale Variables */
+    --sc-font-size-xs: 0.6875rem;
+    --sc-font-size-sm: 0.8125rem;
+    --sc-font-size-base: 0.875rem;
+    --sc-font-size-lg: 1.125rem;
+    --sc-font-size-xl: 1.25rem;
+
+    --sc-line-height-tight: 1.2;
+    --sc-line-height-heading: 1.25;
+    --sc-line-height-body: 1.5;
+
+    --sc-title-line1-size: clamp(1.0625rem, 5cqw, var(--sc-font-size-xl));
+    --sc-title-line2-size: clamp(0.75rem, 3.5cqw, var(--sc-font-size-sm));
+
+    /* Mathematical calculation reserving exact space for 2 address lines without hardcoded heights */
+    --sc-title-container-height: calc(
+      (var(--sc-title-line1-size) * var(--sc-line-height-heading)) +
+        (var(--sc-title-line2-size) * var(--sc-line-height-tight)) + var(--sc-space-xs)
+    );
+
+    --sc-card-media-aspect-ratio: 16 / 10;
+    --sc-touch-target-min: 2.75rem; /* 44px AA accessibility baseline */
+    --sc-transition-default: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Global Scope Enclosure */
+    width: 100%;
+    color: var(--sc-text-main);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    box-sizing: border-box;
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: inherit;
+    }
+  }
+
+  /* Toolbar & Filters Component */
+  .sc-listings-controls {
+    background: var(--sc-surface-alt);
+    border: 1px solid var(--sc-border-light);
+    border-radius: var(--sc-radius-lg);
+    padding: var(--sc-space-lg);
+    margin-bottom: var(--sc-space-md);
+    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.02);
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      height: var(--sc-touch-target-min);
+      padding-block: 0;
+      padding-inline-start: var(--sc-space-md);
+      padding-inline-end: calc(var(--sc-space-lg) * 2);
+      font-size: var(--sc-font-size-base);
+      font-weight: 500;
+      color: var(--sc-text-main);
+      background-color: var(--sc-surface-bg);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%3C475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right var(--sc-space-md) center;
+      border: 1px solid var(--sc-border-color);
+      border-radius: var(--sc-radius-md);
+      transition: var(--sc-transition-default);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      cursor: pointer;
+
+      &:hover:not(:disabled) {
+        border-color: var(--sc-brand-primary);
+      }
+      &:focus-visible {
+        outline: 0.125rem solid var(--sc-brand-primary);
+        outline-offset: 0.125rem;
+        border-color: var(--sc-brand-primary);
+      }
+    }
+
+    @media screen and (max-width: 48em) {
+      padding: var(--sc-space-md);
+      select {
+        height: calc(var(--sc-touch-target-min) * 0.85);
+        font-size: var(--sc-font-size-sm);
+      }
+    }
+  }
+
+  .sc-filter-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11.25rem, 1fr));
+    gap: var(--sc-space-lg);
+    align-items: end;
+    width: 100%;
+
+    @media screen and (max-width: 48em) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sc-space-md);
+    }
+  }
+
+  .sc-filter-legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .sc-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sc-space-xs);
+    width: 100%;
+
+    label {
+      font-size: var(--sc-font-size-xs);
+      font-weight: 700;
+      color: var(--sc-text-label);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      user-select: none;
+    }
+  }
+
+  /* Range Input Component */
+  .sc-price-slider-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+
+    input[type='range'] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      height: var(--sc-space-xs);
+      border-radius: var(--sc-space-2xs);
+      background: var(--sc-border-color);
+      outline: none;
+      margin: var(--sc-space-sm) 0;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 0.125rem solid var(--sc-brand-primary);
+        outline-offset: 0.125rem;
+      }
+
+      &::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 1.375rem;
+        height: 1.375rem;
+        border-radius: 50%;
+        background: var(--sc-brand-primary);
+        border: 0.125rem solid var(--sc-surface-bg);
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.15);
+        transition: var(--sc-transition-default);
+
+        &:hover {
+          transform: scale(1.15);
+          background: var(--sc-brand-primary-hover);
+        }
+      }
+    }
+
+    @media screen and (max-width: 48em) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .sc-price-display {
+    font-size: var(--sc-font-size-base);
+    font-weight: 700;
+    color: var(--sc-brand-primary);
+    margin-bottom: var(--sc-space-xs);
+    height: 1.25em;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Button Component */
+  .sc-btn-reset {
+    height: var(--sc-touch-target-min);
+    padding-inline: var(--sc-space-lg);
+    background: var(--sc-surface-bg);
+    border: 1px solid var(--sc-border-color);
+    border-radius: var(--sc-radius-md);
+    color: var(--sc-text-label);
+    font-size: var(--sc-font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--sc-transition-default);
+    white-space: nowrap;
+
+    &:hover {
+      border-color: var(--sc-state-danger);
+      color: var(--sc-state-danger);
+      background-color: var(--sc-state-danger-bg);
+    }
+
+    &:focus-visible {
+      outline: 0.125rem solid var(--sc-brand-primary);
+      outline-offset: 0.125rem;
+    }
+
+    @media screen and (max-width: 48em) {
+      height: calc(var(--sc-touch-target-min) * 0.85);
+    }
+  }
+
+  .sc-results-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--sc-font-size-sm);
+    font-weight: 600;
+    color: var(--sc-text-muted);
+    margin-bottom: var(--sc-space-lg);
+    padding-inline: var(--sc-space-2xs);
+  }
+
+  #sc-listings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+    gap: var(--sc-space-xl);
+    min-height: 12.5rem;
+
+    @media screen and (max-width: 48em) {
+      grid-template-columns: 1fr;
+      gap: var(--sc-space-lg);
+    }
+  }
+
+  /* Card Component: Encapsulated SRP Layout & Alignment Rules */
+  article.property {
+    border: 1px solid var(--sc-border-light);
+    border-radius: var(--sc-radius-lg);
+    overflow: hidden;
+    background: var(--sc-surface-bg);
+    display: flex;
+    flex-direction: column;
+    transition: var(--sc-transition-default);
+    position: relative;
+    container-type: inline-size;
+
+    &:hover {
+      transform: translateY(-0.1875rem);
+      box-shadow: 0 0.75rem 1.5rem -0.625rem rgba(0, 0, 0, 0.12);
+      border-color: var(--sc-brand-primary);
+
+      .sc-card-cta {
+        background: var(--sc-brand-primary);
+        color: #ffffff;
+        border-color: var(--sc-brand-primary);
+      }
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+
+      img {
+        width: 100%;
+        aspect-ratio: var(--sc-card-media-aspect-ratio);
+        object-fit: cover;
+        display: block;
+        background-color: var(--sc-surface-alt);
+      }
+
+      .card-header-titles {
+        margin: var(--sc-space-lg) var(--sc-space-lg) var(--sc-space-xs) var(--sc-space-lg);
+        /* Guarantees Line 1 always starts at the exact same top baseline regardless of Line 2 */
+        min-height: var(--sc-title-container-height);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+      }
+    }
+
+    footer {
+      padding: var(--sc-space-md) var(--sc-space-lg);
+      border-top: 1px solid var(--sc-border-light);
+      background: var(--sc-surface-alt);
+      margin-top: auto;
+    }
+  }
+
+  /* Internal Card Elements */
+  .sc-card-title-link {
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sc-space-2xs);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+  }
+
+  .address-line-1 {
+    font-weight: 800; /* Extra bold for instant readability */
+    color: var(--sc-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--sc-title-line1-size);
+    line-height: var(--sc-line-height-heading);
+    letter-spacing: -0.015em;
+  }
+
+  .address-line-2 {
+    font-weight: 500;
+    color: var(--sc-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--sc-title-line2-size);
+    line-height: var(--sc-line-height-tight);
+    letter-spacing: 0.01em;
+  }
+
+  .sc-card-location {
+    font-size: var(--sc-font-size-sm);
+    font-weight: 600;
+    color: var(--sc-brand-primary);
+    margin: 0 var(--sc-space-lg) var(--sc-space-md) var(--sc-space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--sc-space-xs);
+  }
+
+  .sc-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 var(--sc-space-lg) var(--sc-space-md) var(--sc-space-lg);
+  }
+
+  .sc-badge {
+    background: var(--sc-surface-alt);
+    border: 1px solid var(--sc-border-light);
+    padding: var(--sc-space-2xs) var(--sc-space-sm);
+    border-radius: var(--sc-radius-md);
+    font-size: var(--sc-font-size-xs);
+    font-weight: 600;
+    color: var(--sc-text-label);
+  }
+
+  .sc-price {
+    font-size: var(--sc-font-size-lg);
+    font-weight: 700;
+    color: var(--sc-brand-primary);
+  }
+
+  .sc-card-hook {
+    font-size: var(--sc-font-size-sm);
+    color: var(--sc-text-muted);
+    margin: 0 var(--sc-space-lg) var(--sc-space-lg) var(--sc-space-lg);
+    flex: 1;
+    line-height: var(--sc-line-height-body);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .sc-card-cta {
+    display: block;
+    text-align: center;
+    font-size: var(--sc-font-size-sm);
+    font-weight: 600;
+    color: var(--sc-brand-primary);
+    background: var(--sc-surface-bg);
+    border: 1px solid var(--sc-border-color);
+    padding: var(--sc-space-sm) var(--sc-space-md);
+    border-radius: var(--sc-radius-md);
+    text-decoration: none;
+    transition: var(--sc-transition-default);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Skeleton & Loading Feedback Component */
+  .sc-skeleton-card {
+    border: 1px solid var(--sc-border-light);
+    border-radius: var(--sc-radius-lg);
+    overflow: hidden;
+    background: var(--sc-surface-bg);
+    height: 23.75rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sc-skeleton-img {
+    width: 100%;
+    aspect-ratio: var(--sc-card-media-aspect-ratio);
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: sc-pulse 1.5s infinite;
+  }
+
+  .sc-skeleton-content {
+    padding: var(--sc-space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sc-space-md);
+    flex: 1;
+  }
+
+  .sc-skeleton-line {
+    height: 0.875rem;
+    border-radius: var(--sc-space-2xs);
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: sc-pulse 1.5s infinite;
+  }
+
+  @keyframes sc-pulse {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .sc-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--sc-space-2xl) var(--sc-space-lg);
+    color: var(--sc-text-muted);
+    font-size: var(--sc-font-size-base);
+    background: var(--sc-surface-alt);
+    border-radius: var(--sc-radius-lg);
+    border: 1px dashed var(--sc-border-color);
+  }
+
+  .sc-empty-actions {
+    display: flex;
+    gap: var(--sc-space-md);
+    justify-content: center;
+    align-items: center;
+    margin-top: var(--sc-space-lg);
+    flex-wrap: wrap;
+  }
+
+  .sc-btn-buildium {
+    display: inline-block;
+    padding: var(--sc-space-sm) var(--sc-space-lg);
+    background-color: var(--sc-brand-primary);
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: var(--sc-font-size-base);
+    border-radius: var(--sc-radius-md);
+    text-decoration: none;
+    transition: var(--sc-transition-default);
+
+    &:hover {
+      background-color: var(--sc-brand-primary-hover);
+    }
+  }
+
+  /* Modal Overlay Component */
+  .sc-property-dialog {
+    padding: 0;
+    border: none;
+    border-radius: var(--sc-radius-lg, 0.75rem);
+    width: 90vw;
+    max-width: 56.25rem;
+    height: 85vh;
+    background: #ffffff;
+    color: #0f172a;
+    overflow: hidden;
+    box-shadow: 0 0.625rem 1.5625rem rgba(0, 0, 0, 0.2);
+
+    &::backdrop {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(0.25rem);
+    }
+  }
+
+  .sc-dialog-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .sc-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sc-space-md) var(--sc-space-lg);
+    background: var(--sc-surface-alt);
+    border-bottom: 1px solid var(--sc-border-light);
+  }
+
+  .sc-dialog-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--sc-text-main);
+  }
+
+  .sc-dialog-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5em;
+    color: var(--sc-text-muted);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 var(--sc-space-2xs);
+
+    &:hover {
+      color: var(--sc-text-main);
+    }
+  }
+
+  .sc-dialog-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+  }
+</style>
+
+<div class="sc-listings-wrapper">
+  <div class="sc-listings-controls" role="search" aria-label="Property Filter Options">
+    <fieldset class="sc-filter-fieldset">
+      <legend class="sc-filter-legend">Filter available property listings</legend>
+
+      <div class="sc-filter-group">
+        <label for="sc-location-filter">Location</label>
+        <select id="sc-location-filter" aria-controls="sc-listings-container">
+          <option value="ALL">All Locations</option>
+        </select>
+      </div>
+
+      <div class="sc-filter-group">
+        <label for="sc-bedroom-filter">Bedrooms</label>
+        <select id="sc-bedroom-filter" aria-controls="sc-listings-container">
+          <option value=">=0" selected>All Beds</option>
+          <option value="=0">Bachelor / Studio</option>
+          <option value="=1">1 Bedroom</option>
+          <option value="=2">2 Bedrooms</option>
+          <option value=">=3">3+ Bedrooms</option>
+        </select>
+      </div>
+
+      <div class="sc-filter-group">
+        <label for="sc-sort-filter">Sort By</label>
+        <select id="sc-sort-filter" aria-controls="sc-listings-container">
+          <option value="default" selected>Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="beds-asc">Bedrooms: Low to High</option>
+          <option value="beds-desc">Bedrooms: High to Low</option>
+        </select>
+      </div>
+
+      <div class="sc-filter-group sc-price-slider-group">
+        <label for="sc-price-filter">Max Rent</label>
+        <div id="sc-price-val" class="sc-price-display" aria-live="polite">Up to $5,000 / mo</div>
+        <input
+          type="range"
+          id="sc-price-filter"
+          min="0"
+          max="5000"
+          step="100"
+          value="5000"
+          aria-controls="sc-listings-container"
+          aria-describedby="sc-price-val"
+        />
+      </div>
+
+      <div class="sc-filter-group">
+        <button type="button" id="sc-reset-filters" class="sc-btn-reset">Reset Filters</button>
+      </div>
+    </fieldset>
+  </div>
+
+  <div id="sc-results-bar" class="sc-results-bar" aria-live="polite" aria-atomic="true">
+    <span>Loading listings...</span>
+  </div>
+
+  <div
+    id="sc-listings-container"
+    role="region"
+    aria-label="Property Listings Grid"
+    aria-live="polite"
+  ></div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    // Constants & Domain Definitions
+    const BUILDIUM_APPLICATION_URL =
+      'https://3dmanagement.managebuilding.com/Resident/rental-application/new';
+
+    const NEW_BRUNSWICK_REGIONS = {
+      'Greater Saint John': {
+        id: 'GSJ',
+        localAreas: [
+          { name: 'Uptown / South End / Central', fsas: ['E2L'] },
+          { name: 'North End / Millidgeville', fsas: ['E2K'] },
+          { name: 'West Side / Lancaster', fsas: ['E2M'] },
+          { name: 'East Side / Loch Lomond', fsas: ['E2J', 'E2N', 'E2R', 'E2S'] },
+          { name: 'Rothesay', fsas: ['E2E'] },
+          { name: 'Quispamsis', fsas: ['E2G'] },
+          { name: 'Grand Bay-Westfield', fsas: ['E5K'] },
+          { name: 'Hampton', fsas: ['E5N'] },
+          { name: 'St. Martins & Rural Southeast', fsas: ['E5R'] },
+        ],
+      },
+      'Greater Moncton': {
+        id: 'GMA',
+        localAreas: [
+          { name: 'Moncton Central / Downtown', fsas: ['E1C'] },
+          { name: 'Moncton North / West / Sunny Brae', fsas: ['E1E', 'E1G'] },
+          { name: 'Moncton East', fsas: ['E1A'] },
+          { name: 'Dieppe', fsas: ['E1A'] },
+          { name: 'Riverview', fsas: ['E1B'] },
+          { name: 'Shediac & Coast', fsas: ['E4P', 'E4R'] },
+          { name: 'Sackville / Port Elgin / Memramcook', fsas: ['E4L', 'E4M', 'E4N'] },
+          {
+            name: 'Bouctouche / Richibucto / Kent Region',
+            fsas: ['E4S', 'E4T', 'E4V', 'E4W', 'E4X'],
+          },
+        ],
+      },
+      'Greater Fredericton': {
+        id: 'GFA',
+        localAreas: [
+          { name: 'Downtown / South Side', fsas: ['E3B', 'E3E'] },
+          { name: 'North Side / Marysville', fsas: ['E3A', 'E3G'] },
+          { name: 'New Maryland / Kingsclear / Rural South', fsas: ['E3C'] },
+          { name: 'Oromocto / Burton / Geary', fsas: ['E2V'] },
+          { name: 'Minto / Chipman / Grand Lake', fsas: ['E4A', 'E4B'] },
+          { name: 'McAdam / Harvey / Southwest Rural', fsas: ['E6H', 'E6K'] },
+        ],
+      },
+      'Greater Charlotte County': {
+        id: 'GCC',
+        localAreas: [
+          { name: 'St. Stephen', fsas: ['E5A'] },
+          { name: 'St. Andrews', fsas: ['E5B'] },
+          { name: 'St. George', fsas: ['E5C'] },
+          { name: 'Blacks Harbour', fsas: ['E5C'] },
+          { name: 'Pennfield & Beaver Harbour', fsas: ['E5C'] },
+          { name: 'Grand Manan Island', fsas: ['E5G'] },
+          { name: 'Deer Island & Campobello Island', fsas: ['E5V'] },
+        ],
+      },
+      'Greater Miramichi & River Valley': {
+        id: 'GMR',
+        localAreas: [
+          { name: 'Miramichi City (Newcastle/Chatham)', fsas: ['E1N', 'E1V'] },
+          { name: 'Neguac & North Shore', fsas: ['E9G'] },
+          { name: 'Sunny Corner / Blackville / Southwest Miramichi', fsas: ['E9E', 'E9H'] },
+          { name: 'Rogersville / Rural South Miramichi', fsas: ['E4Y'] },
+        ],
+      },
+      'Greater Bathurst & Acadian Peninsula': {
+        id: 'GBP',
+        localAreas: [
+          { name: 'Bathurst City', fsas: ['E2A'] },
+          { name: 'Beresford / Petit-Rocher / Chaleur Rural', fsas: ['E8J', 'E8K'] },
+          { name: 'Caraquet', fsas: ['E8P'] },
+          { name: 'Shippagan', fsas: ['E8S'] },
+          { name: 'Tracadie-Sheila', fsas: ['E8R', 'E8T'] },
+          { name: 'Lamèque & Miscou Islands', fsas: ['E8M'] },
+        ],
+      },
+      'Greater Campbellton & Restigouche': {
+        id: 'GCR',
+        localAreas: [
+          { name: 'Campbellton', fsas: ['E3N'] },
+          { name: 'Dalhousie / Balmoral', fsas: ['E8E', 'E8G'] },
+          { name: 'Kedgwick / Saint-Quentin', fsas: ['E8B', 'E8C'] },
+        ],
+      },
+      'Greater Edmundston & Madawaska': {
+        id: 'GEM',
+        localAreas: [
+          { name: 'Edmundston Downtown', fsas: ['E3V'] },
+          { name: 'Saint-Jacques / Verret', fsas: ['E3V'] },
+          { name: 'Saint-Basile', fsas: ['E3V'] },
+          { name: 'Grand Falls / Grand-Sault', fsas: ['E7G'] },
+          { name: 'Saint-Léonard', fsas: ['E7E'] },
+        ],
+      },
+      'Greater Woodstock & Central Upper Valley': {
+        id: 'GWU',
+        localAreas: [
+          { name: 'Woodstock', fsas: ['E7M'] },
+          { name: 'Hartland', fsas: ['E7P'] },
+          { name: 'Florenceville-Bristol', fsas: ['E7L'] },
+          { name: 'Perth-Andover', fsas: ['E7H'] },
+          { name: 'Plaster Rock / Tobique Valley', fsas: ['E7G'] },
+          { name: 'Nackawic / Canterbury', fsas: ['E6G'] },
+        ],
+      },
+      'Greater Sussex & Rural South Central': {
+        id: 'GSR',
+        localAreas: [
+          { name: 'Sussex / Sussex Corner', fsas: ['E4E'] },
+          { name: 'Norton / Springfield / Apohaqui', fsas: ['E4G'] },
+          { name: 'Petitcodiac / Havelock / Salisbury', fsas: ['E4J', 'E4H', 'E4G'] },
+          { name: 'Albert County / Riverside-Albert / Alma', fsas: ['E4H'] },
+        ],
+      },
+    };
+
+    // Pure Helper Functions
+    const escapeHTML = (str) =>
+      String(str || '').replace(
+        /[&<>"']/g,
+        (tag) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[tag],
+      );
+
+    const cleanRegionName = (name) => name.replace(/^Greater\s+/i, '');
+
+    const getFSA = (postalCode) =>
+      (postalCode || '').replace(/\s+/g, '').toUpperCase().substring(0, 3);
+
+    const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+
+    /**
+     * Address Normalizer Service
+     */
+    class AddressNormalizer {
+      static SECONDARY_DESIGNATORS = ['apt', 'apartment', 'unit', 'suite', 'ste', '#'];
+
+      static normalize(rawAddress) {
+        if (!rawAddress || typeof rawAddress !== 'string') {
+          return { line1: '', line2: '' };
+        }
+
+        let clean = this.preprocess(rawAddress);
+
+        if (clean.includes('\n')) {
+          const parts = clean
+            .split('\n')
+            .map((p) => p.trim())
+            .filter(Boolean);
+          return { line1: parts[0] || '', line2: parts[1] || '' };
+        }
+
+        if (clean.includes('-')) {
+          const dashParsed = this.parseDashSeparated(clean);
+          if (dashParsed) return dashParsed;
+        }
+
+        const suffixMatch = clean.match(/^(\d+)\s*(½|[A-Za-z])\b\s+(.*)/i);
+        if (suffixMatch) {
+          return this.parseCivicSuffixAddress(suffixMatch);
+        }
+
+        return this.parseInlineUnit(clean);
+      }
+
+      static preprocess(raw) {
+        return raw
+          .trim()
+          .replace(/\s+/g, ' ')
+          .replace(/\b1\/2\b/g, '½')
+          .replace(/([a-z0-9])(Apt|Unit|Ste|Suite|#)/gi, '$1 $2')
+          .replace(/\bSt\.?\b/gi, 'Street')
+          .replace(/\bAve\.?\b/gi, 'Avenue')
+          .replace(/\bRd\.?\b/gi, 'Road')
+          .replace(/\bDr\.?\b/gi, 'Drive')
+          .replace(/\bBlvd\.?\b/gi, 'Boulevard');
+      }
+
+      static parseDashSeparated(clean) {
+        const numericUnitMatch = clean.match(
+          /^(?:(unit|apt|suite|ste|#)\s*)?(\d+[a-z]?)\s*-\s*(\d+\s+.*)$/i,
+        );
+        if (numericUnitMatch) {
+          const rawUnit = numericUnitMatch[2].trim();
+          const streetPart = numericUnitMatch[3].trim();
+          const formattedUnit = this.hasSecondaryPrefix(rawUnit) ? rawUnit : `Unit ${rawUnit}`;
+
+          return { line1: streetPart, line2: formattedUnit };
+        }
+
+        const prefixSuffixMatch = clean.match(
+          /^(?:([a-z]|½)\s*-\s*(\d+)|(\d+)\s*-\s*([a-z]|½))\s+(.*)$/i,
+        );
+        if (prefixSuffixMatch) {
+          const civicNum = prefixSuffixMatch[2] || prefixSuffixMatch[3];
+          const suffix = (prefixSuffixMatch[1] || prefixSuffixMatch[4]).toUpperCase();
+          const street = prefixSuffixMatch[5].trim();
+          const formattedSuffix = suffix === '½' ? ' ½' : suffix;
+
+          return { line1: `${civicNum}${formattedSuffix} ${street}`.trim(), line2: '' };
+        }
+
+        if (/\s+-\s+/.test(clean)) {
+          const parts = clean.split(/\s+-\s+/).map((p) => p.trim());
+          const streetPart = parts[0];
+          const unitOrSuffix = parts[1] || '';
+
+          if (/^[A-Za-z]$/.test(unitOrSuffix) || unitOrSuffix === '½') {
+            const suffix = unitOrSuffix === '½' ? ' ½' : unitOrSuffix.toUpperCase();
+            const line1 = streetPart.replace(/^(\d+)/, `$1${suffix}`);
+            return { line1, line2: '' };
+          }
+
+          const formattedUnit = this.hasSecondaryPrefix(unitOrSuffix)
+            ? unitOrSuffix
+            : `Unit ${unitOrSuffix}`;
+          return { line1: streetPart, line2: formattedUnit };
+        }
+
+        return null;
+      }
+
+      static parseCivicSuffixAddress(match) {
+        const civicNum = match[1];
+        const suffix = match[2].toUpperCase() === '½' ? ' ½' : match[2].toUpperCase();
+        const restOfAddress = match[3];
+
+        const designatorPattern = this.SECONDARY_DESIGNATORS.join('|');
+        const inlineMatch = restOfAddress.match(
+          new RegExp(`^(.*?)\\s*[\\, ]\\s*(${designatorPattern})\\b\\s*(.*)`, 'i'),
+        );
+
+        if (inlineMatch) {
+          return {
+            line1: `${civicNum}${suffix} ${inlineMatch[1]}`.trim(),
+            line2: `${inlineMatch[2]} ${inlineMatch[3]}`.trim(),
+          };
+        }
+
+        return { line1: `${civicNum}${suffix} ${restOfAddress}`.trim(), line2: '' };
+      }
+
+      static parseInlineUnit(clean) {
+        const designatorPattern = this.SECONDARY_DESIGNATORS.join('|');
+        const regex = new RegExp(`^(.*?)\\s*[\\, ]\\s*(${designatorPattern})\\b\\s*(.*)`, 'i');
+        const match = clean.match(regex);
+
+        if (match) {
+          return {
+            line1: match[1].trim(),
+            line2: `${match[2].trim()} ${match[3].trim()}`.trim(),
+          };
+        }
+
+        return { line1: clean, line2: '' };
+      }
+
+      static hasSecondaryPrefix(str) {
+        const designatorPattern = this.SECONDARY_DESIGNATORS.join('|');
+        return new RegExp(`^(${designatorPattern})`, 'i').test(str);
+      }
+    }
+
+    /**
+     * Location Resolver
+     */
+    class LocationResolver {
+      constructor(regionMap) {
+        this.regionMap = regionMap;
+        this.fsaIndex = {};
+        this.buildFsaIndex();
+      }
+
+      buildFsaIndex() {
+        Object.entries(this.regionMap).forEach(([regionName, regionData]) => {
+          regionData.localAreas.forEach((area) => {
+            area.fsas.forEach((fsa) => {
+              if (!this.fsaIndex[fsa]) this.fsaIndex[fsa] = [];
+              this.fsaIndex[fsa].push({
+                regionName,
+                regionId: regionData.id,
+                areaName: area.name,
+              });
+            });
+          });
+        });
+      }
+
+      resolve(city, postalCode) {
+        const fsa = getFSA(postalCode);
+        const matches = this.fsaIndex[fsa];
+
+        if (matches && matches.length > 0) {
+          if (matches.length === 1) return matches[0];
+          if (city) {
+            const cityLower = city.toLowerCase().trim();
+            const cityMatch = matches.find((m) => m.areaName.toLowerCase().includes(cityLower));
+            if (cityMatch) return cityMatch;
+          }
+          return matches[0];
+        }
+
+        if (city) {
+          const cityLower = city.toLowerCase().trim();
+          for (const [regionName, regionData] of Object.entries(this.regionMap)) {
+            const matchedArea = regionData.localAreas.find((a) =>
+              a.name.toLowerCase().includes(cityLower),
+            );
+            if (matchedArea) {
+              return { regionName, regionId: regionData.id, areaName: matchedArea.name };
+            }
+          }
+        }
+
+        return { regionName: city || 'Other', regionId: 'OTHER', areaName: city || 'General' };
+      }
+    }
+
+    /**
+     * Listing Feed Parser
+     */
+    class ListingParser {
+      static FEED_URL = 'https://3dmanagement.managebuilding.com/resident/api/public/listingFeeds';
+
+      constructor(locationResolver) {
+        this.locationResolver = locationResolver;
+      }
+
+      async fetchXml() {
+        const proxies = [
+          (url) => url,
+          (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+          (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+        ];
+
+        for (const proxyFn of proxies) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+          try {
+            const response = await fetch(proxyFn(ListingParser.FEED_URL), {
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) continue;
+
+            let payload = await response.text();
+            if (payload.trim().startsWith('{') && payload.includes('"contents"')) {
+              payload = JSON.parse(payload).contents;
+            }
+
+            if (payload && payload.includes('<Property>')) return payload;
+          } catch (err) {
+            clearTimeout(timeoutId);
+            continue;
+          }
+        }
+        throw new Error('Unable to retrieve XML feed.');
+      }
+
+      parse(xmlString) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+        const propertyNodes = xmlDoc.querySelectorAll('Property');
+
+        return Array.from(propertyNodes)
+          .map((node) => this.extractListingData(node))
+          .filter(Boolean);
+      }
+
+      extractListingData(propertyNode) {
+        const addressNode = propertyNode.querySelector('PropertyID > Address');
+        const street = addressNode?.querySelector('Address')?.textContent || '';
+        const unit = addressNode?.querySelector('Unit, UnitNumber')?.textContent || '';
+
+        const rawCombined = unit ? `${street} ${unit}` : street;
+        const normalizedAddress = AddressNormalizer.normalize(rawCombined);
+
+        const city = addressNode?.querySelector('City')?.textContent.trim() || '';
+        const postalCode = addressNode?.querySelector('PostalCode')?.textContent.trim() || '';
+
+        const location = this.locationResolver.resolve(city, postalCode);
+
+        const floorplanNode = propertyNode.querySelector('Floorplan');
+        const id =
+          floorplanNode?.querySelector('Identification > IDValue')?.textContent.trim() || '';
+
+        const bedroomNode = floorplanNode?.querySelector('Room[RoomType="Bedroom"] > Count');
+        const bedroomCount = bedroomNode ? parseFloat(bedroomNode.textContent.trim()) : 0;
+
+        const bathroomNode = floorplanNode?.querySelector('Room[RoomType="Bathroom"] > Count');
+        const bathroomCount = bathroomNode ? parseFloat(bathroomNode.textContent.trim()) : null;
+
+        const rentMaxAttr = floorplanNode?.querySelector('EffectiveRent')?.getAttribute('Max');
+        const rent = rentMaxAttr ? Math.round(parseFloat(rentMaxAttr)) : null;
+
+        const fileNodes = Array.from(floorplanNode?.querySelectorAll('File') || []);
+        const rank1File = fileNodes.find(
+          (file) => file.querySelector('Rank')?.textContent.trim() === '1',
+        );
+        const primaryImage = rank1File?.querySelector('Src')?.textContent.trim() || '';
+
+        const rawDesc =
+          propertyNode.querySelector('Information > LongDescription')?.textContent || '';
+        const hook =
+          rawDesc
+            .split('\n')
+            .map((l) => l.trim())
+            .find((l) => l.length > 0) || '';
+
+        return {
+          id,
+          address: {
+            line1: normalizedAddress.line1,
+            line2: normalizedAddress.line2,
+            city,
+            postalCode,
+            fsa: getFSA(postalCode),
+            regionId: location.regionId,
+            regionName: location.regionName,
+            areaName: location.areaName,
+          },
+          bedroomCount,
+          bathroomCount,
+          rent,
+          primaryImage,
+          hook,
+        };
+      }
+    }
+
+    /**
+     * Card Component Template Rendering
+     */
+    class CardTemplate {
+      static FALLBACK_IMAGE =
+        'data:image/svg+xml;charset=UTF-8,%3Csvg width="320" height="220" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="320" height="220" fill="%23edf2f7"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="%234a5568"%3ENo Image Available%3C/text%3E%3C/svg%3E';
+
+      static render(data) {
+        const article = document.createElement('article');
+        article.className = 'property';
+        article.setAttribute('data-id', data.id);
+
+        const listingUrl = `https://3dmanagement.managebuilding.com/Resident/public/rentals/${data.id}`;
+        const imgSrc = data.primaryImage || this.FALLBACK_IMAGE;
+        const formattedRent = data.rent ? `$${data.rent.toLocaleString()} / mo` : 'Call for Price';
+
+        const cleanedRegion = cleanRegionName(data.address.regionName);
+        const locationText = [cleanedRegion, data.address.areaName].filter(Boolean).join(' • ');
+
+        const bedText =
+          data.bedroomCount === 0
+            ? 'Bachelor'
+            : `${data.bedroomCount} Bed${data.bedroomCount !== 1 ? 's' : ''}`;
+        const bathBadge = data.bathroomCount
+          ? `<span class="sc-badge"><i class="fa-solid fa-bath" style="margin-right:4px;" aria-hidden="true"></i>${data.bathroomCount} Bath</span>`
+          : '';
+
+        const fullAddrLabel = `${data.address.line1} ${data.address.line2}`.trim();
+
+        article.innerHTML = `
+        <header>
+          <img src="${escapeHTML(imgSrc)}" alt="${escapeHTML(fullAddrLabel)}" loading="lazy" onerror="this.src='${this.FALLBACK_IMAGE}'" />
+          <div class="card-header-titles">
+            <h3>
+              <a href="${escapeHTML(listingUrl)}" class="sc-card-title-link" aria-label="${escapeHTML(fullAddrLabel)} details">
+                <div class="address-line-1">${escapeHTML(data.address.line1)}</div>
+                ${data.address.line2 ? `<div class="address-line-2">${escapeHTML(data.address.line2)}</div>` : ''}
+              </a>
+            </h3>
+          </div>
+          ${
+            locationText
+              ? `
+            <div class="sc-card-location">
+              <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+              <span>${escapeHTML(locationText)}</span>
+            </div>`
+              : ''
+          }
+        </header>
+        <div class="sc-card-meta">
+          <div style="display:flex; gap:6px;">
+            <span class="sc-badge"><i class="fa-solid fa-bed" style="margin-right:4px;" aria-hidden="true"></i>${bedText}</span>
+            ${bathBadge}
+          </div>
+          <span class="sc-price">${formattedRent}</span>
+        </div>
+        <p class="sc-card-hook">${escapeHTML(data.hook)}</p>
+        <footer>
+          <a href="${escapeHTML(listingUrl)}" class="sc-card-cta" tabindex="-1" aria-hidden="true">View Details &rarr;</a>
+        </footer>
+      `;
+
+        return article;
+      }
+
+      static renderSkeleton() {
+        return Array.from(
+          { length: 6 },
+          () => `
+        <div class="sc-skeleton-card" aria-hidden="true">
+          <div class="sc-skeleton-img"></div>
+          <div class="sc-skeleton-content">
+            <div class="sc-skeleton-line" style="width: 70%;"></div>
+            <div class="sc-skeleton-line" style="width: 40%;"></div>
+            <div class="sc-skeleton-line" style="width: 90%; margin-top: auto;"></div>
+          </div>
+        </div>
+      `,
+        ).join('');
+      }
+    }
+
+    /**
+     * Modal Dialog Component
+     */
+    class PropertyDialog {
+      constructor() {
+        this.dialog = null;
+        this.iframe = null;
+        this.titleEl = null;
+        this.closeBtn = null;
+        this.lastFocusedElement = null;
+      }
+
+      mount() {
+        if (this.dialog) return;
+
+        this.dialog = document.createElement('dialog');
+        this.dialog.className = 'sc-property-dialog';
+        this.dialog.setAttribute('aria-label', 'Property Details Modal');
+
+        this.dialog.innerHTML = `
+        <div class="sc-dialog-layout">
+          <div class="sc-dialog-header">
+            <h3 class="sc-dialog-title">Property Details</h3>
+            <button type="button" class="sc-dialog-close" aria-label="Close dialog">&times;</button>
+          </div>
+          <iframe class="sc-dialog-iframe" allowfullscreen title="Property listing detail view"></iframe>
+        </div>
+      `;
+
+        this.titleEl = this.dialog.querySelector('.sc-dialog-title');
+        this.iframe = this.dialog.querySelector('.sc-dialog-iframe');
+        this.closeBtn = this.dialog.querySelector('.sc-dialog-close');
+
+        this.bindEvents();
+        document.body.appendChild(this.dialog);
+      }
+
+      bindEvents() {
+        this.dialog.addEventListener('close', () => {
+          this.iframe.src = 'about:blank';
+          if (this.lastFocusedElement) this.lastFocusedElement.focus();
+        });
+
+        this.dialog.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            const focusables = this.dialog.querySelectorAll('button, iframe');
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (e.shiftKey && document.activeElement === first) {
+              last.focus();
+              e.preventDefault();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              first.focus();
+              e.preventDefault();
+            }
+          }
+        });
+
+        this.closeBtn.addEventListener('click', () => this.dialog.close());
+        this.dialog.addEventListener('click', (e) => {
+          if (e.target === this.dialog) this.dialog.close();
+        });
+      }
+
+      open(rawUrl, titleText) {
+        this.mount();
+        this.lastFocusedElement = document.activeElement;
+
+        const url = new URL(rawUrl, window.location.href);
+        url.searchParams.set('hidenav', 'true');
+
+        if (this.titleEl) this.titleEl.textContent = titleText || 'Property Details';
+        this.iframe.src = url.toString();
+        this.dialog.showModal();
+        this.closeBtn.focus();
+      }
+    }
+
+    /**
+     * Filter State & UI Controller
+     */
+    class ListingFilter {
+      constructor(selectors) {
+        this.selectors = selectors;
+        this.dom = {};
+        this.listingsStore = [];
+        this.debounceTimer = null;
+      }
+
+      init() {
+        Object.entries(this.selectors).forEach(([key, selector]) => {
+          this.dom[key] = document.querySelector(selector);
+        });
+        this.bindEvents();
+      }
+
+      setListings(items) {
+        this.listingsStore = items.map((item) => ({
+          data: item,
+          element: CardTemplate.render(item),
+        }));
+        this.populateLocations(items);
+        this.setupPriceBounds(items);
+        this.applyFilters();
+      }
+
+      populateLocations(items) {
+        if (!this.dom.locationSelect) return;
+
+        const areaCounts = {};
+        const regionCounts = {};
+
+        items.forEach((item) => {
+          const rId = item.address.regionId;
+          const key = `${rId}||${item.address.areaName}`;
+          areaCounts[key] = (areaCounts[key] || 0) + 1;
+          regionCounts[rId] = (regionCounts[rId] || 0) + 1;
+        });
+
+        const fragment = document.createDocumentFragment();
+        const defaultOption = document.createElement('option');
+        defaultOption.value = 'ALL';
+        defaultOption.textContent = `All Locations (${items.length})`;
+        fragment.appendChild(defaultOption);
+
+        Object.entries(NEW_BRUNSWICK_REGIONS).forEach(([regionName, regionData]) => {
+          const cleanedName = cleanRegionName(regionName);
+          const activeSubAreas = [];
+
+          regionData.localAreas.forEach((area) => {
+            const key = `${regionData.id}||${area.name}`;
+            const count = areaCounts[key] || 0;
+            if (count > 0) activeSubAreas.push({ key, name: area.name, count });
+          });
+
+          if (activeSubAreas.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = cleanedName;
+
+            if (activeSubAreas.length > 1) {
+              const regTotal = regionCounts[regionData.id] || 0;
+              const allRegionOpt = document.createElement('option');
+              allRegionOpt.value = `${regionData.id}||ALL`;
+              allRegionOpt.textContent = `All ${cleanedName} (${regTotal})`;
+              group.appendChild(allRegionOpt);
+            }
+
+            activeSubAreas.forEach((area) => {
+              const option = document.createElement('option');
+              option.value = area.key;
+              option.textContent = `${area.name} (${area.count})`;
+              group.appendChild(option);
+            });
+
+            fragment.appendChild(group);
+          }
+        });
+
+        this.dom.locationSelect.innerHTML = '';
+        this.dom.locationSelect.appendChild(fragment);
+        this.dom.locationSelect.value = 'ALL';
+      }
+
+      setupPriceBounds(items) {
+        if (!this.dom.priceInput) return;
+        const rents = items.map((item) => item.rent).filter((rent) => rent !== null && rent > 0);
+
+        if (rents.length > 0) {
+          const rawMin = Math.min(...rents);
+          const rawMax = Math.max(...rents);
+
+          const minRent = Math.floor(rawMin / 100) * 100;
+          const maxRent = Math.ceil(rawMax / 100) * 100;
+
+          this.dom.priceInput.min = minRent;
+          this.dom.priceInput.max = maxRent;
+          this.dom.priceInput.step = 100;
+          this.dom.priceInput.value = maxRent;
+          this.updatePriceLabel(maxRent);
+        }
+      }
+
+      updatePriceLabel(val) {
+        if (this.dom.priceDisplay) {
+          this.dom.priceDisplay.textContent = `Up to $${parseInt(val, 10).toLocaleString()} / mo`;
+        }
+      }
+
+      resetFilters() {
+        if (this.dom.locationSelect) this.dom.locationSelect.value = 'ALL';
+        if (this.dom.bedSelect) this.dom.bedSelect.value = '>=0';
+        if (this.dom.sortSelect) this.dom.sortSelect.value = 'default';
+        if (this.dom.priceInput) {
+          this.dom.priceInput.value = this.dom.priceInput.max;
+          this.updatePriceLabel(this.dom.priceInput.max);
+        }
+        this.applyFilters();
+      }
+
+      bindEvents() {
+        if (this.dom.locationSelect)
+          this.dom.locationSelect.addEventListener('change', () => this.applyFilters());
+        if (this.dom.bedSelect)
+          this.dom.bedSelect.addEventListener('change', () => this.applyFilters());
+        if (this.dom.sortSelect)
+          this.dom.sortSelect.addEventListener('change', () => this.applyFilters());
+        if (this.dom.resetBtn)
+          this.dom.resetBtn.addEventListener('click', () => this.resetFilters());
+
+        if (this.dom.priceInput) {
+          this.dom.priceInput.addEventListener('input', (e) => {
+            this.updatePriceLabel(e.target.value);
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = setTimeout(() => this.applyFilters(), 150);
+          });
+        }
+      }
+
+      applyFilters() {
+        const selectedLocation = this.dom.locationSelect ? this.dom.locationSelect.value : 'ALL';
+        const selectedBedRule = this.dom.bedSelect ? this.dom.bedSelect.value : '>=0';
+        const sortRule = this.dom.sortSelect ? this.dom.sortSelect.value : 'default';
+        const maxRent = this.dom.priceInput ? parseInt(this.dom.priceInput.value, 10) : Infinity;
+
+        let selRegionId = 'ALL';
+        let selAreaName = 'ALL';
+
+        if (selectedLocation !== 'ALL') {
+          const parts = selectedLocation.split('||');
+          selRegionId = parts[0];
+          selAreaName = parts[1];
+        }
+
+        let visibleItems = this.listingsStore.filter(({ data }) => {
+          let matchesLocation = false;
+          if (selectedLocation === 'ALL') {
+            matchesLocation = true;
+          } else if (selAreaName === 'ALL') {
+            matchesLocation = data.address.regionId === selRegionId;
+          } else {
+            matchesLocation =
+              data.address.regionId === selRegionId &&
+              data.address.areaName.toLowerCase() === selAreaName.toLowerCase();
+          }
+
+          let matchesBeds = false;
+          switch (selectedBedRule) {
+            case '=0':
+              matchesBeds = data.bedroomCount === 0;
+              break;
+            case '=1':
+              matchesBeds = data.bedroomCount === 1;
+              break;
+            case '=2':
+              matchesBeds = data.bedroomCount === 2;
+              break;
+            case '>=3':
+              matchesBeds = data.bedroomCount >= 3;
+              break;
+            case '>=0':
+            default:
+              matchesBeds = data.bedroomCount >= 0;
+              break;
+          }
+
+          const matchesPrice = data.rent === null || data.rent === 0 || data.rent <= maxRent;
+          return matchesLocation && matchesBeds && matchesPrice;
+        });
+
+        if (sortRule !== 'default') {
+          visibleItems.sort((a, b) => {
+            const rentA = a.data.rent || 0;
+            const rentB = b.data.rent || 0;
+            const bedsA = a.data.bedroomCount || 0;
+            const bedsB = b.data.bedroomCount || 0;
+
+            if (sortRule === 'price-asc') return rentA - rentB;
+            if (sortRule === 'price-desc') return rentB - rentA;
+            if (sortRule === 'beds-asc') return bedsA - bedsB;
+            if (sortRule === 'beds-desc') return bedsB - bedsA;
+            return 0;
+          });
+        }
+
+        this.dom.container.innerHTML = '';
+        if (visibleItems.length > 0) {
+          const fragment = document.createDocumentFragment();
+          visibleItems.forEach((item) => fragment.appendChild(item.element));
+          this.dom.container.appendChild(fragment);
+        } else {
+          const emptyMsg = document.createElement('div');
+          emptyMsg.className = 'sc-empty-state';
+          emptyMsg.setAttribute('role', 'status');
+          emptyMsg.innerHTML = `
+          <p>No available listings match your selected criteria right now.</p>
+          <div class="sc-empty-actions">
+            <button type="button" class="sc-btn-reset" onclick="document.querySelector('#sc-reset-filters').click()">Clear Filters</button>
+            <a href="${BUILDIUM_APPLICATION_URL}" target="_blank" rel="noopener noreferrer" class="sc-btn-buildium">Apply Online Now &rarr;</a>
+          </div>
+        `;
+          this.dom.container.appendChild(emptyMsg);
+        }
+
+        if (this.dom.resultsBar) {
+          this.dom.resultsBar.innerHTML = `<span>Showing <strong>${visibleItems.length}</strong> available listing${visibleItems.length !== 1 ? 's' : ''}</span>`;
+        }
+      }
+    }
+
+    /**
+     * Main Application Bootstrapper
+     */
+    class ListingApp {
+      constructor() {
+        this.locationResolver = new LocationResolver(NEW_BRUNSWICK_REGIONS);
+        this.parser = new ListingParser(this.locationResolver);
+        this.dialog = new PropertyDialog();
+
+        this.filterManager = new ListingFilter({
+          locationSelect: '#sc-location-filter',
+          bedSelect: '#sc-bedroom-filter',
+          sortSelect: '#sc-sort-filter',
+          priceInput: '#sc-price-filter',
+          priceDisplay: '#sc-price-val',
+          resetBtn: '#sc-reset-filters',
+          container: '#sc-listings-container',
+          resultsBar: '#sc-results-bar',
+        });
+      }
+
+      async init() {
+        const container = document.querySelector('#sc-listings-container');
+        if (!container) return;
+
+        this.filterManager.init();
+        container.innerHTML = CardTemplate.renderSkeleton();
+        this.attachEvents();
+
+        try {
+          const xmlString = await this.parser.fetchXml();
+          const listings = this.parser.parse(xmlString);
+          this.filterManager.setListings(listings);
+        } catch (error) {
+          console.error('Sitecloud Listing Embed Error:', error);
+          container.innerHTML =
+            '<div class="sc-empty-state" role="alert"><p>Unable to load listings at this time.</p></div>';
+        }
+      }
+
+      attachEvents() {
+        const self = this;
+        document.addEventListener('click', (e) => {
+          const anchor = e.target.closest('article.property a');
+          if (!anchor || isMobileViewport()) return;
+
+          e.preventDefault();
+          const card = anchor.closest('article.property');
+          const line1 = card?.querySelector('.address-line-1')?.textContent.trim() || '';
+          const line2 = card?.querySelector('.address-line-2')?.textContent.trim() || '';
+          const fullTitle = `${line1} ${line2}`.trim() || 'Property Details';
+
+          self.dialog.open(anchor.href, fullTitle);
+        });
+      }
+    }
+
+    // Self-initializing bootstrap execution
+    const boot = () => new ListingApp().init();
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      boot();
+    }
+  })();
+</script>
