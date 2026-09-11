@@ -1,5 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
+import theme from './styles/listing-theme.css';
 import styles from './styles.css';
+import './components/property-listings.js';
+import './components/migration-progress.js';
 
 export class ListingCard extends LitElement {
   static properties = {
@@ -8,7 +11,7 @@ export class ListingCard extends LitElement {
     price: { type: String },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = unsafeCSS(`${theme}\n${styles}`);
 
   title = '';
   location = '';

@@ -13,7 +13,7 @@ test('esbuild bundles the web component and CSS', async () => {
     await build({
       entryPoints: ['src/index.tsx'],
       bundle: true,
-      format: 'esm',
+      format: 'iife',
       target: 'es2022',
       loader: { '.css': 'text' },
       outfile: outputFile,

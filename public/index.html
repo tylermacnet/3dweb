@@ -7,13 +7,16 @@
   </head>
   <body>
     <main>
-      <listing-card
-        title="Available property"
-        location="Saint John, NB"
-        price="$1,500/month"
-      ></listing-card>
+      <property-listings></property-listings>
     </main>
 
-    <script type="module" src="./dist/bundle.js"></script>
+    <footer>
+      <details>
+        <summary>Migration progress</summary>
+        <migration-progress></migration-progress>
+      </details>
+    </footer>
+
+    <script defer src="./dist/bundle.js"></script>
   </body>
 </html>

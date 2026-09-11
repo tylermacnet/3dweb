@@ -1,0 +1,43 @@
+:host {
+  width: 100%;
+}
+
+.listing-page {
+  width: 100%;
+  max-width: 75rem;
+  margin-inline: auto;
+}
+
+.results-status {
+  display: block;
+  text-align: right;
+  margin: 0 0 1rem;
+  color: var(--sc-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 1.25rem;
+  min-height: 12.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listing-grid li {
+  min-width: 0;
+}
+
+@media screen and (max-width: 48em) {
+  :host {
+    display: block;
+  }
+
+  .listing-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
