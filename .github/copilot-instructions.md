@@ -19,3 +19,9 @@
 
 - Use the native Node.js test runner (`node:test`) co-located under `test/`.
 - Run `mise run check` to validate formatting, linting, type-checking, tests, and bundling before finalizing work on any slice.
+
+## Tooling Commands
+
+- Prefer repository-defined `mise` tasks (`mise run <task>`) over direct `npm`, `npx`, or tool-binary invocations.
+- Use the relevant task for focused work, such as `mise run test`, `mise run typecheck`, `mise run lint`, or `mise run build`.
+- Use direct package-manager or tool commands only when no suitable `mise` task exists or when diagnosing a task failure.
