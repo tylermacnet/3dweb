@@ -28,7 +28,7 @@ export class MigrationProgress extends LitElement {
         <p class="eyebrow">Migration in progress</p>
         <h1 id="migration-progress-title">Property listings web component</h1>
         <p class="progress-summary">
-          Phase 3 is complete. The page below exposes the current component work while the feed
+          Phase 4 is complete. The page below exposes the current component work while the feed
           integration is built.
         </p>
         <ol class="progress-list">

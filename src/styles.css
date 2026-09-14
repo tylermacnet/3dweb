@@ -7,6 +7,31 @@
   background: var(--sc-surface-bg);
   color: var(--sc-text-main);
   box-shadow: 0 0.5rem 1.5rem rgb(15 23 42 / 8%);
+  overflow: hidden;
+}
+
+.listing-image {
+  display: block;
+  width: calc(100% + 3rem);
+  height: 12rem;
+  margin: -1.5rem -1.5rem 1.5rem;
+  object-fit: cover;
+  background: var(--sc-surface-alt);
+}
+
+.listing-image-placeholder {
+  display: grid;
+  place-items: center;
+  background-image: var(--sc-listing-placeholder-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  color: var(--sc-text-muted);
+  font-size: 0.875rem;
+}
+
+.listing-image-placeholder::before {
+  content: 'No image available';
 }
 
 .eyebrow {

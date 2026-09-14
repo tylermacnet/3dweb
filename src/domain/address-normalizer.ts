@@ -42,7 +42,7 @@ export class AddressNormalizer {
       .join('\n')
       .replace(/\b1\/2\b/g, '½')
       .replace(/([a-z0-9])(Apt|Unit|Ste|Suite|#)/gi, '$1 $2')
-      .replace(/\b(Apt|Unit|Ste|Suite|#)(?=\d)/gi, '$1 ')
+      .replace(/\b(Apt|Unit|Ste|Suite|#)\.?\s*(?=\d)/gi, '$1 ')
       .replace(/\bSt\.?(?=\s|$)/gi, 'Street')
       .replace(/\bAve\.?(?=\s|$)/gi, 'Avenue')
       .replace(/\bRd\.?(?=\s|$)/gi, 'Road')

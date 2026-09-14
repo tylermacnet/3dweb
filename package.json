@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
+    "linkedom": "^0.18.13",
     "oxlint": "^1.82.0",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2"
