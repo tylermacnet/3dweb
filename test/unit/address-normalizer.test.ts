@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AddressNormalizer } from '../src/domain/address-normalizer.ts';
+import { AddressNormalizer } from '../../src/domain/address-normalizer.ts';
 
 test('normalizes empty and non-string addresses', () => {
   assert.deepEqual(AddressNormalizer.normalize(''), { line1: '', line2: '' });

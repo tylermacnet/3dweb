@@ -11,8 +11,8 @@ const PHASES: readonly MigrationPhase[] = [
   { name: 'Domain types and regions', status: 'complete' },
   { name: 'Address and location resolution', status: 'complete' },
   { name: 'Listing filtering and sorting', status: 'complete' },
-  { name: 'Feed ports and XML parser', status: 'current' },
-  { name: 'HTTP feed and modal adapters', status: 'planned' },
+  { name: 'Feed ports and XML parser', status: 'complete' },
+  { name: 'HTTP feed and modal adapters', status: 'current' },
   { name: 'Listing controller', status: 'planned' },
   { name: 'Presentation components', status: 'planned' },
   { name: 'Container and dependency wiring', status: 'planned' },
@@ -28,8 +28,8 @@ export class MigrationProgress extends LitElement {
         <p class="eyebrow">Migration in progress</p>
         <h1 id="migration-progress-title">Property listings web component</h1>
         <p class="progress-summary">
-          Phase 4 is complete. The page below exposes the current component work while the feed
-          integration is built.
+          Phase 5 is in progress. The page below exposes the current component work while the feed
+          integration and details modal are wired up.
         </p>
         <ol class="progress-list">
           ${PHASES.map(

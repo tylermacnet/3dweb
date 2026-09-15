@@ -6,18 +6,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { DOMParser as LinkedomDOMParser } from 'linkedom';
-import { NEW_BRUNSWICK_REGIONS } from '../src/config/regions.ts';
-import { LocationResolver } from '../src/domain/location-resolver.ts';
+import { NEW_BRUNSWICK_REGIONS } from '../../src/config/regions.ts';
+import { LocationResolver } from '../../src/domain/location-resolver.ts';
 
 const fixturePath = join(
   dirname(fileURLToPath(import.meta.url)),
+  '..',
   '..',
   'test-src',
   'sample',
   'listingFeeds.xml',
 );
 
-async function loadParser(): Promise<typeof import('../src/adapters/xml-listing-parser.ts')> {
+async function loadParser(): Promise<typeof import('../../src/adapters/xml-listing-parser.ts')> {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), '3dweb-parser-'));
   const outputFile = join(temporaryDirectory, 'xml-listing-parser.js');
 
@@ -35,7 +36,9 @@ async function loadParser(): Promise<typeof import('../src/adapters/xml-listing-
 }
 
 async function withParser<T>(
-  callback: (Parser: typeof import('../src/adapters/xml-listing-parser.ts').XmlListingParser) => T,
+  callback: (
+    Parser: typeof import('../../src/adapters/xml-listing-parser.ts').XmlListingParser,
+  ) => T,
 ): Promise<T> {
   const previousParser = globalThis.DOMParser;
   globalThis.DOMParser = LinkedomDOMParser;

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { Listing } from '../src/domain/listing.ts';
+import type { Listing } from '../../src/domain/listing.ts';
 import {
   filterAndSortListings,
   filterListings,
   sortListings,
-} from '../src/domain/listing-filter.ts';
-import type { ListingFilterConfig } from '../src/domain/listing-filter.ts';
+} from '../../src/domain/listing-filter.ts';
+import type { ListingFilterConfig } from '../../src/domain/listing-filter.ts';
 
 const address = (regionId: string, areaName: string) => ({
   line1: '1 Main Street',

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { NEW_BRUNSWICK_REGIONS } from '../src/config/regions.ts';
-import { getFSA, LocationResolver } from '../src/domain/location-resolver.ts';
+import { NEW_BRUNSWICK_REGIONS } from '../../src/config/regions.ts';
+import { getFSA, LocationResolver } from '../../src/domain/location-resolver.ts';
 
 const resolver = new LocationResolver(NEW_BRUNSWICK_REGIONS);
 

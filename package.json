@@ -6,11 +6,13 @@
   "scripts": {
     "build": "mise run build",
     "dev": "mise run dev",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "oxlint .",
-    "test": "node --test",
-    "typecheck": "tsc --noEmit",
+    "format": "mise run format",
+    "format:check": "mise run format-check",
+    "lint": "mise run lint",
+    "test": "mise run test",
+    "test:unit": "mise run test-unit",
+    "test:integration": "mise run test-integration",
+    "typecheck": "mise run typecheck",
     "check": "mise run check"
   },
   "repository": {
