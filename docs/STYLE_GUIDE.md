@@ -203,8 +203,9 @@ shrinking desktop controls:
 - Labels and controls remain readable without horizontal scrolling
 - Touch targets remain at least `2.75rem`
 
-Use CSS media queries inside the component stylesheet. Do not require a separate public stylesheet;
-component styles must be imported and bundled through `src/index.tsx`.
+Use CSS media queries inside the component stylesheet. Component-owned styles must be declared
+by the owning Lit component with `unsafeCSS` and bundled through `src/index.tsx`; the composition
+root must not own presentation styles.
 
 ## Accessibility
 
@@ -225,6 +226,11 @@ Production-facing custom elements should remain focused:
 - `listing-filters`: filter controls and configured options
 - `listing-card`: one listing presentation
 - `migration-progress`: development/demo status only; never part of the production listings API
+
+Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
+The controller depends on `ListingFeed` and `DetailsDialog` ports, while concrete
+implementations are wired by `src/index.tsx`. The browser details experience is currently an
+adapter-backed dialog, not a `property-dialog` custom element.
 
 The host page owns surrounding branding and layout. The component owns its internal presentation and
 ships its styles through the bundled entrypoint.

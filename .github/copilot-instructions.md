@@ -12,7 +12,8 @@
 - UI Layer: Lit framework (`lit`). Use Lit HTML templates (`html```); never use manual string `innerHTML` concatenation.
 - Components: Extend base classes via post-construction/constructor controller wiring orLit properties. Preserve lowercase custom element contracts (e.g., `<listing-card>`, `<property-listings>`).
 - State Management: Encapsulate application/UI state inside Lit `ReactiveController` instances.
-- CSS Handling: Import `src/styles.css` inside `src/index.tsx` using `unsafeCSS`.
+- CSS Handling: Import component-owned CSS from the component that owns the styles using
+  `unsafeCSS`; the composition root should only register components and wire dependencies.
 - Network Resilience: Use `AbortSignal.timeout(5000)` instead of manual timer clearing.
 
 ## Test Standards

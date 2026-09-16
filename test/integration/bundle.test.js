@@ -27,3 +27,10 @@ test('esbuild bundles the web component and CSS', async () => {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
 });
+
+test('host page mounts the property-listings web component', async () => {
+  const indexHtml = await readFile('public/index.html', 'utf8');
+
+  assert.match(indexHtml, /<property-listings><\/property-listings>/);
+  assert.match(indexHtml, /src="\.\/dist\/bundle\.js"/);
+});
