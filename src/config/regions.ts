@@ -10,6 +10,15 @@ export interface RegionDefinition {
 
 export type RegionMap = Readonly<Record<string, RegionDefinition>>;
 
+function freezeRegionPolicy(regions: RegionMap): void {
+  Object.values(regions).forEach((region) => {
+    region.localAreas.forEach((area) => Object.freeze(area));
+    Object.freeze(region.localAreas);
+    Object.freeze(region);
+  });
+  Object.freeze(regions);
+}
+
 export const NEW_BRUNSWICK_REGIONS = {
   'Greater Saint John': {
     id: 'GSJ',
@@ -123,3 +132,5 @@ export const NEW_BRUNSWICK_REGIONS = {
     ],
   },
 } as const satisfies RegionMap;
+
+freezeRegionPolicy(NEW_BRUNSWICK_REGIONS);

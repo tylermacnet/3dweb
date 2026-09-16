@@ -86,6 +86,9 @@ Keep changes within the project boundaries described in the migration plan:
   not add a service locator, global singleton, or dependency-injection framework.
 - Component styles belong to their owning component and are bundled through that component's
   `static styles`; composition entry points should not own presentation styles.
+- Use Valibot for lightweight runtime validation at external-to-domain boundaries instead of
+  inventing repeated validation helpers. Bundle it for the external embed; do not add a second
+  validation library for the same boundary.
 
 When adding a layer or component, preserve lowercase kebab-case filenames and custom-element
 names, PascalCase classes/types, camelCase members, narrow capability interfaces, and explicit

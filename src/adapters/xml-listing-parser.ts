@@ -1,5 +1,5 @@
 import { AddressNormalizer } from '../domain/address-normalizer.js';
-import type { Listing } from '../domain/listing.js';
+import { createListing, type Listing } from '../domain/listing.js';
 import { getFSA, LocationResolver } from '../domain/location-resolver.js';
 
 export class XmlListingParser {
@@ -40,7 +40,7 @@ export class XmlListingParser {
     const primaryImage = this.primaryImage(floorplan);
     const description = this.text(property, 'Information > LongDescription');
 
-    return {
+    return createListing({
       id: this.text(floorplan, 'Identification > IDValue'),
       address: {
         line1: normalizedAddress.line1,
@@ -61,7 +61,7 @@ export class XmlListingParser {
           .split('\n')
           .map((line) => line.trim())
           .find((line) => line.length > 0) ?? '',
-    };
+    });
   }
 
   private primaryImage(floorplan: Element | null): string {

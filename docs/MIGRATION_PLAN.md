@@ -108,6 +108,9 @@ documentation, and coverage reviews are required process steps.
    - Create `src/domain/listing.ts` and `src/config/regions.ts`.
    - Define explicit types/value objects for listing identity, address, pricing,
      availability, and region configuration; reject invalid states at boundaries.
+     Valibot is the lightweight validation library used at the domain boundary;
+     keep validation schemas close to the domain types and bundle the dependency
+     for the single-script external embed contract.
    - Keep region data immutable and separate from rendering labels.
    - Add pure unit tests for valid construction and representative edge cases.
    - Do not import Lit, DOM APIs, or adapter code.
