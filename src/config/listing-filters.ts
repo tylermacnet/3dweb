@@ -1,4 +1,4 @@
-import type { ListingFilterConfig, ListingSort } from '../domain/listing-filter.js';
+import type { ListingFilterConfig } from '../domain/listing-filter.js';
 import type { Listing } from '../domain/listing.js';
 
 export const LISTING_FILTER_CONFIG: ListingFilterConfig<Listing> = {
@@ -30,12 +30,4 @@ export const BEDROOM_FILTER_OPTIONS: readonly ListingFilterOption[] = [
   { value: 'one', label: '1 Bedroom' },
   { value: 'two', label: '2 Bedrooms' },
   { value: 'three-plus', label: '3+ Bedrooms' },
-];
-
-export const SORT_OPTIONS: readonly { value: ListingSort; label: string }[] = [
-  { value: 'default', label: 'Featured' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'beds-asc', label: 'Bedrooms: Low to High' },
-  { value: 'beds-desc', label: 'Bedrooms: High to Low' },
 ];

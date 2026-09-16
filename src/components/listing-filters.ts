@@ -1,7 +1,7 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import theme from '../styles/listing-theme.css';
 import styles from './listing-filters.css';
-import { BEDROOM_FILTER_OPTIONS, SORT_OPTIONS } from '../config/listing-filters.js';
+import { BEDROOM_FILTER_OPTIONS } from '../config/listing-filters.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
 
 export class ListingFilters extends LitElement {
@@ -26,18 +26,6 @@ export class ListingFilters extends LitElement {
               @change=${this.handleChange}
             >
               ${BEDROOM_FILTER_OPTIONS.map(
-                (option) => html`<option value=${option.value}>${option.label}</option>`,
-              )}
-            </select>
-          </label>
-          <label>
-            Sort By
-            <select
-              aria-label="Sort By"
-              .value=${this.options.sort ?? 'default'}
-              @change=${this.handleChange}
-            >
-              ${SORT_OPTIONS.map(
                 (option) => html`<option value=${option.value}>${option.label}</option>`,
               )}
             </select>
@@ -68,11 +56,8 @@ export class ListingFilters extends LitElement {
     if (!(target instanceof HTMLSelectElement) && !(target instanceof HTMLInputElement)) return;
 
     const bedroomRule = this.selectValue('Bedrooms');
-    const selectedSort = this.selectValue('Sort By');
-    const sort = SORT_OPTIONS.find((option) => option.value === selectedSort)?.value;
     const nextOptions: ListingFilterOptions = {
       ...(bedroomRule && bedroomRule !== 'all' ? { bedroomRule } : {}),
-      ...(sort && sort !== 'default' ? { sort } : {}),
       maxRent: Number(this.maxRentInput?.value ?? 5000),
     };
 

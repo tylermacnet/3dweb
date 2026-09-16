@@ -109,3 +109,16 @@ city match is reported as `ambiguous`; malformed or unknown data is reported as 
 outcomes use the `OTHER` region rather than silently selecting the first configured area. The
 region configuration does not contain guessed city aliases; add aliases only when they are
 verified by the source data and covered by domain tests.
+
+## Filtering policy
+
+Listing filtering is side-effect free and uses typed criteria independent of control order or DOM
+values. Empty criteria preserve the source listing set, combined criteria use AND semantics, and
+maximum rent is inclusive. Sorting is intentionally not part of the current product feature set.
+Unknown rent is represented by `null` in the domain and uses the configured sentinel value `0` for
+filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
+configured produce no matches, while non-finite rent criteria are ignored.
+
+Filtering preserves source order and does not mutate the input. Missing bedroom and location
+values are rejected at the domain construction boundary rather than guessed by the filtering
+layer.

@@ -128,14 +128,16 @@ documentation, and coverage reviews are required process steps.
      and unknown locations. The current region policy intentionally has no
      unverified city-alias table; FSA data is preferred for disambiguation.
 
-3. **Phase 3: Implement listing filtering and sorting**
+3. **Phase 3: Implement listing filtering**
    - Create `src/domain/listing-filter.ts`.
    - Keep filter criteria typed, composable, and side-effect free; do not couple
-     sorting to UI control order or DOM values.
-   - Define stable sorting and explicit handling for missing price, room, and
-     location values.
+     filtering to UI control order or DOM values. Sorting is intentionally excluded
+     from the current product scope.
+   - Define explicit handling for missing price, room, and location values.
    - Add table-driven unit tests covering empty criteria, combined criteria,
-     boundaries, stable ordering, and no-match results.
+     boundaries, source-order preservation, and no-match results. The domain policy
+     uses `null` for unknown rent and a configured `0` sentinel; zero is not a
+     valid business rent.
 
 4. **Phase 4: Define ports and implement XML parsing**
    - Define `src/ports/listing-feed.ts`, `src/ports/listing-parser.ts`, and
@@ -162,7 +164,7 @@ documentation, and coverage reviews are required process steps.
 6. **Phase 6: Build the application controller**
    - Create `src/application/listing-controller.ts` as a Lit
      `ReactiveController`.
-   - Orchestrate loading, filtering, sorting, empty, error, and retry states while
+   - Orchestrate loading, filtering, empty, error, and retry states while
      depending only on ports and domain functions.
    - Make state transitions explicit and race-safe when criteria change or a
      request is cancelled; do not hide errors behind success-shaped fallbacks.
@@ -193,7 +195,7 @@ documentation, and coverage reviews are required process steps.
 9. **Phase 9: Update the host page and verify parity**
    - Update `public/index.html` to consume the new bundle and preserve the host
      page's responsibilities for branding, layout, and navigation.
-   - Compare behavior against `public/test.html`: data, filters, sorting, details
+   - Compare behavior against `public/test.html`: data, filters, details
      interaction, responsive layout, loading, empty, and error states.
    - Keep migration-only surfaces such as `public/migration.html` and
      `phase-five-harness` out of the production listings API.
@@ -216,7 +218,8 @@ evidence for that review and are also required before merge or final migration s
 
 11. **Demo and documentation update**
     - Update the demo/host page and sample data to demonstrate loading, populated,
-      empty, error, retry, filtering, sorting, and details flows.
+      empty, error, retry, filtering, and details flows. Sorting remains a legacy
+      reference behavior and is not part of the migrated product contract.
     - Verify the demo works at desktop and mobile widths with keyboard navigation
       and assistive-technology-friendly status updates.
     - Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, and this plan when

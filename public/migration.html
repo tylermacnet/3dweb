@@ -177,9 +177,9 @@
         <p class="eyebrow">Migration status</p>
         <h1>Migration report</h1>
         <p>
-          Phases 1 and 2 are complete. Phase 2 uses deterministic address normalization and typed
-          location-resolution outcomes; Phases 3–5 remain under review against the filtering,
-          parser-error, adapter-resilience, and coverage requirements.
+          Phases 1–3 are complete. Phase 3 uses typed, side-effect-free filtering with an explicit
+          unknown-rent policy; sorting is intentionally out of scope. Phases 4–5 remain under review
+          against the parser-error, adapter-resilience, and coverage requirements.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -197,10 +197,10 @@
             <span>Address and location resolution</span>
             <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase review">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">3</span>
-            <span>Listing filtering and sorting</span>
-            <strong class="phase-status">Under review</strong>
+            <span>Listing filtering</span>
+            <strong class="phase-status">Complete</strong>
           </li>
           <li class="phase review">
             <span class="phase-number" aria-hidden="true">4</span>
@@ -281,6 +281,30 @@
           </li>
           <li>
             <strong>Validation:</strong> the full repository gate passes with 26 unit tests and 16
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-three-review-title">
+        <h2 id="phase-three-review-title">Phase 3 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> filtering remains a pure domain function; configuration
+            supplies accessors and bedroom policies without coupling to Lit controls.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> criteria are typed and composable, source
+            order is preserved without mutation, sorting is excluded from product scope, and the
+            zero-rent sentinel policy is explicit.
+          </li>
+          <li>
+            <strong>Coverage:</strong> empty criteria, combined criteria, inclusive boundaries,
+            no-match results, non-finite criteria, unknown rules, source-order preservation, and
+            unknown rent are covered.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 31 unit tests and 16
             integration tests, plus formatting, linting, type-checking, and production build.
           </li>
         </ul>

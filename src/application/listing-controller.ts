@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { filterAndSortListings, type ListingFilterOptions } from '../domain/listing-filter.js';
+import { filterListings, type ListingFilterOptions } from '../domain/listing-filter.js';
 import type { Listing } from '../domain/listing.js';
 import { LISTING_FILTER_CONFIG } from '../config/listing-filters.js';
 import type { DetailsDialog } from '../ports/details-dialog.js';
@@ -44,7 +44,7 @@ export class ListingController implements ReactiveController {
   }
 
   get visibleListings(): readonly Listing[] {
-    return filterAndSortListings(this.listings, this.options, LISTING_FILTER_CONFIG);
+    return filterListings(this.listings, this.options, LISTING_FILTER_CONFIG);
   }
 
   setOptions(options: ListingFilterOptions): void {

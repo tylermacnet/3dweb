@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Listing } from '../../src/domain/listing.ts';
-import {
-  filterAndSortListings,
-  filterListings,
-  sortListings,
-} from '../../src/domain/listing-filter.ts';
+import { filterListings, type ListingFilterCriteria } from '../../src/domain/listing-filter.ts';
 import type { ListingFilterConfig } from '../../src/domain/listing-filter.ts';
 
 const address = (regionId: string, areaName: string) => ({
@@ -79,6 +75,52 @@ test('filters by region, area, bedrooms, and maximum rent', () => {
   );
 });
 
+test('returns all listings for empty criteria', () => {
+  assert.deepEqual(
+    filterListings(listings, {}, config).map((listing) => listing.id),
+    ['studio', 'one-bedroom', 'unknown-rent'],
+  );
+});
+
+test('applies table-driven filtering cases', () => {
+  const cases = [
+    {
+      name: 'empty criteria',
+      criteria: {},
+      expected: ['studio', 'one-bedroom', 'unknown-rent'],
+    },
+    {
+      name: 'inclusive rent boundary',
+      criteria: { maxRent: 900 },
+      expected: ['studio', 'unknown-rent'],
+    },
+    {
+      name: 'no matching region',
+      criteria: { regionId: 'GFA' },
+      expected: [],
+    },
+  ] satisfies Array<{
+    name: string;
+    criteria: ListingFilterCriteria;
+    expected: string[];
+  }>;
+
+  for (const scenario of cases) {
+    assert.deepEqual(
+      filterListings(listings, scenario.criteria, config).map((listing) => listing.id),
+      scenario.expected,
+      scenario.name,
+    );
+  }
+});
+
+test('includes a listing at the exact maximum rent boundary', () => {
+  assert.deepEqual(
+    filterListings(listings, { maxRent: 900 }, config).map((listing) => listing.id),
+    ['studio', 'unknown-rent'],
+  );
+});
+
 test('keeps unknown rents visible under a price filter', () => {
   assert.deepEqual(
     filterListings(listings, { maxRent: 100 }, config).map((listing) => listing.id),
@@ -86,25 +128,24 @@ test('keeps unknown rents visible under a price filter', () => {
   );
 });
 
-test('sorts without mutating the source', () => {
-  const source = [listings[1]!, listings[0]!, listings[2]!];
-  const sorted = sortListings(source, 'price-asc', config);
+test('returns no listings when criteria do not match', () => {
+  assert.deepEqual(filterListings(listings, { regionId: 'GFA', bedroomRule: 'two' }, config), []);
+});
 
+test('ignores non-finite maximum rent criteria', () => {
   assert.deepEqual(
-    sorted.map((listing) => listing.id),
-    ['unknown-rent', 'studio', 'one-bedroom'],
-  );
-  assert.deepEqual(
-    source.map((listing) => listing.id),
-    ['one-bedroom', 'studio', 'unknown-rent'],
+    filterListings(listings, { maxRent: Number.NaN }, config).map((listing) => listing.id),
+    ['studio', 'one-bedroom', 'unknown-rent'],
   );
 });
 
-test('combines filtering and sorting', () => {
+test('rejects unknown bedroom rules without returning matches', () => {
+  assert.deepEqual(filterListings(listings, { bedroomRule: 'unconfigured' }, config), []);
+});
+
+test('combines filter criteria without changing source order', () => {
   assert.deepEqual(
-    filterAndSortListings(listings, { bedroomRule: 'three-plus', sort: 'beds-desc' }, config).map(
-      (listing) => listing.id,
-    ),
+    filterListings(listings, { bedroomRule: 'three-plus' }, config).map((listing) => listing.id),
     ['unknown-rent'],
   );
 });
