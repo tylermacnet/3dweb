@@ -10,7 +10,8 @@ testable, and usable.
 The target follows 2026 web engineering practices:
 
 - Keep business rules framework-agnostic and deterministic.
-- Prefer native browser and platform APIs over unnecessary dependencies.
+- Prefer native browser and platform APIs over unnecessary runtime dependencies; lightweight
+  development dependencies are acceptable when they materially improve maintainability or coverage.
 - Use strict TypeScript types, explicit error states, and abortable network work.
 - Treat accessibility, responsive behavior, performance, and security as acceptance
   criteria rather than follow-up enhancements.

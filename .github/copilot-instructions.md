@@ -15,6 +15,8 @@
 - CSS Handling: Import component-owned CSS from the component that owns the styles using
   `unsafeCSS`; the composition root should only register components and wire dependencies.
 - Network Resilience: Use `AbortSignal.timeout(5000)` instead of manual timer clearing.
+- Dependency policy: keep shipped runtime dependencies lightweight and purposeful; development-only
+  dependencies may be added when their maintenance and workflow cost is justified.
 
 ## Test Standards
 
