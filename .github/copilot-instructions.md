@@ -31,3 +31,14 @@
 - Do not bypass an existing `mise` task with an equivalent direct command, even when the direct command appears shorter.
 - Direct package-manager, runtime, or tool commands are permitted only when no suitable `mise` task exists or when diagnosing a failed `mise` task.
 - After using a direct diagnostic command, return to the corresponding `mise` task for final validation.
+
+## Commit Message Rules
+
+- Follow the Conventional Commits specification when creating commit messages.
+- Use the repository's established `type: description` format and choose the type based on
+  release impact (`feat`, `fix`, `refactor`, `docs`, `test`, `build`, `ci`, or `chore`).
+- Keep descriptions concise, lower-case, imperative, and free of a trailing period.
+- Use an optional scope when it adds useful subsystem context, and use `!` or a
+  `BREAKING CHANGE` footer only for intentional breaking changes.
+- Consult the authoritative commit-message guidance before creating or validating a commit:
+  https://raw.githubusercontent.com/conventional-changelog/conventional-changelog/refs/heads/master/skills/conventional-commit-message/SKILL.md
