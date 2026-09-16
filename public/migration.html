@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migration Report | 3D Property Listings</title>
+    <style>
+      :root {
+        --page-bg: #f8fafc;
+        --surface: #ffffff;
+        --border: #cbd5e1;
+        --text: #0f172a;
+        --muted: #475569;
+        --link: #1d4ed8;
+        --complete: #15803d;
+        --review: #b45309;
+        --planned: #64748b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 760px);
+        margin: 0 auto;
+      }
+
+      header,
+      section {
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+      }
+
+      header {
+        margin-bottom: 16px;
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 4px;
+        font-size: clamp(1.5rem, 4vw, 2.25rem);
+      }
+
+      h2 {
+        font-size: 1rem;
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      a {
+        color: var(--link);
+        font-weight: 600;
+      }
+
+      a:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: 3px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--link);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .phase-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .phase {
+        display: grid;
+        grid-template-columns: 2rem 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .phase-number {
+        display: grid;
+        width: 1.75rem;
+        height: 1.75rem;
+        place-items: center;
+        border-radius: 50%;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .phase-status {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .complete .phase-number {
+        background: var(--complete);
+      }
+
+      .complete .phase-status {
+        color: var(--complete);
+      }
+
+      .review .phase-number {
+        background: var(--review);
+      }
+
+      .review .phase-status {
+        color: var(--review);
+      }
+
+      .planned .phase-number {
+        background: var(--planned);
+      }
+
+      .planned .phase-status {
+        color: var(--planned);
+      }
+
+      @media (max-width: 520px) {
+        body {
+          padding: 12px;
+        }
+
+        header,
+        section {
+          padding: 16px;
+        }
+
+        .phase {
+          grid-template-columns: 2rem 1fr;
+        }
+
+        .phase-status {
+          grid-column: 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Migration status</p>
+        <h1>Migration report</h1>
+        <p>
+          Phases 1–5 are under review against the domain-boundary, parser-error, adapter-resilience,
+          and coverage requirements. Phase 6 is complete.
+        </p>
+        <a href="./index.html">Back to property listings</a>
+      </header>
+
+      <section aria-labelledby="phase-status-title">
+        <h2 id="phase-status-title">Phase status</h2>
+        <ol class="phase-list">
+          <li class="phase review">
+            <span class="phase-number" aria-hidden="true">1</span>
+            <span>Domain types and regions</span>
+            <strong class="phase-status">Under review</strong>
+          </li>
+          <li class="phase review">
+            <span class="phase-number" aria-hidden="true">2</span>
+            <span>Address and location resolution</span>
+            <strong class="phase-status">Under review</strong>
+          </li>
+          <li class="phase review">
+            <span class="phase-number" aria-hidden="true">3</span>
+            <span>Listing filtering and sorting</span>
+            <strong class="phase-status">Under review</strong>
+          </li>
+          <li class="phase review">
+            <span class="phase-number" aria-hidden="true">4</span>
+            <span>Feed ports and XML parser</span>
+            <strong class="phase-status">Under review</strong>
+          </li>
+          <li class="phase review">
+            <span class="phase-number" aria-hidden="true">5</span>
+            <span>HTTP feed and modal adapters</span>
+            <strong class="phase-status">Under review</strong>
+          </li>
+          <li class="phase complete">
+            <span class="phase-number" aria-hidden="true">6</span>
+            <span>Listing controller</span>
+            <strong class="phase-status">Complete</strong>
+          </li>
+          <li class="phase planned">
+            <span class="phase-number" aria-hidden="true">7</span>
+            <span>Presentation components</span>
+            <strong class="phase-status">Planned</strong>
+          </li>
+          <li class="phase planned">
+            <span class="phase-number" aria-hidden="true">8</span>
+            <span>Container and dependency wiring</span>
+            <strong class="phase-status">Planned</strong>
+          </li>
+          <li class="phase planned">
+            <span class="phase-number" aria-hidden="true">9</span>
+            <span>Host page parity</span>
+            <strong class="phase-status">Planned</strong>
+          </li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

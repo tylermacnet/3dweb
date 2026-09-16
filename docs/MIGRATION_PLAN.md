@@ -14,8 +14,9 @@ The target follows 2026 web engineering practices:
 - Use strict TypeScript types, explicit error states, and abortable network work.
 - Treat accessibility, responsive behavior, performance, and security as acceptance
   criteria rather than follow-up enhancements.
-- Preserve the single static entry point at `src/index.tsx`; do not add a server
-  runtime or dependency-injection container.
+- Keep each independently deployable component or demo on an explicit static entry
+  point; do not add a server runtime, global service locator, or dependency-injection
+  container.
 
 ## Target Architecture
 
@@ -41,9 +42,10 @@ index.tsx  -> components, application, adapters, config
   business-rule implementations.
 - **Configuration (`src/config/`)**: Typed, immutable product policy such as regions
   and filter definitions. Configuration is not a substitute for domain logic.
-- **Composition root (`src/index.tsx`)**: The only place that creates concrete
-  adapters and wires dependencies explicitly. It registers components but does not
-  own their presentation styles.
+- **Composition roots (`src/*.tsx`)**: Each deployable component or demo entry point
+  creates its concrete adapters and wires dependencies explicitly. Entry points
+  register only the components and dependencies needed by that surface and do not
+  own component presentation styles.
 
 ### SOLID and dependency rules
 
@@ -56,7 +58,7 @@ index.tsx  -> components, application, adapters, config
 - **Interface Segregation**: Keep ports narrow (`ListingFeed`, `ListingParser`,
   `DetailsDialog`) so consumers depend only on capabilities they use.
 - **Dependency Inversion**: Application code depends on ports; concrete adapters are
-  supplied by `src/index.tsx`.
+  supplied by the composition root for the specific component or demo surface.
 
 No layer may reach around an adjacent layer, import from a more concrete layer, or
 duplicate a rule already owned by the domain/configuration layer.
@@ -173,11 +175,11 @@ documentation, and coverage reviews are required process steps.
      and keyboard interactions.
 
 8. **Phase 8: Compose the container and dependencies**
-   - Build `property-listings` and wire concrete dependencies in `src/index.tsx`.
-   - Keep dependency construction in the composition root; do not introduce a
+   - Build `property-listings` and wire concrete dependencies in its entry point.
+   - Keep dependency construction in the relevant composition root; do not introduce a
      service locator, global mutable singleton, or DI framework.
    - Keep component-owned CSS in the owning component and preserve public
-     custom-element contracts; use `src/index.tsx` only as the composition root.
+     custom-element contracts; keep entry points limited to composition and registration.
    - Add integration coverage for loading, success, empty, error, retry, and
      filter-to-render flows.
 
@@ -186,7 +188,7 @@ documentation, and coverage reviews are required process steps.
      page's responsibilities for branding, layout, and navigation.
    - Compare behavior against `public/test.html`: data, filters, sorting, details
      interaction, responsive layout, loading, empty, and error states.
-   - Keep migration-only helpers such as `migration-progress` and
+   - Keep migration-only surfaces such as `public/migration.html` and
      `phase-five-harness` out of the production listings API.
    - Record any intentional parity differences and their user-facing rationale.
 

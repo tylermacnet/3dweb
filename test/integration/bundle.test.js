@@ -33,4 +33,17 @@ test('host page mounts the property-listings web component', async () => {
 
   assert.match(indexHtml, /<property-listings><\/property-listings>/);
   assert.match(indexHtml, /src="\.\/dist\/bundle\.js"/);
+  assert.match(indexHtml, /href="\.\/migration\.html"/);
+  assert.match(indexHtml, /window\.location\.protocol === 'file:'/);
+  assert.match(indexHtml, /live feed[\s\S]*HTTP\(S\) origin/);
+  assert.doesNotMatch(indexHtml, /src\/.*\.(?:ts|tsx)/);
+  assert.doesNotMatch(indexHtml, /<script[^>]+src="[^"]*(?:watch|dev|serve)/i);
+});
+
+test('migration report is a static page', async () => {
+  const migrationHtml = await readFile('public/migration.html', 'utf8');
+
+  assert.match(migrationHtml, /<h1>Migration report<\/h1>/);
+  assert.match(migrationHtml, /Phase 6/);
+  assert.doesNotMatch(migrationHtml, /<migration-progress>/);
 });

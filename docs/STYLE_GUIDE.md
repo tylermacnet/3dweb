@@ -225,7 +225,8 @@ Production-facing custom elements should remain focused:
 - `property-listings`: filters and listings only
 - `listing-filters`: filter controls and configured options
 - `listing-card`: one listing presentation
-- `migration-progress`: development/demo status only; never part of the production listings API
+- `public/migration.html`: static development/demo migration report; never part of the production
+  listings API
 
 Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
 The controller depends on `ListingFeed` and `DetailsDialog` ports, while concrete

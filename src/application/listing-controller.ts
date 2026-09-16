@@ -5,7 +5,7 @@ import { LISTING_FILTER_CONFIG } from '../config/listing-filters.js';
 import type { DetailsDialog } from '../ports/details-dialog.js';
 import type { ListingFeed } from '../ports/listing-feed.js';
 
-export type ListingViewState = 'idle' | 'loading' | 'ready' | 'error';
+export type ListingViewState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
 export class ListingController implements ReactiveController {
   private readonly host: ReactiveControllerHost;
@@ -24,6 +24,13 @@ export class ListingController implements ReactiveController {
   }
 
   configure(feed: ListingFeed | undefined, detailsDialog: DetailsDialog | undefined): void {
+    if (feed !== this.feed) {
+      this.requestController?.abort();
+      this.requestController = undefined;
+      this.listings = [];
+      this.state = 'idle';
+      this.errorMessage = '';
+    }
     this.feed = feed;
     this.detailsDialog = detailsDialog;
   }
@@ -61,15 +68,20 @@ export class ListingController implements ReactiveController {
     this.host.requestUpdate();
 
     try {
-      this.listings = await this.feed.getListings(requestController.signal);
-      if (requestController.signal.aborted) return;
-      this.state = 'ready';
+      const listings = await this.feed.getListings(requestController.signal);
+      if (requestController.signal.aborted || this.requestController !== requestController) return;
+      this.listings = listings;
+      this.state = listings.length > 0 ? 'ready' : 'empty';
     } catch (error) {
       if (requestController.signal.aborted) return;
       this.state = 'error';
       this.errorMessage = error instanceof Error ? error.message : 'Unable to load listings.';
     }
     this.host.requestUpdate();
+  }
+
+  retry(): Promise<void> {
+    return this.loadListings();
   }
 
   openDetails(listing: Listing): void {

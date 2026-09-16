@@ -66,11 +66,25 @@ export class PropertyListings extends LitElement {
       case 'loading':
         return html`<p class="results-status" role="status">Loading listings…</p>`;
       case 'error':
-        return html`<p class="results-status" role="alert">${this.controller.errorMessage}</p>`;
+        return html`
+          <div class="results-status" role="alert">
+            <p>${this.controller.errorMessage}</p>
+            <button type="button" @click=${() => void this.controller.retry()}>Try again</button>
+          </div>
+        `;
       case 'ready':
         return html`<p class="results-status" role="status">
           Showing <strong>${this.controller.visibleListings.length}</strong> available listings
         </p>`;
+      case 'empty':
+        return html`
+          <div class="results-status" role="status">
+            <p>No available listings match the selected criteria.</p>
+            <button type="button" @click=${() => this.controller.setOptions({})}>
+              Clear filters
+            </button>
+          </div>
+        `;
       default:
         return '';
     }

@@ -39,6 +39,16 @@ Every task exposes its supported arguments through `mise run <task> --help`. Tas
 accepting no arguments intentionally keep their project configuration fixed; use a focused task
 such as `format`, `lint`, or a test task when selecting files.
 
+The demo host page at `public/index.html` consumes only the generated
+`public/dist/bundle.js` artifact, matching how an external site embeds the component. It must not
+reference TypeScript source files or development/watch scripts. Use `mise run dev` or
+`mise run serve` for local development; those tasks build the artifact before serving it.
+
+When `public/index.html` is opened directly from `file://`, the page displays a development notice:
+the bundled client still executes, but successful live feed requests require an HTTP(S) origin.
+This diagnostic is host-page-only and has no effect when the component is embedded by an external
+site or served over HTTP(S).
+
 ## Mandatory post-change process
 
 After every migration phase or major architecture, behavior, or public-contract change, do not
@@ -71,10 +81,11 @@ Keep changes within the project boundaries described in the migration plan:
   depends on ports rather than concrete adapters.
 - Keep Lit custom elements in `src/components/`. Components render state and emit semantic
   events; they do not fetch feeds or implement business rules.
-- Keep concrete dependency construction in `src/index.tsx`, the composition root. Do not add
-  a service locator, global singleton, or dependency-injection framework.
+- Keep concrete dependency construction in the composition root for the relevant component or
+  demo entry point. Multiple independent components may have separate static entry points; do
+  not add a service locator, global singleton, or dependency-injection framework.
 - Component styles belong to their owning component and are bundled through that component's
-  `static styles`; `src/index.tsx` should not own presentation styles.
+  `static styles`; composition entry points should not own presentation styles.
 
 When adding a layer or component, preserve lowercase kebab-case filenames and custom-element
 names, PascalCase classes/types, camelCase members, narrow capability interfaces, and explicit
