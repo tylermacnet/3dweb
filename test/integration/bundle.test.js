@@ -44,6 +44,6 @@ test('migration report is a static page', async () => {
   const migrationHtml = await readFile('public/migration.html', 'utf8');
 
   assert.match(migrationHtml, /<h1>Migration report<\/h1>/);
-  assert.match(migrationHtml, /Phase 1 is complete/);
+  assert.match(migrationHtml, /Phases 1 and 2 are complete/);
   assert.doesNotMatch(migrationHtml, /<migration-progress>/);
 });

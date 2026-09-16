@@ -235,3 +235,10 @@ adapter-backed dialog, not a `property-dialog` custom element.
 
 The host page owns surrounding branding and layout. The component owns its internal presentation and
 ships its styles through the bundled entrypoint.
+
+## Address display policy
+
+Address formatting and New Brunswick location resolution are domain policies, not presentation
+concerns. The normalizer preserves a stable two-line representation and is idempotent for the
+supported feed formats. Unknown or ambiguous location data is represented by the domain's
+`OTHER` region; components must not guess a region or select a shared-FSA area themselves.

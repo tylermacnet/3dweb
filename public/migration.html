@@ -177,8 +177,9 @@
         <p class="eyebrow">Migration status</p>
         <h1>Migration report</h1>
         <p>
-          Phase 1 is complete with Valibot-backed domain validation. Phases 2–5 remain under review
-          against the normalization, parser-error, adapter-resilience, and coverage requirements.
+          Phases 1 and 2 are complete. Phase 2 uses deterministic address normalization and typed
+          location-resolution outcomes; Phases 3–5 remain under review against the filtering,
+          parser-error, adapter-resilience, and coverage requirements.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -191,10 +192,10 @@
             <span>Domain types and regions</span>
             <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase review">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">2</span>
             <span>Address and location resolution</span>
-            <strong class="phase-status">Under review</strong>
+            <strong class="phase-status">Complete</strong>
           </li>
           <li class="phase review">
             <span class="phase-number" aria-hidden="true">3</span>
@@ -252,6 +253,34 @@
           </li>
           <li>
             <strong>Validation:</strong> the full repository gate passes with 24 unit tests and 16
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-two-review-title">
+        <h2 id="phase-two-review-title">Phase 2 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> normalization and location policy remain pure domain
+            code; region configuration is injected into the resolver and no browser APIs are used.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> postal-code validation is centralized in the
+            resolver, resolution outcomes are typed, and shared FSAs never silently select an
+            arbitrary area.
+          </li>
+          <li>
+            <strong>Coverage:</strong> casing, whitespace, postal-code variants, malformed postal
+            codes, supported address forms, idempotence, unique matches, city disambiguation,
+            ambiguous FSAs, and unknown locations are covered.
+          </li>
+          <li>
+            <strong>Policy:</strong> no unverified city-alias table is maintained; FSA data is the
+            preferred disambiguation source, with explicit <code>OTHER</code> fallbacks.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 26 unit tests and 16
             integration tests, plus formatting, linting, type-checking, and production build.
           </li>
         </ul>

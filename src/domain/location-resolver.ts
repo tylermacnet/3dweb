@@ -1,8 +1,11 @@
 import type { RegionMap } from '../config/regions.js';
-import type { ResolvedLocation } from './listing.js';
+import type { ResolvedLocation, LocationResolution } from './listing.js';
 
 export function getFSA(postalCode: string | null | undefined): string {
-  return (postalCode ?? '').replace(/\s+/g, '').toUpperCase().substring(0, 3);
+  const compactPostalCode = (postalCode ?? '').replace(/\s+/g, '').toUpperCase();
+  return /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[A-Z]\d$/.test(compactPostalCode)
+    ? compactPostalCode.substring(0, 3)
+    : '';
 }
 
 export const getFsa = getFSA;
@@ -20,40 +23,41 @@ export class LocationResolver {
     city: string | null | undefined,
     postalCode: string | null | undefined,
   ): ResolvedLocation {
+    const normalizedCity = normalizeLocationText(city);
     const fsaMatches = this.fsaIndex[getFSA(postalCode)];
 
     if (fsaMatches && fsaMatches.length > 0) {
-      if (fsaMatches.length === 1) return fsaMatches[0]!;
+      if (fsaMatches.length === 1) return withResolution(fsaMatches[0]!, 'matched');
 
-      if (city) {
-        const cityLower = city.toLowerCase().trim();
+      if (normalizedCity) {
         const cityMatch = fsaMatches.find((match) =>
-          match.areaName.toLowerCase().includes(cityLower),
+          normalizeLocationText(match.areaName).includes(normalizedCity),
         );
-        if (cityMatch) return cityMatch;
+        if (cityMatch) return withResolution(cityMatch, 'matched');
       }
 
-      return fsaMatches[0]!;
+      return ambiguousLocation(city);
     }
 
-    if (city) {
-      const cityLower = city.toLowerCase().trim();
+    if (normalizedCity) {
+      const cityMatches: ResolvedLocation[] = [];
       for (const [regionName, regionData] of Object.entries(this.regionMap)) {
-        const matchedArea = regionData.localAreas.find((area) =>
-          area.name.toLowerCase().includes(cityLower),
-        );
-        if (matchedArea) {
-          return { regionName, regionId: regionData.id, areaName: matchedArea.name };
+        for (const area of regionData.localAreas) {
+          if (normalizeLocationText(area.name).includes(normalizedCity)) {
+            cityMatches.push({
+              regionName,
+              regionId: regionData.id,
+              areaName: area.name,
+              resolution: 'matched',
+            });
+          }
         }
       }
+      if (cityMatches.length === 1) return cityMatches[0]!;
+      if (cityMatches.length > 1) return ambiguousLocation(city);
     }
 
-    const fallbackCity = city ?? '';
-    return {
-      regionName: fallbackCity || 'Other',
-      regionId: 'OTHER',
-      areaName: fallbackCity || 'General',
-    };
+    return unknownLocation(city);
   }
 
   private buildFsaIndex(): void {
@@ -64,9 +68,40 @@ export class LocationResolver {
             regionName,
             regionId: regionData.id,
             areaName: area.name,
+            resolution: 'matched',
           });
         }
       }
     }
   }
+}
+
+function normalizeLocationText(value: string | null | undefined): string {
+  return (value ?? '').trim().toLocaleLowerCase();
+}
+
+function withResolution(
+  location: Omit<ResolvedLocation, 'resolution'>,
+  resolution: LocationResolution,
+): ResolvedLocation {
+  return { ...location, resolution };
+}
+
+function ambiguousLocation(city: string | null | undefined): ResolvedLocation {
+  return {
+    regionName: 'Other',
+    regionId: 'OTHER',
+    areaName: normalizeLocationText(city) ? city!.trim() : 'Ambiguous location',
+    resolution: 'ambiguous',
+  };
+}
+
+function unknownLocation(city: string | null | undefined): ResolvedLocation {
+  const fallbackCity = city?.trim() ?? '';
+  return {
+    regionName: fallbackCity || 'Other',
+    regionId: 'OTHER',
+    areaName: fallbackCity || 'General',
+    resolution: 'unknown',
+  };
 }

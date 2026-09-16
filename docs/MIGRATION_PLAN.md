@@ -120,9 +120,12 @@ documentation, and coverage reviews are required process steps.
      `src/domain/location-resolver.ts`.
    - Use deterministic, named pure functions with no hidden global state.
    - Make normalization idempotent and define behavior for missing or ambiguous
-     address data instead of silently inventing values.
-   - Add unit tests for casing, whitespace, postal-code variants, aliases, and
-     unknown locations.
+     address data instead of silently inventing values. Shared or malformed
+     location data resolves to an explicit `OTHER` result with a typed
+     `matched`, `ambiguous`, or `unknown` resolution.
+   - Add unit tests for casing, whitespace, postal-code variants, idempotence,
+     and unknown locations. The current region policy intentionally has no
+     unverified city-alias table; FSA data is preferred for disambiguation.
 
 3. **Phase 3: Implement listing filtering and sorting**
    - Create `src/domain/listing-filter.ts`.

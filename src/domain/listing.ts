@@ -41,4 +41,7 @@ export interface ResolvedLocation {
   regionName: string;
   regionId: string;
   areaName: string;
+  resolution: LocationResolution;
 }
+
+export type LocationResolution = 'matched' | 'ambiguous' | 'unknown';

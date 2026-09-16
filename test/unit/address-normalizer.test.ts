@@ -90,3 +90,23 @@ test('leaves ordinary street addresses on line one', () => {
     line2: '',
   });
 });
+
+test('normalization is idempotent for supported address forms', () => {
+  const addresses = [
+    '12 Main St Apt 2',
+    '4-123 Main Street',
+    'A-12 Main Street',
+    '12 Main Street\nSuite 4',
+  ];
+
+  for (const address of addresses) {
+    const normalized = AddressNormalizer.normalize(address);
+    const rendered = [normalized.line1, normalized.line2].filter(Boolean).join('\n');
+    assert.deepEqual(AddressNormalizer.normalize(rendered), normalized);
+  }
+});
+
+test('does not invent address lines for missing input', () => {
+  assert.deepEqual(AddressNormalizer.normalize(undefined), { line1: '', line2: '' });
+  assert.deepEqual(AddressNormalizer.normalize('\n\n'), { line1: '', line2: '' });
+});

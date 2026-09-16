@@ -94,3 +94,16 @@ When adding a layer or component, preserve lowercase kebab-case filenames and cu
 names, PascalCase classes/types, camelCase members, narrow capability interfaces, and explicit
 typed boundaries. Add a focused unit or integration test with the change and update the
 architecture documentation when a public contract or dependency direction changes.
+
+## Address and location policy
+
+The Phase 2 domain rules are deterministic and browser-independent. Address normalization is
+idempotent for supported feed formats and returns empty lines for missing input rather than
+inventing address content. Canadian postal codes are normalized to a valid FSA only when the full
+postal-code shape is valid.
+
+Location resolution prefers an FSA, then a unique city-area match. A shared FSA without a
+city match is reported as `ambiguous`; malformed or unknown data is reported as `unknown`. Both
+outcomes use the `OTHER` region rather than silently selecting the first configured area. The
+region configuration does not contain guessed city aliases; add aliases only when they are
+verified by the source data and covered by domain tests.
