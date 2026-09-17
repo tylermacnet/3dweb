@@ -38,6 +38,25 @@ const listing: Listing = {
   hook: '',
 };
 
+const listingWithArea: Listing = {
+  id: 'listing-2',
+  address: {
+    line1: '2 Main Street',
+    line2: '',
+    city: 'Moncton',
+    postalCode: 'E1C 1A1',
+    fsa: 'E1C',
+    regionId: 'GMA',
+    regionName: 'Greater Moncton',
+    areaName: 'Moncton Central / Downtown',
+  },
+  bedroomCount: 1,
+  bathroomCount: 1,
+  rent: 1000,
+  primaryImage: '',
+  hook: '',
+};
+
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolvePromise) => {
@@ -143,6 +162,38 @@ test('ignores a stale request after a newer request completes', async () => {
 
   assert.equal(controller.state, 'empty');
   assert.deepEqual(controller.visibleListings, []);
+});
+
+test('exposes location groups after loading listings', async () => {
+  const { ListingController } = await loadController();
+  const host = new TestHost();
+  const response = deferred<readonly Listing[]>();
+  const feed: ListingFeed = { getListings: async () => response.promise };
+  const controller = new ListingController(host);
+
+  controller.configure(feed, undefined);
+  const load = controller.loadListings();
+  response.resolve([listingWithArea]);
+  await load;
+
+  assert.equal(controller.locationGroups.length > 0, true);
+  assert.equal(controller.locationGroups[0].regionId, 'ALL');
+});
+
+test('exposes empty location groups for an empty feed', async () => {
+  const { ListingController } = await loadController();
+  const controller = new ListingController(new TestHost());
+  controller.configure({ getListings: async () => [] }, undefined);
+
+  await controller.loadListings();
+
+  assert.deepEqual(controller.locationGroups, [
+    {
+      regionId: 'ALL',
+      regionName: 'All Locations',
+      options: [{ value: 'ALL', label: 'All Locations (0)', count: 0 }],
+    },
+  ]);
 });
 
 test('opens details through the details dialog port', async () => {

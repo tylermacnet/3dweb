@@ -1,7 +1,11 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { filterListings, type ListingFilterOptions } from '../domain/listing-filter.js';
 import type { Listing } from '../domain/listing.js';
-import { LISTING_FILTER_CONFIG } from '../config/listing-filters.js';
+import {
+  LISTING_FILTER_CONFIG,
+  getListingLocationGroups,
+  type ListingLocationGroup,
+} from '../config/listing-filters.js';
 import type { DetailsDialog } from '../ports/details-dialog.js';
 import type { ListingFeed } from '../ports/listing-feed.js';
 
@@ -13,10 +17,13 @@ export class ListingController implements ReactiveController {
   private detailsDialog: DetailsDialog | undefined;
   private requestController: AbortController | undefined;
   private listings: readonly Listing[] = [];
+  private _locationGroups: readonly ListingLocationGroup[] = [];
   options: ListingFilterOptions = {};
 
   state: ListingViewState = 'idle';
   errorMessage = '';
+
+  locationGroups: readonly ListingLocationGroup[] = [];
 
   constructor(host: ReactiveControllerHost) {
     this.host = host;
@@ -28,6 +35,8 @@ export class ListingController implements ReactiveController {
       this.requestController?.abort();
       this.requestController = undefined;
       this.listings = [];
+      this._locationGroups = getListingLocationGroups([]);
+      this.locationGroups = this._locationGroups;
       this.state = 'idle';
       this.errorMessage = '';
     }
@@ -71,6 +80,8 @@ export class ListingController implements ReactiveController {
       const listings = await this.feed.getListings(requestController.signal);
       if (requestController.signal.aborted || this.requestController !== requestController) return;
       this.listings = listings;
+      this._locationGroups = getListingLocationGroups(this.listings);
+      this.locationGroups = this._locationGroups;
       this.state = listings.length > 0 ? 'ready' : 'empty';
     } catch (error) {
       if (requestController.signal.aborted) return;
