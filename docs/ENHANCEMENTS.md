@@ -20,5 +20,7 @@ and component or adapter contracts where direct stack traces and type-safe fixtu
 
 Before adoption, assess the added feature/step-definition configuration, TypeScript runtime setup,
 test discovery, reporting, execution time, dependency maintenance, and duplicate-runner workflow.
-If adopted, provide a dedicated `mise run test-bdd` task and include it in the appropriate quality
-gate without making Cucumber a runtime or production-bundle dependency.
+If adopted, provide a dedicated `mise run test-bdd` task and include it in the appropriate
+quality gate without making Cucumber a runtime or production-bundle dependency.
+
+For the full command reference and architecture constraints, see `AGENTS.md`.

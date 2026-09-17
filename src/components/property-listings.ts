@@ -33,6 +33,7 @@ export class PropertyListings extends LitElement {
       <section class="listing-page" aria-labelledby="listings-title">
         <listing-filters
           .options=${this.controller.options}
+          .locationGroups=${this.controller.locationGroups}
           @listing-filters-changed=${(event: CustomEvent<ListingFilterOptions>) =>
             this.controller.setOptions(event.detail)}
         ></listing-filters>
