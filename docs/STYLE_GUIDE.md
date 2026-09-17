@@ -227,6 +227,8 @@ Production-facing custom elements should remain focused:
 - `listing-card`: one listing presentation
 - `public/migration.html`: static development/demo migration report; never part of the production
   listings API
+- `src/components/phase-five-harness.ts`: migration debugging harness; never part of the production
+  listings API
 
 Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
 The controller depends on `ListingFeed` and `DetailsDialog` ports, while concrete
@@ -235,6 +237,9 @@ adapter-backed dialog, not a `property-dialog` custom element.
 
 The host page owns surrounding branding and layout. The component owns its internal presentation and
 ships its styles through the bundled entrypoint.
+
+For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
+`docs/DEVELOPMENT.md`. Within `mise.toml`, `aube` is the preferred tool.
 
 ## Address display policy
 

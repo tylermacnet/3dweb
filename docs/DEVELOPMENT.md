@@ -2,7 +2,9 @@
 
 ## Use mise tasks first
 
-Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`.
+Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`. Task definitions are sourced from `mise.toml`.
+
+See `AGENTS.md` for the complete command reference.
 
 Use the task that matches the work:
 
@@ -21,7 +23,7 @@ Use the task that matches the work:
 | `mise run test`                        | Run all unit and integration tests                       | None                                           |
 | `mise run check`                       | Run formatting, linting, type checking, tests, and build | None                                           |
 
-Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Direct commands are permitted only when:
+Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Within `mise.toml` task definitions, `aube` is the preferred tool. Direct commands are permitted only when:
 
 1. no suitable `mise` task exists; or
 2. a `mise` task has failed and a direct command is needed to diagnose that failure.
@@ -62,8 +64,8 @@ declare the work complete until this review is performed:
    type-safety issue.
 3. Assess test coverage for the changed behavior and boundaries; add focused tests for missing
    branches, edge cases, regressions, and integration contracts.
-4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, and `docs/MIGRATION_PLAN.md` when
-   architecture, contracts, naming, workflow, or user-facing behavior changes.
+4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
+    architecture, contracts, naming, workflow, or user-facing behavior changes.
 5. Run the repository validation commands listed below and report their results in the handoff.
 
 Targeted validation is useful during implementation, but it does not replace this process review.
@@ -115,6 +117,8 @@ verified by the source data and covered by domain tests.
 Listing filtering is side-effect free and uses typed criteria independent of control order or DOM
 values. Empty criteria preserve the source listing set, combined criteria use AND semantics, and
 maximum rent is inclusive. Sorting is intentionally not part of the current product feature set.
+Location options are populated from active listings, grouped by configured region, and support
+both an entire region and an individual active area.
 Unknown rent is represented by `null` in the domain and uses the configured sentinel value `0` for
 filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
 configured produce no matches, while non-finite rent criteria are ignored.
