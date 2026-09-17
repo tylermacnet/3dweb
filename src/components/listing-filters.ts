@@ -1,23 +1,44 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import theme from '../styles/listing-theme.css';
 import styles from './listing-filters.css';
-import { BEDROOM_FILTER_OPTIONS } from '../config/listing-filters.js';
+import { BEDROOM_FILTER_OPTIONS, type ListingLocationGroup } from '../config/listing-filters.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
 
 export class ListingFilters extends LitElement {
   static properties = {
     options: { attribute: false },
+    locationGroups: { attribute: false },
   };
 
   static styles = unsafeCSS(`${theme}\n${styles}`);
 
   options: ListingFilterOptions = {};
+  locationGroups: readonly ListingLocationGroup[] = [];
 
   render() {
     return html`
       <section class="filters-panel" role="search" aria-label="Property filter options">
         <fieldset>
           <legend>Filter available property listings</legend>
+          <label>
+            Location
+            <select
+              id="location-filter"
+              aria-label="Location"
+              .value=${this.locationValue}
+              @change=${this.handleChange}
+            >
+              ${this.locationGroups.map(
+                (group) => html`
+                  <optgroup label=${group.regionName}>
+                    ${group.options.map(
+                      (option) => html`<option value=${option.value}>${option.label}</option>`,
+                    )}
+                  </optgroup>
+                `,
+              )}
+            </select>
+          </label>
           <label>
             Bedrooms
             <select
@@ -56,7 +77,11 @@ export class ListingFilters extends LitElement {
     if (!(target instanceof HTMLSelectElement) && !(target instanceof HTMLInputElement)) return;
 
     const bedroomRule = this.selectValue('Bedrooms');
+    const location = this.selectValue('Location') ?? 'ALL';
+    const [regionId, areaName] = location.split('||');
     const nextOptions: ListingFilterOptions = {
+      ...(regionId && regionId !== 'ALL' ? { regionId } : {}),
+      ...(areaName && areaName !== 'ALL' ? { areaName } : {}),
       ...(bedroomRule && bedroomRule !== 'all' ? { bedroomRule } : {}),
       maxRent: Number(this.maxRentInput?.value ?? 5000),
     };
@@ -81,6 +106,14 @@ export class ListingFilters extends LitElement {
 
   private get maxRentInput(): HTMLInputElement | null {
     return this.renderRoot.querySelector<HTMLInputElement>('#max-rent');
+  }
+
+  private get locationValue(): string {
+    if (this.options.regionId && this.options.areaName) {
+      return `${this.options.regionId}||${this.options.areaName}`;
+    }
+    if (this.options.regionId) return `${this.options.regionId}||ALL`;
+    return 'ALL';
   }
 
   private selectValue(label: string): string | undefined {

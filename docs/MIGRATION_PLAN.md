@@ -101,7 +101,7 @@ After every migration phase or major architecture, behavior, or public-contract 
 3. Assess coverage for changed domain rules and adapter, application, component, and host boundaries;
    add focused tests for missing behavior, edge cases, and regressions.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
-    architecture, contracts, naming, workflow, or user-facing behavior changes.
+   architecture, contracts, naming, workflow, or user-facing behavior changes.
 5. Run the validation commands in **Post-Migration Quality Gates** and record the results in the
    phase handoff before declaring the phase complete.
 
@@ -141,6 +141,9 @@ documentation, and coverage reviews are required process steps.
      boundaries, source-order preservation, and no-match results. The domain policy
      uses `null` for unknown rent and a configured `0` sentinel; zero is not a
      valid business rent.
+   - Add `cleanRegionName()` and `getListingLocationGroups()` in `src/config/listing-filters.ts`
+     to produce location dropdown configuration with "All Locations" as the leading entry
+     and cleaned region display names grouped by configured region with listing counts.
 
 4. **Phase 4: Define ports and implement XML parsing**
    - Define `src/ports/listing-feed.ts`, `src/ports/listing-parser.ts`, and
@@ -216,8 +219,8 @@ evidence for that review and are also required before merge or final migration s
       adapter/application/component boundary has behavior-focused integration
       coverage; prioritize risk and behavior over a vanity percentage.
     - Add regression tests for every defect found during parity review.
-     - Run `mise run check` so formatting, linting, type checking, tests, and the
-       production bundle are validated together.
+    - Run `mise run check` so formatting, linting, type checking, tests, and the
+      production bundle are validated together.
 
 11. **Demo and documentation update**
     - Update the demo/host page and sample data to demonstrate loading, populated,
@@ -225,8 +228,8 @@ evidence for that review and are also required before merge or final migration s
       reference behavior and is not part of the migrated product contract.
     - Verify the demo works at desktop and mobile widths with keyboard navigation
       and assistive-technology-friendly status updates.
-     - Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, this plan, and `AGENTS.md` when
-       commands, public contracts, architecture, or naming conventions change.
+    - Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, this plan, and `AGENTS.md` when
+      commands, public contracts, architecture, or naming conventions change.
 
 12. **Pull request code review**
     - Open a pull request containing the migration as reviewable commits or clearly

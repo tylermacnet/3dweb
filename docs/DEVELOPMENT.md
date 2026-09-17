@@ -65,7 +65,7 @@ declare the work complete until this review is performed:
 3. Assess test coverage for the changed behavior and boundaries; add focused tests for missing
    branches, edge cases, regressions, and integration contracts.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
-    architecture, contracts, naming, workflow, or user-facing behavior changes.
+   architecture, contracts, naming, workflow, or user-facing behavior changes.
 5. Run the repository validation commands listed below and report their results in the handoff.
 
 Targeted validation is useful during implementation, but it does not replace this process review.
@@ -117,8 +117,12 @@ verified by the source data and covered by domain tests.
 Listing filtering is side-effect free and uses typed criteria independent of control order or DOM
 values. Empty criteria preserve the source listing set, combined criteria use AND semantics, and
 maximum rent is inclusive. Sorting is intentionally not part of the current product feature set.
-Location options are populated from active listings, grouped by configured region, and support
-both an entire region and an individual active area.
+Location options are populated from active listings, grouped by configured region,
+and support an "All Locations" entry, entire regions, and individual active areas.
+Region names are cleaned via `cleanRegionName()` in `src/config/listing-filters.ts`
+before being used as display labels. The `getListingLocationGroups()` function produces
+the complete location dropdown configuration including the "All Locations" option
+and per-region grouping with listing counts.
 Unknown rent is represented by `null` in the domain and uses the configured sentinel value `0` for
 filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
 configured produce no matches, while non-finite rent criteria are ignored.

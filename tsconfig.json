@@ -29,6 +29,7 @@
     "strict": true,
     "jsx": "preserve",
     "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Listing } from '../../src/domain/listing.ts';
+import { getListingLocationGroups, cleanRegionName } from '../../src/config/listing-filters.ts';
 import { filterListings, type ListingFilterCriteria } from '../../src/domain/listing-filter.ts';
 import type { ListingFilterConfig } from '../../src/domain/listing-filter.ts';
 
@@ -148,4 +149,55 @@ test('combines filter criteria without changing source order', () => {
     filterListings(listings, { bedroomRule: 'three-plus' }, config).map((listing) => listing.id),
     ['unknown-rent'],
   );
+});
+
+test('builds reference-compatible location groups from active listings', () => {
+  const groups = getListingLocationGroups(listings);
+
+  assert.deepEqual(groups, [
+    {
+      regionId: 'ALL',
+      regionName: 'All Locations',
+      options: [{ value: 'ALL', label: 'All Locations (3)', count: 3 }],
+    },
+    {
+      regionId: 'GSJ',
+      regionName: 'Saint John',
+      options: [{ value: 'GSJ||Rothesay', label: 'Rothesay (1)', count: 1 }],
+    },
+    {
+      regionId: 'GMA',
+      regionName: 'Moncton',
+      options: [
+        {
+          value: 'GMA||Moncton Central / Downtown',
+          label: 'Moncton Central / Downtown (2)',
+          count: 2,
+        },
+      ],
+    },
+  ]);
+});
+
+test('builds only All Locations group when listings are empty', () => {
+  const groups = getListingLocationGroups([]);
+
+  assert.deepEqual(groups, [
+    {
+      regionId: 'ALL',
+      regionName: 'All Locations',
+      options: [{ value: 'ALL', label: 'All Locations (0)', count: 0 }],
+    },
+  ]);
+});
+
+test('cleanRegionName strips Greater prefix', () => {
+  assert.equal(cleanRegionName('Greater Saint John'), 'Saint John');
+  assert.equal(cleanRegionName('Greater Moncton'), 'Moncton');
+});
+
+test('cleanRegionName is case-insensitive and handles no prefix', () => {
+  assert.equal(cleanRegionName('Greater Saint John'), 'Saint John');
+  assert.equal(cleanRegionName('Saint John'), 'Saint John');
+  assert.equal(cleanRegionName(''), '');
 });
