@@ -32,4 +32,27 @@ independent components on the same layers: reuse `domain`, `ListingController`
 independently. Do not add a root component or couple the new view to
 `property-listings`.
 
+## Fragment deep-linking for listings (`#listing/<id>`)
+
+Evaluated and deliberately deferred: recording the open listing in the page URL
+so a shared link reopens the same details popover on load, browser Back closes
+the popover (SPA-style history entry per open), and reload restores the open
+state. The listing id already drives the iframe `src`; the fragment would
+address page-level state only.
+
+Deferred because host sharing already flows through the canonical ManageBuilding
+details URL, and the fragment adds a sync module with open→write→hashchange
+loop guards plus multi-instance arbitration (hash is document-global: adopt an
+opt-in `<property-listings deep-link>` attribute with a single-opt-in-per-document
+rule, or embeds fight over one hash). Dynamic availability also forces a
+stale-id state: an id missing from the current feed must render a
+"no longer available" popover body (title + notice + close action, no iframe)
+instead of failing silently.
+
+Adopt only when share-reopens-popover or Back-to-close becomes a host
+requirement. Design on adoption: pure `parseListingHash`/`buildListingHash`
+helpers in `src/application/` (DOM-free, unit-tested), container-owned binding,
+hash written on open and cleared on explicit close, unknown ids cleared without
+an error state unless the not-available body is also adopted.
+
 For the full command reference and architecture constraints, see `AGENTS.md`.
