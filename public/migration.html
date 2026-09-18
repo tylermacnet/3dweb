@@ -179,11 +179,14 @@
         <p>
           The project ships a library of independent web components with no root component:
           <code>property-listings</code>, <code>listing-card</code>, <code>listing-filters</code>,
-          and the planned iframe-to-listing <code>listing-details</code>, all registered by the
-          single bundle. Phases 1–7 are complete, including focused presentation components with an
-          adapter-styled details dialog, stretched-link cards with pointer-gated dialog behavior,
-          and contrast-hardened text; sorting is intentionally out of scope. Phases 4–5 remain under
-          review against the parser-error, adapter-resilience, and coverage requirements.
+          and the iframe-to-listing <code>listing-details</code>, all registered by the single
+          bundle. Phases 1–8 are complete, including focused presentation components with a
+          native-only adapter-backed details popover (Popover API <code>popover="auto"</code>,
+          <code>autofocus</code>, native focus return, no manual focus or dismiss code), a
+          four-element public surface with an SSR-safe auto-wiring bundle entry, and
+          origin-restricted <code>hidenav</code> iframe embeds; sorting is intentionally out of
+          scope. Phases 4–5 remain under review against the parser-error, adapter-resilience, and
+          coverage requirements.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -213,12 +216,12 @@
           </li>
           <li class="phase review">
             <span class="phase-number" aria-hidden="true">5</span>
-            <span>HTTP feed and modal adapters</span>
+            <span>HTTP feed and popover adapters</span>
             <strong class="phase-status">Under review</strong>
           </li>
           <li class="phase complete">
             <span class="phase-number" aria-hidden="true">6</span>
-            <span>Listing controller</span>
+            <span>Application state (feed loader + filter store)</span>
             <strong class="phase-status">Complete</strong>
           </li>
           <li class="phase complete">
@@ -226,10 +229,10 @@
             <span>Presentation components</span>
             <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase planned">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">8</span>
             <span>Public surface and bundle entry</span>
-            <strong class="phase-status">Planned</strong>
+            <strong class="phase-status">Complete</strong>
           </li>
           <li class="phase planned">
             <span class="phase-number" aria-hidden="true">9</span>
@@ -322,15 +325,15 @@
             <code>listing-filters</code> components with container loading, empty, error, and retry
             states; details stay behind the <code>DetailsDialog</code> port. Component styles flow
             through the single <code>componentStyles()</code> trust boundary while the light-DOM
-            dialog is styled by its adapter via a constructed stylesheet with a
+            popover is styled by its adapter via a constructed stylesheet with a
             <code>:root</code> token mirror. Shared details concerns (canonical URL, iframe-only
             <code>hidenav</code> variant, location-prefixed title) live in
             <code>src/config/application.ts</code>.
           </li>
           <li>
             <strong>SOLID and 2026 practices:</strong> native CSS nesting with
-            <code>:host</code> token aliases; one stretched link per card with pointer-gated dialog
-            interception (coarse pointers and new-tab gestures navigate normally); the dialog is
+            <code>:host</code> token aliases; one stretched link per card with pointer-gated details
+            interception (coarse pointers and new-tab gestures navigate normally); the popover is
             named from its visible listing title; small-text contrast measures 5.93:1 against WCAG
             AA.
           </li>
@@ -341,6 +344,56 @@
           </li>
           <li>
             <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 40
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-eight-review-title">
+        <h2 id="phase-eight-review-title">Phase 8 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> four independent elements
+            (<code>property-listings</code>, <code>listing-card</code>,
+            <code>listing-filters</code>, <code>listing-details</code>) are registered by the single
+            bundle; there is no root component. <code>src/index.tsx</code> exports
+            <code>configurePropertyListings(root?)</code>, auto-wires on
+            <code>DOMContentLoaded</code>, observes late-added elements, and touches no
+            <code>document</code> at import time (SSR-safe). Defaults are assembled once per
+            document: a shared immutable location resolver, a fresh stateless feed per element, one
+            popover per document, and a root element that is itself a
+            <code>property-listings</code> is wired too.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> the monolithic
+            <code>ListingController</code> was split into <code>ListingFeedLoader</code> (feed
+            lifecycle, cancellation, and a discriminated-union load state behind an explicit
+            <code>setFeed()</code>) and <code>ListingFilterStore</code> (criteria plus derived
+            visible listings/location groups, defended from caller mutation). The details overlay is
+            a native Popover API element (<code>popover="auto"</code>, <code>autofocus</code>, focus
+            return to the triggering card via <code>showPopover({ source })</code>; no manual Tab
+            trap, backdrop handler, or focus capture/restore) that returns <code>false</code>
+            when popover is unsupported, so the card's cancelable
+            <code>listing-details-requested</code> event leaves the anchor navigation as the
+            progressive-enhancement fallback. <code>resolveDetailsIframeUrl()</code> restricts
+            iframe sources to HTTPS on exactly the ManageBuilding canonical origin (a host
+            <code>base-url</code> never widens that origin) and always forces <code>hidenav</code>;
+            the feed URL is adapter-owned product policy with a fixed direct-then-proxy chain.
+          </li>
+          <li>
+            <strong>Coverage:</strong> loader state machine (ready, empty, error, retry, stale
+            request including stale rejections, feed swap cancellation), filter store derivation,
+            entry-wiring contract (fresh feed per element, shared popover, host override
+            preservation, root scoping including the root element itself, idempotence),
+            <code>listing-details</code> template branches and the hostile-URL matrix (canonical
+            origin lock, blank-input fallthrough, encoded path segments), popover open/close/invoker
+            and iframe-reset behavior, and a bundle test asserting all four element registrations,
+            the <code>showPopover</code>/<code>hidePopover</code> surface, no
+            <code>showModal</code>/<code>closedby</code> remnants, plus the
+            <code>phase-five-harness</code> exclusion.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 67
             integration tests, plus formatting, linting, type-checking, and production build.
           </li>
         </ul>

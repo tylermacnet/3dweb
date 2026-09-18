@@ -26,8 +26,8 @@ quality gate without making Cucumber a runtime or production-bundle dependency.
 ## Alternative listing views (for example map-based)
 
 Alternative presentations are not current scope but are anticipated as new
-independent components on the same layers: reuse `domain`, `ListingController`
-(or a sibling controller), `ports`, `adapters`, and `config`, add one
+independent components on the same layers: reuse `domain`, `ListingFeedLoader`
+(and the shared filter configuration), `ports`, `adapters`, and `config`, add one
 `src/components/*` element, register it in the single bundle entry, and demo it
 independently. Do not add a root component or couple the new view to
 `property-listings`.

@@ -7,16 +7,10 @@ export class ManageBuildingFeed implements ListingFeed {
     'https://3dmanagement.managebuilding.com/resident/api/public/listingFeeds';
 
   private readonly parser: ListingParser;
-  private readonly feedUrl: string;
   private readonly fetchFn: typeof fetch;
 
-  constructor(
-    parser: ListingParser,
-    feedUrl: string = ManageBuildingFeed.FEED_URL,
-    fetchFn: typeof fetch = globalThis.fetch.bind(globalThis),
-  ) {
+  constructor(parser: ListingParser, fetchFn: typeof fetch = globalThis.fetch.bind(globalThis)) {
     this.parser = parser;
-    this.feedUrl = feedUrl;
     this.fetchFn = fetchFn;
   }
 
@@ -27,9 +21,9 @@ export class ManageBuildingFeed implements ListingFeed {
 
   async fetchXml(signal?: AbortSignal): Promise<string> {
     const requestUrls = [
-      this.feedUrl,
-      `https://corsproxy.io/?${encodeURIComponent(this.feedUrl)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(this.feedUrl)}`,
+      ManageBuildingFeed.FEED_URL,
+      `https://corsproxy.io/?${encodeURIComponent(ManageBuildingFeed.FEED_URL)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(ManageBuildingFeed.FEED_URL)}`,
     ];
     let lastError: unknown;
 

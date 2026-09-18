@@ -105,21 +105,28 @@ class RecordingCustomEvent {
   readonly detail: unknown;
   readonly bubbles: boolean;
   readonly composed: boolean;
+  readonly cancelable: boolean;
 
-  constructor(type: string, init?: { detail?: unknown; bubbles?: boolean; composed?: boolean }) {
+  constructor(
+    type: string,
+    init?: { detail?: unknown; bubbles?: boolean; composed?: boolean; cancelable?: boolean },
+  ) {
     this.type = type;
     this.detail = init?.detail;
     this.bubbles = init?.bubbles ?? false;
     this.composed = init?.composed ?? false;
+    this.cancelable = init?.cancelable ?? false;
   }
 }
 
-function captureDispatched(target: object): RecordingCustomEvent[] {
+// `returns` mirrors dispatchEvent: true when no listener prevented default
+// (nobody took over), false when a container called preventDefault.
+function captureDispatched(target: object, returns = true): RecordingCustomEvent[] {
   const events: RecordingCustomEvent[] = [];
   Object.assign(globalThis, { CustomEvent: RecordingCustomEvent });
   (target as { dispatchEvent(event: unknown): boolean }).dispatchEvent = (event: unknown) => {
     events.push(event as RecordingCustomEvent);
-    return true;
+    return returns;
   };
   return events;
 }
@@ -231,12 +238,12 @@ function restorePointer(original: unknown): void {
   else (globalThis as Record<string, unknown>).matchMedia = original;
 }
 
-test('opens the dialog for an unmodified click on a fine pointer', async () => {
+test('requests details for an unmodified click on a fine pointer', async () => {
   // Arrange
   await cardModule();
   const listing = listingFixture();
   const card = createCard(listing);
-  const dispatched = captureDispatched(card);
+  const dispatched = captureDispatched(card, false);
   const original = (globalThis as Record<string, unknown>).matchMedia;
   stubPointer(true);
   const click = syntheticClick();
@@ -254,6 +261,31 @@ test('opens the dialog for an unmodified click on a fine pointer', async () => {
     assert.equal(dispatched[0].detail, listing);
     assert.equal(dispatched[0].bubbles, true);
     assert.equal(dispatched[0].composed, true);
+    assert.equal(dispatched[0].cancelable, true);
+  } finally {
+    restorePointer(original);
+  }
+});
+
+test('falls through to link navigation when no container takes over', async () => {
+  // Arrange
+  await cardModule();
+  const card = createCard(listingFixture());
+  const dispatched = captureDispatched(card, true);
+  const original = (globalThis as Record<string, unknown>).matchMedia;
+  stubPointer(true);
+  const click = syntheticClick();
+
+  try {
+    // Act
+    (card as unknown as { handleDetailsClick(event: MouseEvent): void }).handleDetailsClick(
+      click.event,
+    );
+
+    // Assert: nobody handled details (e.g. popover unsupported), so the anchor
+    // keeps its native navigation as the progressive-enhancement fallback.
+    assert.equal(click.prevented(), false);
+    assert.equal(dispatched.length, 1);
   } finally {
     restorePointer(original);
   }
@@ -314,11 +346,11 @@ test('never intercepts modified or non-primary clicks', async () => {
   }
 });
 
-test('defaults to the dialog when pointer detection is unavailable', async () => {
+test('defaults to details when pointer detection is unavailable', async () => {
   // Arrange
   await cardModule();
   const card = createCard(listingFixture());
-  const dispatched = captureDispatched(card);
+  const dispatched = captureDispatched(card, false);
   const original = (globalThis as Record<string, unknown>).matchMedia;
   delete (globalThis as Record<string, unknown>).matchMedia;
   const click = syntheticClick();

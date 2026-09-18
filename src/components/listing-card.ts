@@ -127,14 +127,19 @@ export class ListingCard extends LitElement {
       return;
     }
     if (!shouldOpenDialog()) return;
-    event.preventDefault();
-    this.dispatchEvent(
+    // Ask any interested container (e.g. <property-listings>) to open details.
+    // preventDefault on the custom event means a container took over; nothing
+    // cancelling it here means no one can show details, so the anchor keeps its
+    // default navigation as the progressive-enhancement fallback.
+    const takenOver = !this.dispatchEvent(
       new CustomEvent<Listing>('listing-details-requested', {
         bubbles: true,
         composed: true,
+        cancelable: true,
         detail: this.listing,
       }),
     );
+    if (takenOver) event.preventDefault();
   }
 
   private handleImageError(event: Event): void {

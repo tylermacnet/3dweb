@@ -39,10 +39,10 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
 
 - **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- **Application** (`src/application/`): `ListingController` is a Lit `ReactiveController` — owns feed loading, cancellation, filtering, dialog requests.
+- **Application** (`src/application/`): `ListingFeedLoader` (Lit `ReactiveController`) owns feed loading, request cancellation, and the load-state machine; `ListingFilterStore` owns filter criteria and derived visible listings/location groups.
 - **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsDialog`).
-- **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser dialog).
-- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (planned iframe-to-listing element). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `property-listings` composes `listing-card` and `listing-filters` but does not own them.
+- **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser popover).
+- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (iframe-to-listing element accepting `listing-id` with a `src` override). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `property-listings` composes `listing-card` and `listing-filters` but does not own them.
 - **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs).
 
 ## Key constraints
@@ -51,7 +51,7 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
 - CSS is component-owned: imported via `componentStyles()` in the owning component's `static styles`.
   `src/styles/component-styles.ts` is the only `unsafeCSS` call site (first-party build-time CSS only).
-  Exception: the light-DOM details dialog is styled by its adapter
+  Exception: the light-DOM details popover is styled by its adapter
   (`src/adapters/browser-details-dialog.css`, constructed stylesheet, `:root` token mirror) —
   `:host` tokens do not resolve outside shadow roots.
 - Use `AbortSignal.timeout(5000)` for network resilience, not manual timer clearing.
@@ -93,9 +93,9 @@ After every migration phase or major change, complete all five steps before decl
 - `mise.lock` — pinned toolchain versions (commit updates).
 - `.opencode/opencode.json` — project TypeScript LSP (`mise exec` wrapper, committed).
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
-- `src/config/application.ts` — shared details URL, iframe variant, dialog title policy.
+- `src/config/application.ts` — shared details URL, iframe variant, popover title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
-- `src/adapters/browser-details-dialog.css` — adapter-owned dialog styles.
+- `src/adapters/browser-details-dialog.css` — adapter-owned popover styles.
 - `public/index.html` — host page consuming `public/dist/bundle.js`.
 - `public/test.html` — legacy embed (migration source).
 - `public/migration.html` — static demo, not part of production listings API.

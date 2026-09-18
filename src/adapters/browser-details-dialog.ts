@@ -39,12 +39,18 @@ function ensureDialogStyles(doc: Document): void {
   doc.head.appendChild(style);
 }
 
+function supportsPopover(): boolean {
+  return (
+    typeof HTMLElement !== 'undefined' && typeof HTMLElement.prototype.showPopover === 'function'
+  );
+}
+
 export class BrowserDetailsDialog implements DetailsDialog {
-  private dialog: HTMLDialogElement | null = null;
+  private panel: HTMLElement | null = null;
   private iframe: HTMLIFrameElement | null = null;
   private titleEl: HTMLElement | null = null;
   private closeBtn: HTMLButtonElement | null = null;
-  private lastFocusedElement: HTMLElement | null = null;
+  private shown = false;
 
   private readonly detailsBaseUrl: string;
 
@@ -52,12 +58,11 @@ export class BrowserDetailsDialog implements DetailsDialog {
     this.detailsBaseUrl = detailsBaseUrl;
   }
 
-  open(listing: Listing): void {
-    if (!globalThis.document || !globalThis.window) return;
+  open(listing: Listing, invoker?: HTMLElement): boolean {
+    if (!globalThis.document || !globalThis.window) return false;
+    if (!supportsPopover()) return false;
 
     this.mount();
-    const activeElement = document.activeElement;
-    this.lastFocusedElement = activeElement instanceof HTMLElement ? activeElement : null;
 
     const detailsUrl = getListingDetailsUrl(listing, {
       baseUrl: this.detailsBaseUrl,
@@ -73,27 +78,34 @@ export class BrowserDetailsDialog implements DetailsDialog {
       this.iframe.src = detailsUrl;
       this.iframe.title = `Details for ${titleText}`;
     }
-    if (this.dialog && !this.dialog.open) this.dialog.showModal();
-    this.closeBtn?.focus();
+
+    this.show(invoker);
+    return true;
   }
 
   close(): void {
-    if (!this.dialog) return;
+    if (!this.panel || !this.shown) return;
+    this.shown = false;
+    this.panel.hidePopover();
+  }
 
-    if (this.dialog.open) this.dialog.close();
-    if (this.iframe) this.iframe.src = 'about:blank';
-    if (this.lastFocusedElement) this.lastFocusedElement.focus();
+  private show(invoker: HTMLElement | undefined): void {
+    if (!this.panel || this.shown) return;
+    this.shown = true;
+    this.panel.showPopover(invoker === undefined ? undefined : { source: invoker });
   }
 
   private mount(): void {
-    if (!globalThis.document || this.dialog) return;
+    if (!globalThis.document || this.panel) return;
 
-    this.dialog = document.createElement('dialog');
-    this.dialog.className = 'sc-property-dialog';
-    this.dialog.setAttribute('aria-labelledby', 'sc-dialog-title');
-    // Progressive enhancement: browsers with closedby="any" get native light
-    // dismiss; the manual handlers below remain the fallback elsewhere.
-    this.dialog.setAttribute('closedby', 'any');
+    const panel = document.createElement('div');
+    panel.className = 'sc-property-dialog';
+    panel.setAttribute('popover', 'auto');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-labelledby', 'sc-dialog-title');
+    // Native popover semantics: auto type gives the top-layer backdrop, Esc
+    // and light-dismiss cross-browser, and (via showPopover({ source })) focus
+    // return to the triggering element. No manual focus, trap, or dismiss code.
     const layout = document.createElement('div');
     layout.className = 'sc-dialog-layout';
     const header = document.createElement('div');
@@ -106,6 +118,7 @@ export class BrowserDetailsDialog implements DetailsDialog {
     closeButton.type = 'button';
     closeButton.className = 'sc-dialog-close';
     closeButton.setAttribute('aria-label', 'Close dialog');
+    closeButton.autofocus = true;
     closeButton.append(createCloseIcon(document));
     const iframe = document.createElement('iframe');
     iframe.className = 'sc-dialog-iframe';
@@ -114,43 +127,31 @@ export class BrowserDetailsDialog implements DetailsDialog {
 
     header.append(title, closeButton);
     layout.append(header, iframe);
-    this.dialog.append(layout);
+    panel.append(layout);
     this.titleEl = title;
     this.iframe = iframe;
     this.closeBtn = closeButton;
+    this.panel = panel;
 
     this.bindEvents();
     ensureDialogStyles(document);
-    document.body.appendChild(this.dialog);
+    document.body.appendChild(panel);
   }
 
   private bindEvents(): void {
-    if (!this.dialog) return;
+    if (!this.panel) return;
 
-    this.dialog.addEventListener('close', () => {
-      if (this.iframe) this.iframe.src = 'about:blank';
-      if (this.lastFocusedElement) this.lastFocusedElement.focus();
-    });
-
-    this.dialog.addEventListener('keydown', (event) => {
-      if (event.key !== 'Tab' || !this.dialog) return;
-
-      const focusables = this.dialog.querySelectorAll('button, iframe');
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        if (last instanceof HTMLElement) last.focus();
-        event.preventDefault();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        if (first instanceof HTMLElement) first.focus();
-        event.preventDefault();
+    // The toggle event is the single source of truth for open/closed state,
+    // covering Esc, light-dismiss, and programmatic show/hide. On close the
+    // cross-origin iframe is discarded so its page does not keep running.
+    this.panel.addEventListener('toggle', (event: Event) => {
+      const state = (event as ToggleEvent).newState;
+      if (state === 'closed') {
+        this.shown = false;
+        if (this.iframe) this.iframe.src = 'about:blank';
       }
     });
 
     this.closeBtn?.addEventListener('click', () => this.close());
-    this.dialog.addEventListener('click', (event) => {
-      if (event.target === this.dialog) this.close();
-    });
   }
 }

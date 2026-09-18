@@ -1,18 +1,85 @@
 import './components/property-listings.js';
 import './components/listing-card.js';
+import './components/listing-filters.js';
+import './components/listing-details.js';
 import { BrowserDetailsDialog } from './adapters/browser-details-dialog.js';
 import { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
 import { XmlListingParser } from './adapters/xml-listing-parser.js';
 import { NEW_BRUNSWICK_REGIONS } from './config/regions.js';
 import { LocationResolver } from './domain/location-resolver.js';
-import { PropertyListings } from './components/property-listings.js';
+import type { DetailsDialog } from './ports/details-dialog.js';
+import type { ListingFeed } from './ports/listing-feed.js';
+import type { PropertyListings } from './components/property-listings.js';
 
 const locationResolver = new LocationResolver(NEW_BRUNSWICK_REGIONS);
-const feed = new ManageBuildingFeed(new XmlListingParser(locationResolver));
-const detailsDialog = new BrowserDetailsDialog();
-const listings = document.querySelector<PropertyListings>('property-listings');
+const dialogByDocument = new WeakMap<Document, DetailsDialog>();
 
-if (listings) {
-  listings.feed = feed;
-  listings.detailsDialog = detailsDialog;
+const PROPERTY_LISTINGS_TAG = 'property-listings';
+
+interface ListingDefaults {
+  createFeed(): ListingFeed;
+  detailsDialog: DetailsDialog;
+}
+
+// Immutable shared per bundle; a fresh stateless feed per element; exactly one
+// popover per document (a single shared overlay is correct sharing, not a
+// singleton smell).
+function defaultsFor(doc: Document): ListingDefaults {
+  let detailsDialog = dialogByDocument.get(doc);
+  if (!detailsDialog) {
+    detailsDialog = new BrowserDetailsDialog();
+    dialogByDocument.set(doc, detailsDialog);
+  }
+  return {
+    createFeed: () => new ManageBuildingFeed(new XmlListingParser(locationResolver)),
+    detailsDialog,
+  };
+}
+
+function wireElement(element: PropertyListings, defaults: ListingDefaults): void {
+  if (element.feed == null) element.feed = defaults.createFeed();
+  if (element.detailsDialog == null) element.detailsDialog = defaults.detailsDialog;
+}
+
+/**
+ * Fills only the unset ports on every <property-listings> inside `root`, so a
+ * host-supplied feed or dialog always wins. Safe to call repeatedly; safe in
+ * SSR/server environments where no `document` exists.
+ */
+export function configurePropertyListings(root?: ParentNode): void {
+  if (typeof document === 'undefined') return;
+  const target = root ?? document;
+  const doc = target.nodeType === 9 ? (target as Document) : target.ownerDocument;
+  if (!doc) return;
+
+  const defaults = defaultsFor(doc);
+  if (
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    target.matches(PROPERTY_LISTINGS_TAG)
+  ) {
+    wireElement(target as PropertyListings, defaults);
+  }
+  for (const element of target.querySelectorAll<PropertyListings>(PROPERTY_LISTINGS_TAG)) {
+    wireElement(element, defaults);
+  }
+}
+
+function autoWire(): void {
+  if (typeof document === 'undefined') return;
+  configurePropertyListings();
+  // Late-added elements (host DOM changed after load) are wired as they appear.
+  // Shadow-root rendering never retriggers this observer (subtree does not
+  // traverse into shadow roots).
+  if (typeof MutationObserver === 'undefined') return;
+  const observer = new MutationObserver(() => configurePropertyListings());
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoWire, { once: true });
+  } else {
+    autoWire();
+  }
 }

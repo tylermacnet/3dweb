@@ -3,8 +3,10 @@ import type { ListingFeed } from '../ports/listing-feed.js';
 import type { DetailsDialog } from '../ports/details-dialog.js';
 import type { Listing } from '../domain/listing.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
-import { ListingController } from '../application/listing-controller.js';
+import { ListingFeedLoader, type ListingLoadState } from '../application/listing-feed-loader.js';
+import { ListingFilterStore } from '../application/listing-filter-store.js';
 import { APPLICATION_URL } from '../config/application.js';
+import { getListingLocationGroups, LISTING_FILTER_CONFIG } from '../config/listing-filters.js';
 import theme from '../styles/listing-theme.css';
 import { componentStyles } from '../styles/component-styles.js';
 import styles from './property-listings.css';
@@ -23,37 +25,62 @@ export class PropertyListings extends LitElement {
 
   feed: ListingFeed | undefined;
   detailsDialog: DetailsDialog | undefined;
-  private readonly controller = new ListingController(this);
+
+  private readonly loader = new ListingFeedLoader(this);
+  private readonly filterStore = new ListingFilterStore(
+    this,
+    LISTING_FILTER_CONFIG,
+    getListingLocationGroups,
+  );
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLoader();
+  }
+
+  private syncLoader(): void {
+    this.loader.setFeed(this.feed);
+    if (this.feed && this.loader.loadState.kind === 'idle') void this.loader.load();
+  }
+
+  private handleDetailsRequested(event: CustomEvent<Listing>): void {
+    if (!this.detailsDialog) return;
+    const handled = this.detailsDialog.open(
+      event.detail,
+      event.target instanceof HTMLElement ? event.target : undefined,
+    );
+    if (handled) event.preventDefault();
+  }
 
   updated(changedProperties: Map<string, unknown>): void {
-    if (changedProperties.has('feed') || changedProperties.has('detailsDialog')) {
-      this.controller.configure(this.feed, this.detailsDialog);
-      if (this.feed && this.controller.state === 'idle') void this.controller.loadListings();
-    }
+    if (changedProperties.has('feed')) this.syncLoader();
   }
 
   render() {
+    const state = this.loader.loadState;
+    const listings = state.kind === 'ready' ? state.listings : [];
+    const visibleListings = this.filterStore.visibleListings(listings);
+    const locationGroups = this.filterStore.locationGroups(listings);
     return html`
       <section class="listing-page" aria-label="Property listings">
         <listing-filters
-          .options=${this.controller.options}
-          .locationGroups=${this.controller.locationGroups}
+          .options=${this.filterStore.options}
+          .locationGroups=${locationGroups}
           @listing-filters-changed=${(event: CustomEvent<ListingFilterOptions>) =>
-            this.controller.setOptions(event.detail)}
+            this.filterStore.setOptions(event.detail)}
         ></listing-filters>
 
-        ${this.renderStatus()}
+        ${this.renderStatus(state, visibleListings.length)}
         ${
-          this.controller.state === 'ready'
+          state.kind === 'ready'
             ? html`
                 <ol class="listing-grid" aria-label="Property listings results">
-                  ${this.controller.visibleListings.map(
+                  ${visibleListings.map(
                     (listing) => html`
                       <li>
                         <listing-card
                           .listing=${listing}
-                          @listing-details-requested=${(event: CustomEvent<Listing>) =>
-                            this.controller.openDetails(event.detail)}
+                          @listing-details-requested=${this.handleDetailsRequested}
                         ></listing-card>
                       </li>
                     `,
@@ -66,8 +93,8 @@ export class PropertyListings extends LitElement {
     `;
   }
 
-  private renderStatus() {
-    switch (this.controller.state) {
+  private renderStatus(state: ListingLoadState, visibleCount: number) {
+    switch (state.kind) {
       case 'loading':
         return html`
           <p class="results-status" role="status">
@@ -94,21 +121,23 @@ export class PropertyListings extends LitElement {
       case 'error':
         return html`
           <div class="results-status" role="alert">
-            <p>${this.controller.errorMessage}</p>
-            <button type="button" @click=${() => void this.controller.retry()}>Try again</button>
+            <p>${state.message}</p>
+            <button type="button" @click=${() => void this.loader.retry()}>Try again</button>
           </div>
         `;
       case 'ready':
-        return html`<p class="results-status" role="status">
-          Showing <strong>${this.controller.visibleListings.length}</strong> available
-          listing${this.controller.visibleListings.length === 1 ? '' : 's'}
-        </p>`;
+        return html`
+          <p class="results-status" role="status">
+            Showing
+            <strong>${visibleCount}</strong> available listing${visibleCount === 1 ? '' : 's'}
+          </p>
+        `;
       case 'empty':
         return html`
           <div class="empty-state" role="status">
             <p>No available listings match your selected criteria right now.</p>
             <div class="empty-actions">
-              <button type="button" @click=${() => this.controller.setOptions({})}>
+              <button type="button" @click=${() => this.filterStore.setOptions({})}>
                 Clear filters
               </button>
               <a href=${APPLICATION_URL} target="_blank" rel="noopener noreferrer" class="apply-cta"

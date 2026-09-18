@@ -1,4 +1,4 @@
-/* Dialog lives in light DOM outside any shadow root, where :host tokens do not
+/* Popover lives in light DOM outside any shadow root, where :host tokens do not
    resolve (unresolved tokens made earlier attempts render transparent). Mirror
    the tokens this dialog uses from src/styles/listing-theme.css and keep them
    in sync. Critical surfaces additionally carry literal var() fallbacks. */
@@ -37,7 +37,7 @@
 }
 
 @starting-style {
-  .sc-property-dialog:open::backdrop {
+  .sc-property-dialog:popover-open::backdrop {
     background-color: transparent;
   }
 }

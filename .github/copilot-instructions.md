@@ -15,7 +15,7 @@
 - CSS Handling: Import component-owned CSS from the component that owns the styles using
   `componentStyles()` from `src/styles/component-styles.ts` (the project's only `unsafeCSS`
   call site; first-party build-time CSS only); the bundle entry only registers
-  components and assembles safe port defaults. The light-DOM details dialog is styled by its adapter via
+  components and assembles safe port defaults. The light-DOM details popover is styled by its adapter via
   a constructed stylesheet, never by the composition root.
 - Network Resilience: Use `AbortSignal.timeout(5000)` instead of manual timer clearing.
 - Dependency policy: keep shipped runtime dependencies lightweight and purposeful; development-only

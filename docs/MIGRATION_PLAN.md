@@ -34,8 +34,8 @@ The project ships a library of independent web components for use on external
 sites, not a single rooted app. The single bundle (`public/dist/bundle.js`,
 built from `src/index.tsx`) registers every public element; each element works
 standalone once the bundle is loaded. Public elements: `<property-listings>`,
-`<listing-card>`, `<listing-filters>`, and `<listing-details>` (planned
-iframe-to-listing element). Future listing views (for example a map-based plan)
+`<listing-card>`, `<listing-filters>`, and `<listing-details>`
+(iframe-to-listing element). Future listing views (for example a map-based plan)
 reuse the same `domain`/`application`/`ports`/`adapters`/`config` layers with a
 new component, without changing existing elements.
 
@@ -92,9 +92,9 @@ duplicate a rule already owned by the domain/configuration layer.
   (`listings`).
 - Preserve lowercase custom-element names and match the public element contract:
   `<property-listings>`, `<listing-card>`, `<listing-filters>`, and
-  `<listing-details>` (planned). The dialog experience stays behind the
+  `<listing-details>` (iframe-to-listing element). The popover experience stays behind the
   `DetailsDialog` port and `BrowserDetailsDialog` adapter; `listing-details` is
-  the standalone iframe-to-listing element and never replaces the dialog.
+  the standalone iframe-to-listing element and never replaces the popover.
 - Keep one primary public concept per file. Co-locate a component stylesheet only
   when it is owned exclusively by that component.
 
@@ -178,16 +178,27 @@ documentation, and coverage reviews are required process steps.
      `src/adapters/browser-details-dialog.ts`.
    - Use `AbortSignal.timeout(5000)` for network resilience, preserve cancellation,
      check HTTP responses, and map failures to a documented application error shape.
+   - The feed URL is product policy owned by the adapter and hardcoded as
+     `ManageBuildingFeed.FEED_URL`; the adapter keeps a fixed direct-then-proxy
+     request chain consistent with what is known to be true for that URL.
    - Keep `fetch`, `DOMParser`, and dialog APIs confined to adapters.
    - Ensure external URLs are validated and opened with safe browser options.
+   - The details overlay is native-only Popover API semantics (`popover="auto"`,
+     `role="dialog"`, `autofocus` on the close control, focus return to the invoker
+     via `showPopover({ source })`); no manual trap/dismiss/focus code. The port
+     returns `false` when popover is unsupported so the container falls back to
+     the canonical link navigation.
    - Add integration tests for success, HTTP failure, timeout/cancellation, parser
      failure, and dialog behavior without relying on a live service.
 
-6. **Phase 6: Build the application controller**
-   - Create `src/application/listing-controller.ts` as a Lit
-     `ReactiveController`.
-   - Orchestrate loading, filtering, empty, error, and retry states while
-     depending only on ports and domain functions.
+6. **Phase 6: Build the application controllers**
+   - Create `src/application/listing-feed-loader.ts` (a Lit `ReactiveController`
+     owning feed loading, cancellation, and a discriminated-union load state) and
+     `src/application/listing-filter-store.ts` (owning filter criteria and derived
+     visible listings/location groups).
+   - The loader accepts its port through an explicit `setFeed()` that cancels any
+     in-flight request; the container composes loader and store and opens details
+     directly through the `DetailsDialog` port.
    - Make state transitions explicit and race-safe when criteria change or a
      request is cancelled; do not hide errors behind success-shaped fallbacks.
    - Add focused tests for state transitions using test doubles for each port.
@@ -206,21 +217,34 @@ documentation, and coverage reviews are required process steps.
      and keyboard interactions.
 
 8. **Phase 8: Compose the public surface and bundle entry**
-   - Finish `property-listings` and implement `listing-details` (simple
-     iframe-to-listing element accepting `listing-id` with a `src` override;
-     builds the canonical details URL from `src/config/application.ts` and
-     forces the iframe-only `hidenav` variant).
+   - Implement `listing-details`, the standalone iframe-to-listing element
+     accepting `listing-id` with a `src` override. `resolveDetailsIframeUrl()`
+     in `src/config/application.ts` accepts a `src` only when HTTPS on exactly
+     the ManageBuilding canonical origin (a host-supplied `base-url` never widens
+     iframe origins; it affects listing-id resolution only), always URL-encodes
+     the `listing-id` path segment, always forces the iframe-only `hidenav`
+     variant, treats blank `src`/`listing-id` as absent, and returns an
+     error state (no iframe) for invalid or missing input.
    - Expose all four public elements (`property-listings`, `listing-card`,
      `listing-filters`, `listing-details`) as independent embeds from the
-     single bundle; there is no root component. Keep default port construction
-     in the bundle entry; do not introduce a service locator, global mutable
-     singleton, or DI framework.
+     single bundle; there is no root component. `src/index.tsx` registers all
+     public elements, exports `configurePropertyListings(root?)` to fill only
+     unset ports (including a root element that is itself a
+     `property-listings`), auto-wires on `DOMContentLoaded`, and observes
+     late-added elements; it is SSR-safe (no import-time `document` access) and
+     introduces no service locator, global mutable singleton, or DI framework.
+   - The card dispatches a cancelable, composed `listing-details-requested`
+     event; the container opens the `DetailsDialog` port and cancels the click
+     only when the dialog returns handled, so the anchor's native navigation is
+     the progressive-enhancement fallback when popover is unsupported or no
+     dialog is wired.
    - Keep component-owned CSS in the owning component and preserve public
      custom-element contracts; keep the entry limited to registration and safe
      defaults.
    - Add integration coverage for loading, success, empty, error, retry, and
-     filter-to-render flows, plus `listing-details` URL resolution (`listing-id`
-     vs `src`), `hidenav` enforcement, and invalid-URL handling.
+     filter-to-render flows, the entry wiring contract, plus `listing-details`
+     URL resolution (`listing-id` vs `src`), `hidenav` enforcement, and
+     invalid-URL handling.
 
 9. **Phase 9: Update the host page and verify parity**
    - Update `public/index.html` to consume the single bundle and demonstrate

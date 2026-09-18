@@ -20,9 +20,17 @@ test('esbuild bundles the web component and CSS', async () => {
     });
 
     const bundle = await readFile(outputFile, 'utf8');
+    assert.match(bundle, /customElements\.define\("property-listings"/);
     assert.match(bundle, /customElements\.define\("listing-card"/);
+    assert.match(bundle, /customElements\.define\("listing-filters"/);
+    assert.match(bundle, /customElements\.define\("listing-details"/);
     assert.match(bundle, /Property listing/);
     assert.match(bundle, /box-shadow/);
+    assert.match(bundle, /showPopover/);
+    assert.match(bundle, /hidePopover/);
+    assert.match(bundle, /popover/);
+    assert.doesNotMatch(bundle, /showModal|closedby/);
+    assert.doesNotMatch(bundle, /phase-five-harness/);
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
@@ -44,7 +52,8 @@ test('migration report is a static page', async () => {
   const migrationHtml = await readFile('public/migration.html', 'utf8');
 
   assert.match(migrationHtml, /<h1>Migration report<\/h1>/);
-  assert.match(migrationHtml, /Phases 1–7 are complete/);
+  assert.match(migrationHtml, /Phases 1–8 are complete/);
   assert.match(migrationHtml, /Phase 7 review evidence/);
+  assert.match(migrationHtml, /Phase 8 review evidence/);
   assert.doesNotMatch(migrationHtml, /<migration-progress>/);
 });

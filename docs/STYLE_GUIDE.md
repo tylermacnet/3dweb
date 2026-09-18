@@ -212,14 +212,14 @@ project's single `unsafeCSS` trust boundary for first-party build-time CSS) and 
 the single bundle entry; the bundle entry must not own presentation styles. See
 `docs/DEVELOPMENT.md` for the native-nesting rules (`:host` boundary, flat internals, states and
 responsive contexts only, max depth 3). The adapter-backed
-details dialog is the exception: it lives in light DOM, so `BrowserDetailsDialog` owns
+details popover is the exception: it lives in light DOM, so `BrowserDetailsDialog` owns
 `src/adapters/browser-details-dialog.css` and applies it via a constructed stylesheet. Its
 stylesheet mirrors the tokens it needs under `:root` with literal `var()` fallbacks, because
-`:host` tokens do not resolve outside shadow roots (unresolved tokens rendered the dialog
+`:host` tokens do not resolve outside shadow roots (unresolved tokens rendered the popover
 transparent in an earlier attempt).
 
 Shadow-DOM internals use short semantic class names without a prefix (the shadow boundary is
-the namespace); the light-DOM dialog keeps the `sc-` prefix, and `--sc-*` tokens are unchanged
+the namespace); the light-DOM popover keeps the `sc-` prefix, and `--sc-*` tokens are unchanged
 as the public theming API.
 
 ## Accessibility
@@ -230,7 +230,7 @@ as the public theming API.
 - Associate every form control with a label.
 - Keep card interaction to a single stretched link per card so keyboard users get one tab stop;
   never intercept modified or non-primary clicks.
-- Name the details dialog from its visible listing title (`aria-labelledby`), not a generic label.
+- Name the details popover from its visible listing title (`aria-labelledby`), not a generic label.
 - Use `role="status"` and `aria-live` for changing result counts and loading states.
 - Provide visible `:focus-visible` indicators with at least a `2px` outline and offset.
 - Preserve readable contrast for all text and controls.
@@ -244,20 +244,21 @@ Each works standalone on an external site once the single bundle is loaded:
 - `property-listings`: filters and listings only (composes `listing-card` and `listing-filters`)
 - `listing-filters`: filter controls and configured options, usable standalone
 - `listing-card`: one listing presentation, usable standalone
-- `listing-details` (planned): standalone iframe-to-listing element accepting `listing-id` with a `src` override
+- `listing-details`: standalone iframe-to-listing element accepting `listing-id` with a `src` override
 - `public/migration.html`: static development/demo migration report; never part of the production
   listings API
 - `src/components/phase-five-harness.ts`: migration debugging harness; never part of the production
   listings API
 
-Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
-The controller depends on `ListingFeed` and `DetailsDialog` ports, while safe
-defaults are assembled in the bundle entry (`src/index.tsx`) and overridable per
-element. The browser details experience is an adapter-backed dialog, not a
-`property-dialog` custom element. Shared details concerns live in
-`src/config/application.ts`: the canonical details URL (used by the card link,
-the adapter, and `listing-details`), the iframe-only `hidenav` variant, and the
-location-prefixed dialog title.
+Application behavior belongs in `src/application/`, not in a component:
+`ListingFeedLoader` drives feed loading through the `ListingFeed` port and
+`ListingFilterStore` owns filter state, while safe defaults are assembled in
+the bundle entry (`src/index.tsx`) and overridable per element. The browser details
+experience is an adapter-backed popover, not a `property-dialog` custom element. Shared
+details concerns live in `src/config/application.ts`: the canonical details URL
+(used by the card link, the adapter, and `listing-details`), the iframe-only
+`hidenav` variant (enforced by `resolveDetailsIframeUrl()`), and the
+location-prefixed popover title.
 
 The host page owns surrounding branding and layout. Each component owns its internal presentation and
 ships its styles through the single bundle; the bundle entry itself owns no styles.

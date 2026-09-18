@@ -72,47 +72,42 @@ test('loads listings from the ManageBuilding feed', async () => {
     requestedUrls.push(url);
     return { ok: true, text: async () => xml } as Response;
   };
-  const feed = new ManageBuildingFeed(
-    parser,
-    'https://example.com/listings.xml',
-    fetchFn as typeof fetch,
-  );
+  const feed = new ManageBuildingFeed(parser, fetchFn as typeof fetch);
 
   // Act
   const listings = await feed.getListings();
 
   // Assert
-  assert.deepEqual(requestedUrls, ['https://example.com/listings.xml']);
+  assert.deepEqual(requestedUrls, [ManageBuildingFeed.FEED_URL]);
   assert.equal(listings.length, 1);
   assert.equal(listings[0]?.id, 'abc123');
   assert.equal(listings[0]?.rent, 1500);
   assert.equal(listings[0]?.address.line1, '12 Main Street');
 });
 
-test('falls back to the CORS proxy after a failed direct request', async () => {
+test('falls back to the CORS proxies in fixed order after failed requests', async () => {
   // Arrange
   const { ManageBuildingFeed } = await loadFeed();
   const requestedUrls: string[] = [];
   const fetchFn = async (url: string) => {
     requestedUrls.push(url);
-    if (requestedUrls.length === 1) return { ok: false, text: async () => '' } as Response;
+    if (requestedUrls.length <= 2) return { ok: false, text: async () => '' } as Response;
     return {
       ok: true,
       text: async () => JSON.stringify({ contents: '<Property><id>proxy</id></Property>' }),
     } as Response;
   };
-  const feed = new ManageBuildingFeed(
-    { parse: () => [] },
-    'https://example.com/listings.xml',
-    fetchFn as typeof fetch,
-  );
+  const feed = new ManageBuildingFeed({ parse: () => [] }, fetchFn as typeof fetch);
 
   // Act
   const xml = await feed.fetchXml();
 
   // Assert
-  assert.equal(requestedUrls.length, 2);
-  assert.match(requestedUrls[1]!, /^https:\/\/corsproxy\.io\/\?/);
+  assert.deepEqual(requestedUrls, [
+    ManageBuildingFeed.FEED_URL,
+    `https://corsproxy.io/?${encodeURIComponent(ManageBuildingFeed.FEED_URL)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(ManageBuildingFeed.FEED_URL)}`,
+  ]);
   assert.match(xml, /<Property>/);
 });
 
@@ -122,11 +117,7 @@ test('throws when every feed request fails', async () => {
   const fetchFn = async () => {
     throw new Error('network unavailable');
   };
-  const feed = new ManageBuildingFeed(
-    { parse: () => [] },
-    'https://example.com/listings.xml',
-    fetchFn as typeof fetch,
-  );
+  const feed = new ManageBuildingFeed({ parse: () => [] }, fetchFn as typeof fetch);
 
   // Act and assert
   await assert.rejects(feed.fetchXml(), {

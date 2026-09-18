@@ -121,8 +121,10 @@ Keep changes within the project boundaries described in the migration plan:
 
 - Put pure listing rules and types in `src/domain/`; domain modules must not import Lit,
   DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- Put orchestration and view state in `src/application/`. `ListingController` owns feed
-  loading, cancellation, filtering, and dialog requests for the listing container.
+- Put orchestration and view state in `src/application/`. `ListingFeedLoader` owns feed
+  loading and cancellation behind an explicit `setFeed()` port; `ListingFilterStore` owns
+  filter criteria and derives visible listings and location groups from the loader's
+  loaded listings. The container composes the two.
 - Define capabilities in `src/ports/` and implement them in `src/adapters/`. Application code
   depends on ports rather than concrete adapters.
 - Keep Lit custom elements in `src/components/`. Components render state and emit semantic
@@ -145,12 +147,12 @@ Keep changes within the project boundaries described in the migration plan:
   flat with explicit classes; nest only states, modifiers, pseudo-elements, and responsive
   contexts; maximum nesting depth is 3; always include `&` when chaining pseudo-classes,
   compound classes, or reversed context. Never use Sass-style `&__child` concatenation.
-- The adapter-backed details dialog is styled by its adapter, not by a component or the
+- The adapter-backed details popover is styled by its adapter, not by a component or the
   composition root. `BrowserDetailsDialog` owns `src/adapters/browser-details-dialog.css` and
   applies it once per document as a constructed stylesheet (plain `<style>` fallback only when
-  unsupported). The dialog stylesheet mirrors the tokens it needs under `:root` with literal
+  unsupported). The popover stylesheet mirrors the tokens it needs under `:root` with literal
   `var()` fallbacks: `:host` tokens do not resolve in light DOM, and unresolved tokens rendered
-  the dialog transparent in an earlier attempt.
+  the overlay transparent in an earlier attempt.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries instead of
   inventing repeated validation helpers. Bundle it for the external embed; do not add a second
   runtime validation library for the same boundary. The lightweight-dependency constraint applies
@@ -194,22 +196,37 @@ Filtering preserves source order and does not mutate the input. Missing bedroom 
 values are rejected at the domain construction boundary rather than guessed by the filtering
 layer.
 
-## Card, dialog, and details-iframe policy
+## Card, popover, and details-iframe policy
 
 Each listing card renders a single stretched link to the canonical details URL from
 `getListingDetailsUrl()` in `src/config/application.ts`. An unmodified primary click on a fine
-pointer cancels navigation and opens the dialog through the `DetailsDialog` port instead;
-coarse pointers and modified clicks (new-tab gestures) fall through to normal link navigation,
-while environments without pointer detection keep the dialog path. The `hidenav` chromeless variant is iframe-only and must
-never appear in card links. Dialog headers are prefixed with the listing location
+pointer stops at the card and dispatches a cancelable, composed
+`listing-details-requested` event; the container opens the `DetailsDialog` port and, only when
+the dialog reports it handled the request, cancels the click so the anchor never navigates.
+If no dialog is wired (standalone card) or it declines (popover unsupported), the anchor keeps
+its default navigation: coarse pointers and modified clicks (new-tab gestures) also fall through
+to normal link navigation, so old browsers and touch-first hosts degrade to the canonical link.
+The `hidenav` chromeless variant is iframe-only and must
+never appear in card links. Popover headers are prefixed with the listing location
 (`formatDialogTitle()`), using the same region/area vocabulary as the card.
 
+The details overlay is a native Popover API element (`div[popover="auto"]`, `role="dialog"`) that
+gives cross-browser backdrop, `Esc`, and light-dismiss without the Chromium-only `closedby`.
+`BrowserDetailsDialog` mirrors the platform open/closed state from the `toggle` event, hands the
+triggering card to `showPopover({ source })` for native focus return, resets the cross-origin
+iframe to `about:blank` on close, and mounts nothing at all when `showPopover` is unsupported
+(the port returns `false` so the card navigates instead).
+
 `<listing-details>` is the standalone iframe-to-listing element. It accepts
-`listing-id` with a `src` override, resolves both through the same canonical URL
-helpers, always forces `hidenav` for its iframe, and validates external URLs
-before rendering. It never replaces the dialog; it is for hosts that want a
-bare embeddable details view.
+`listing-id` with a `src` override, and resolves both through
+`resolveDetailsIframeUrl()` in `src/config/application.ts`: the src override is
+accepted only when HTTPS on exactly the ManageBuilding canonical origin (a host-supplied
+`base-url` never widens iframe origins; it affects listing-id resolution only), the listing-id
+path segment is always URL-encoded, and both always force `hidenav` for the
+iframe. Blank `src` and blank `listing-id` fall through to the other input. Invalid or missing
+input renders an error state without an iframe. It
+never replaces the popover; it is for hosts that want a bare embeddable details view.
 
 Cards render client-side, so true no-script operation still shows no listings; the anchor
-provides dialog-failure degradation, new-tab and copy-link behavior, and crawlable links, not
+provides popover-failure degradation, new-tab and copy-link behavior, and crawlable links, not
 full no-script rendering.
