@@ -33,7 +33,7 @@
 
 ## Tooling Commands
 
-- Copilot MUST strongly prefer repository-defined `mise` tasks (`mise run <task>`) over direct `npm`, `npx`, `node`, or tool-binary invocations. Within `mise.toml` task definitions, `aube` is the preferred tool.
+- Copilot MUST strongly prefer repository-defined `mise` tasks (`mise run <task>`) over direct `npm`, `npx`, `node`, or tool-binary invocations. Within `mise.toml` task definitions, call bare binaries; `mise` provides them via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`).
 - Use the relevant task for every routine workflow: `mise run test-unit`, `mise run test-integration`, `mise run test`, `mise run typecheck`, `mise run lint`, `mise run format-check`, `mise run build`, or `mise run check`.
 - Do not bypass an existing `mise` task with an equivalent direct command, even when the direct command appears shorter.
 - Direct package-manager, runtime, or tool commands are permitted only when no suitable `mise` task exists or when diagnosing a failed `mise` task.

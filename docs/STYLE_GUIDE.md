@@ -259,7 +259,8 @@ The host page owns surrounding branding and layout. The component owns its inter
 ships its styles through the bundled entrypoint.
 
 For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
-`docs/DEVELOPMENT.md`. Within `mise.toml`, `aube` is the preferred tool.
+`docs/DEVELOPMENT.md`. Within `mise.toml`, call bare binaries; `mise` provides them via
+`node_modules/.bin` on `PATH`.
 
 ## Address display policy
 

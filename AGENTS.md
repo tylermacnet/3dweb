@@ -2,7 +2,14 @@
 
 ## Commands — always use `mise run <task>`
 
-Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Use `mise run <task>` for every workflow. Within task definitions, `aube` is the preferred tool for executing commands.
+Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Use `mise run <task>` for every workflow. Within task definitions, call bare binaries (`esbuild`, `prettier`, `oxlint`, `tsc`, `node`); `mise` provides them via `node_modules/.bin` on `PATH` (`[env] _.path`) and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+
+## Onboarding — only `mise` is required
+
+1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
+2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
+3. `mise run chat` launches OpenCode with the project toolchain and TypeScript LSP.
+4. Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`).
 
 | Task                                   | Purpose                                             |
 | -------------------------------------- | --------------------------------------------------- |
@@ -83,6 +90,8 @@ After every migration phase or major change, complete all five steps before decl
 ## Important files
 
 - `mise.toml` — task definitions (source of truth for all commands).
+- `mise.lock` — pinned toolchain versions (commit updates).
+- `.opencode/opencode.json` — project TypeScript LSP (`mise exec` wrapper, committed).
 - `src/index.tsx` — composition root, single entrypoint.
 - `src/config/application.ts` — shared details URL, iframe variant, dialog title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.

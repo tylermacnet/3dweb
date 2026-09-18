@@ -9,7 +9,7 @@ testable, and usable.
 
 The target follows 2026 web engineering practices:
 
-- Use the `mise` task manager for all development workflows. Within `mise.toml`, `aube` is the preferred tool. Run `mise run <task>` from the repository root.
+- Use the `mise` task manager for all development workflows. Within `mise.toml`, call bare binaries; `mise` provides them via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`). Run `mise run <task>` from the repository root.
 
 - Keep business rules framework-agnostic and deterministic.
 - Prefer native browser and platform APIs over unnecessary runtime dependencies; lightweight

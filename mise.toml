@@ -1,43 +1,56 @@
-[tools]
-node = "latest"
-opencode = "latest"
-aube = "latest"
+min_version = "2026.9.11"
 
+[tools]
+node = "26.9.0"
+aube = "2.2.17"
+opencode = "1.18.31"
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+# Built-in [deps.aube] requires aube-lock.yaml to exist, which this project
+# will never have (aube reads/writes package-lock.json in place). A custom
+# provider with explicit sources/outputs/run has no such precondition.
+[deps.install]
+auto = true
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules/"]
+run = "aube install"
 
 [tasks.build]
 description = "Bundle the web component and its CSS"
-run = "aube exec -- esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js"
+run = "esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js"
 
 [tasks.watch]
 description = "Watch source files and rebuild the bundle"
-run = "aube exec -- esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --watch"
+run = "esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --watch"
 
 [tasks.serve]
 description = "Serve the public directory locally"
-run = "aube exec -- esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000"
+run = "esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000"
 
 [tasks.dev]
 description = "Build, watch, and serve the website locally"
-run = "aube exec -- esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000 --watch"
+run = "esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000 --watch"
 
 [tasks.format]
 description = "Format selected files or the repository"
 usage = 'arg "[files]..." default="." help="Files or directories to format (default: .)"'
-run = "aube exec -- prettier --write {{ usage.files | join(sep=' ') }}"
+run = "prettier --write {{ usage.files | join(sep=' ') }}"
 
 [tasks.format-check]
 description = "Check selected files or the repository"
 usage = 'arg "[files]..." default="." help="Files or directories to check (default: .)"'
-run = "aube exec -- prettier --check {{ usage.files | join(sep=' ') }}"
+run = "prettier --check {{ usage.files | join(sep=' ') }}"
 
 [tasks.lint]
 description = "Lint selected files or the repository"
 usage = 'arg "[files]..." default="." help="Files or directories to lint (default: .)"'
-run = "aube exec -- oxlint {{ usage.files | join(sep=' ') }}"
+run = "oxlint {{ usage.files | join(sep=' ') }}"
 
 [tasks.typecheck]
 description = "Type-check the project"
-run = "aube exec -- tsc --noEmit"
+run = "tsc --noEmit"
 
 [tasks.test]
 description = "Run unit and integration tests"
@@ -46,16 +59,19 @@ depends = ["test-unit", "test-integration"]
 [tasks.test-unit]
 description = "Run selected unit tests or all unit tests"
 usage = 'arg "[files]..." default="test/unit" help="Unit test files or directories (default: test/unit)"'
-run = "aube node --test {{ usage.files | join(sep=' ') }}"
+run = "node --test {{ usage.files | join(sep=' ') }}"
 
 [tasks.test-integration]
 description = "Run selected integration tests or all integration tests"
 usage = 'arg "[files]..." default="test/integration" help="Integration test files or directories (default: test/integration)"'
-run = "aube node --test {{ usage.files | join(sep=' ') }}"
+run = "node --test {{ usage.files | join(sep=' ') }}"
 
 [tasks.check]
 description = "Run all checks and create a production bundle"
 depends = ["format-check", "lint", "typecheck", "test", "build"]
+
+[settings]
+experimental = true
 
 [settings.packslip]
 exec = true

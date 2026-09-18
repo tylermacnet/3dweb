@@ -1,5 +1,20 @@
 # Development workflow
 
+## Onboarding — only `mise` is required
+
+1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
+2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
+3. `mise run chat` launches OpenCode with the project toolchain and TypeScript LSP.
+
+Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock`
+committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
+no extra tool). JS libraries stay in
+`package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them
+(`lit`, `valibot`, `esbuild`, `linkedom`); `mise` auto-installs them through `[deps.install]`
+(backed by pinned `aube`; `package-lock.json` format is preserved) before tasks run,
+so no manual install is needed. Never mix installers in one tree: prune `node_modules/`
+when switching between `npm` and `aube`.
+
 ## Use mise tasks first
 
 Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`. Task definitions are sourced from `mise.toml`.
@@ -22,13 +37,37 @@ Use the task that matches the work:
 | `mise run test-integration [files...]` | Run selected integration tests                           | Optional paths; defaults to `test/integration` |
 | `mise run test`                        | Run all unit and integration tests                       | None                                           |
 | `mise run check`                       | Run formatting, linting, type checking, tests, and build | None                                           |
+| `mise run chat`                        | Launch OpenCode AI agent in local project context        | None                                           |
 
-Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Within `mise.toml` task definitions, `aube` is the preferred tool. Direct commands are permitted only when:
+Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Within `mise.toml` task definitions, call bare binaries (`esbuild`, `prettier`, `oxlint`, `tsc`, `node`); `mise` provides them via `node_modules/.bin` on `PATH` (`[env] _.path`). Direct commands are permitted only when:
 
 1. no suitable `mise` task exists; or
 2. a `mise` task has failed and a direct command is needed to diagnose that failure.
 
 If a direct diagnostic command is necessary, return to the corresponding `mise` task for final validation.
+
+## Toolchain and language server
+
+- `mise.toml` is the source of truth for runtimes, CLIs, env, tasks, and project
+  dependencies (custom `[deps.install]` with `auto = true` runs `aube install` over
+  `package.json`/`package-lock.json` before `mise run`/`mise exec`). A custom provider
+  ID is used because built-in `[deps.aube]` requires an `aube-lock.yaml` this project
+  will never have; aube reads/writes `package-lock.json` in place.
+- Before migrating tooling, prune regenerables (`node_modules/`, `public/dist/`) and
+  orphaned stores (`aube store prune`, `mise prune --yes`); keep `package.json` and
+  `package-lock.json` as the JS pinning source.
+- Project TypeScript LSP lives in `.opencode/opencode.json` and launches the workspace
+  compiler's native server via `mise exec -- tsc --lsp -stdio`. Only the `typescript`
+  server is enabled; lint/type diagnostics come from `mise run lint` / `mise run typecheck`.
+  (`typescript-language-server` cannot be used: it wraps the classic `tsserver.js`,
+  which TypeScript 7 no longer ships. Verified live: pull diagnostics report TS2322
+  and hover resolves symbols; push `publishDiagnostics` was not observed, so the agent
+  loop still prefers the `lint`/`typecheck` tasks for diagnostics.)
+- Verify with `mise ls --current` and `opencode debug config`.
+- Pins are reproducible, not self-updating. To bump to latest releases: `mise self-update --yes`,
+  edit `mise.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
+  for JS deps, then `mise run check` to prove the bumps are safe before committing
+  `mise.toml` + `mise.lock` + `package.json`/`package-lock.json`.
 
 Formatting tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
 
