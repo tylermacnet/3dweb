@@ -27,8 +27,17 @@ The target follows 2026 web engineering practices:
 components -> application -> ports -> domain
 adapters   -> ports       -> domain
 config     -> domain (when configuration describes domain policy)
-index.tsx  -> components, application, adapters, config
+index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
+
+The project ships a library of independent web components for use on external
+sites, not a single rooted app. The single bundle (`public/dist/bundle.js`,
+built from `src/index.tsx`) registers every public element; each element works
+standalone once the bundle is loaded. Public elements: `<property-listings>`,
+`<listing-card>`, `<listing-filters>`, and `<listing-details>` (planned
+iframe-to-listing element). Future listing views (for example a map-based plan)
+reuse the same `domain`/`application`/`ports`/`adapters`/`config` layers with a
+new component, without changing existing elements.
 
 ### Layers and responsibilities
 
@@ -45,10 +54,12 @@ index.tsx  -> components, application, adapters, config
   business-rule implementations.
 - **Configuration (`src/config/`)**: Typed, immutable product policy such as regions
   and filter definitions. Configuration is not a substitute for domain logic.
-- **Composition roots (`src/*.tsx`)**: Each deployable component or demo entry point
-  creates its concrete adapters and wires dependencies explicitly. Entry points
-  register only the components and dependencies needed by that surface and do not
-  own component presentation styles.
+- **Bundle entry (`src/index.tsx`)**: The single static entry point registers all
+  public elements and assembles their safe port defaults (feed, parser, dialog).
+  It owns no presentation styles and is not a component. Each public element
+  accepts its ports via properties/attributes so it works standalone on an
+  external site; `property-listings` composes `listing-card` and
+  `listing-filters` but does not own them.
 
 ### SOLID and dependency rules
 
@@ -61,7 +72,8 @@ index.tsx  -> components, application, adapters, config
 - **Interface Segregation**: Keep ports narrow (`ListingFeed`, `ListingParser`,
   `DetailsDialog`) so consumers depend only on capabilities they use.
 - **Dependency Inversion**: Application code depends on ports; concrete adapters are
-  supplied by the composition root for the specific component or demo surface.
+  supplied per element via properties/attributes, with safe defaults assembled in
+  the bundle entry.
 
 No layer may reach around an adjacent layer, import from a more concrete layer, or
 duplicate a rule already owned by the domain/configuration layer.
@@ -79,9 +91,10 @@ duplicate a rule already owned by the domain/configuration layer.
 - Use singular domain concepts (`Listing`, `Address`) and plural collections
   (`listings`).
 - Preserve lowercase custom-element names and match the public element contract:
-  `<listing-card>`, `<listing-filters>`, and `<property-listings>`. The details
-  experience is currently implemented by the `BrowserDetailsDialog` adapter rather
-  than a custom element.
+  `<property-listings>`, `<listing-card>`, `<listing-filters>`, and
+  `<listing-details>` (planned). The dialog experience stays behind the
+  `DetailsDialog` port and `BrowserDetailsDialog` adapter; `listing-details` is
+  the standalone iframe-to-listing element and never replaces the dialog.
 - Keep one primary public concept per file. Co-locate a component stylesheet only
   when it is owned exclusively by that component.
 
@@ -192,23 +205,36 @@ documentation, and coverage reviews are required process steps.
    - Add DOM integration tests for rendering, events, accessibility attributes,
      and keyboard interactions.
 
-8. **Phase 8: Compose the container and dependencies**
-   - Build `property-listings` and wire concrete dependencies in its entry point.
-   - Keep dependency construction in the relevant composition root; do not introduce a
-     service locator, global mutable singleton, or DI framework.
+8. **Phase 8: Compose the public surface and bundle entry**
+   - Finish `property-listings` and implement `listing-details` (simple
+     iframe-to-listing element accepting `listing-id` with a `src` override;
+     builds the canonical details URL from `src/config/application.ts` and
+     forces the iframe-only `hidenav` variant).
+   - Expose all four public elements (`property-listings`, `listing-card`,
+     `listing-filters`, `listing-details`) as independent embeds from the
+     single bundle; there is no root component. Keep default port construction
+     in the bundle entry; do not introduce a service locator, global mutable
+     singleton, or DI framework.
    - Keep component-owned CSS in the owning component and preserve public
-     custom-element contracts; keep entry points limited to composition and registration.
+     custom-element contracts; keep the entry limited to registration and safe
+     defaults.
    - Add integration coverage for loading, success, empty, error, retry, and
-     filter-to-render flows.
+     filter-to-render flows, plus `listing-details` URL resolution (`listing-id`
+     vs `src`), `hidenav` enforcement, and invalid-URL handling.
 
 9. **Phase 9: Update the host page and verify parity**
-   - Update `public/index.html` to consume the new bundle and preserve the host
-     page's responsibilities for branding, layout, and navigation.
+   - Update `public/index.html` to consume the single bundle and demonstrate
+     each public element independently while preserving the host page's
+     responsibilities for branding, layout, and navigation.
    - Compare behavior against `public/test.html`: data, filters, details
-     interaction, responsive layout, loading, empty, and error states.
+     interaction, responsive layout, loading, empty, and error states. Copy
+     functionality while improving artifacts to modern standards (Lit
+     templates, Valibot boundaries, `AbortSignal.timeout(5000)`, token CSS).
    - Keep migration-only surfaces such as `public/migration.html` and
      `phase-five-harness` out of the production listings API.
-   - Record any intentional parity differences and their user-facing rationale.
+   - Record intentional parity differences and their user-facing rationale:
+     sorting stays out of scope; ambiguous/unknown locations resolve to
+     explicit `OTHER` outcomes instead of the legacy first-match fallback.
 
 ## Post-Migration Quality Gates
 

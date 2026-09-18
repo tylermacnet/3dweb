@@ -177,9 +177,12 @@
         <p class="eyebrow">Migration status</p>
         <h1>Migration report</h1>
         <p>
-          Phases 1–7 are complete, including focused presentation components with an adapter-styled
-          details dialog, stretched-link cards with pointer-gated dialog behavior, and
-          contrast-hardened text; sorting is intentionally out of scope. Phases 4–5 remain under
+          The project ships a library of independent web components with no root component:
+          <code>property-listings</code>, <code>listing-card</code>, <code>listing-filters</code>,
+          and the planned iframe-to-listing <code>listing-details</code>, all registered by the
+          single bundle. Phases 1–7 are complete, including focused presentation components with an
+          adapter-styled details dialog, stretched-link cards with pointer-gated dialog behavior,
+          and contrast-hardened text; sorting is intentionally out of scope. Phases 4–5 remain under
           review against the parser-error, adapter-resilience, and coverage requirements.
         </p>
         <a href="./index.html">Back to property listings</a>
@@ -225,7 +228,7 @@
           </li>
           <li class="phase planned">
             <span class="phase-number" aria-hidden="true">8</span>
-            <span>Container and dependency wiring</span>
+            <span>Public surface and bundle entry</span>
             <strong class="phase-status">Planned</strong>
           </li>
           <li class="phase planned">

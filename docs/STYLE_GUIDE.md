@@ -209,7 +209,7 @@ Use CSS media queries inside the component stylesheet, nested directly inside th
 element's rule. Component-owned styles must be declared
 by the owning Lit component with `componentStyles()` from `src/styles/component-styles.ts` (the
 project's single `unsafeCSS` trust boundary for first-party build-time CSS) and bundled through
-`src/index.tsx`; the composition root must not own presentation styles. See
+the single bundle entry; the bundle entry must not own presentation styles. See
 `docs/DEVELOPMENT.md` for the native-nesting rules (`:host` boundary, flat internals, states and
 responsive contexts only, max depth 3). The adapter-backed
 details dialog is the exception: it lives in light DOM, so `BrowserDetailsDialog` owns
@@ -238,25 +238,29 @@ as the public theming API.
 
 ## Implementation Boundaries
 
-Production-facing custom elements should remain focused:
+Production-facing custom elements are independent; there is no root component.
+Each works standalone on an external site once the single bundle is loaded:
 
-- `property-listings`: filters and listings only
-- `listing-filters`: filter controls and configured options
-- `listing-card`: one listing presentation
+- `property-listings`: filters and listings only (composes `listing-card` and `listing-filters`)
+- `listing-filters`: filter controls and configured options, usable standalone
+- `listing-card`: one listing presentation, usable standalone
+- `listing-details` (planned): standalone iframe-to-listing element accepting `listing-id` with a `src` override
 - `public/migration.html`: static development/demo migration report; never part of the production
   listings API
 - `src/components/phase-five-harness.ts`: migration debugging harness; never part of the production
   listings API
 
 Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
-The controller depends on `ListingFeed` and `DetailsDialog` ports, while concrete
-implementations are wired by `src/index.tsx`. The browser details experience is currently an
-adapter-backed dialog, not a `property-dialog` custom element. Shared details concerns live in
-`src/config/application.ts`: the canonical details URL (used by both the card link and the
-adapter), the iframe-only `hidenav` variant, and the location-prefixed dialog title.
+The controller depends on `ListingFeed` and `DetailsDialog` ports, while safe
+defaults are assembled in the bundle entry (`src/index.tsx`) and overridable per
+element. The browser details experience is an adapter-backed dialog, not a
+`property-dialog` custom element. Shared details concerns live in
+`src/config/application.ts`: the canonical details URL (used by the card link,
+the adapter, and `listing-details`), the iframe-only `hidenav` variant, and the
+location-prefixed dialog title.
 
-The host page owns surrounding branding and layout. The component owns its internal presentation and
-ships its styles through the bundled entrypoint.
+The host page owns surrounding branding and layout. Each component owns its internal presentation and
+ships its styles through the single bundle; the bundle entry itself owns no styles.
 
 For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
 `docs/DEVELOPMENT.md`. Within `mise.toml`, call bare binaries; `mise` provides them via

@@ -4,18 +4,18 @@
 
 - Migrate iteratively from `public/test.html` into vertical slices under `src/`.
 - Architecture Layers: `components -> application -> ports -> domain` and `adapters -> ports -> domain`.
-- Static Embed Constraints: Single entrypoint at `src/index.tsx`. Do NOT introduce DI framework containers or server runtimes. Explicit TypeScript wiring only.
+- Static Embed Constraints: Single bundle entry at `src/index.tsx` registers all public elements (`property-listings`, `listing-card`, `listing-filters`, `listing-details`). There is no root component; each element must work standalone on an external site. Do NOT introduce DI framework containers or server runtimes. Each element accepts its ports via properties/attributes with safe defaults assembled in the bundle entry.
 - Strict Domain Purity: Domain modules MUST NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals (`window`, `document`).
 
 ## Technical Stack & Mechanics
 
 - UI Layer: Lit framework (`lit`). Use Lit HTML templates (`html```); never use manual string `innerHTML` concatenation.
-- Components: Extend base classes via post-construction/constructor controller wiring orLit properties. Preserve lowercase custom element contracts (e.g., `<listing-card>`, `<property-listings>`).
+- Components: Extend base classes via post-construction/constructor controller wiring or Lit properties. Preserve lowercase custom element contracts (`<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>`). Copy functionality from `public/test.html` while improving artifacts to modern standards: Lit templates, Valibot boundaries, `AbortSignal.timeout(5000)`, token-based CSS. Sorting stays intentionally out of scope.
 - State Management: Encapsulate application/UI state inside Lit `ReactiveController` instances.
 - CSS Handling: Import component-owned CSS from the component that owns the styles using
   `componentStyles()` from `src/styles/component-styles.ts` (the project's only `unsafeCSS`
-  call site; first-party build-time CSS only); the composition root should only register
-  components and wire dependencies. The light-DOM details dialog is styled by its adapter via
+  call site; first-party build-time CSS only); the bundle entry only registers
+  components and assembles safe port defaults. The light-DOM details dialog is styled by its adapter via
   a constructed stylesheet, never by the composition root.
 - Network Resilience: Use `AbortSignal.timeout(5000)` instead of manual timer clearing.
 - Dependency policy: keep shipped runtime dependencies lightweight and purposeful; development-only

@@ -35,19 +35,19 @@ Direct commands are only allowed when no `mise` task exists or when diagnosing a
 components -> application -> ports -> domain
 adapters   -> ports       -> domain
 config     -> domain
-index.tsx  -> composition root (wires everything)
+index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
 
 - **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
 - **Application** (`src/application/`): `ListingController` is a Lit `ReactiveController` — owns feed loading, cancellation, filtering, dialog requests.
 - **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsDialog`).
 - **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser dialog).
-- **Components** (`src/components/`): Lit custom elements, presentational only. Lowercase kebab-case names (`<listing-card>`, `<listing-filters>`, `<property-listings>`).
-- **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions).
+- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (planned iframe-to-listing element). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `property-listings` composes `listing-card` and `listing-filters` but does not own them.
+- **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs).
 
 ## Key constraints
 
-- No DI containers, service locators, or global singletons. Explicit TypeScript wiring only in `src/index.tsx`.
+- No DI containers, service locators, or global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled in the bundle entry. No root component.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
 - CSS is component-owned: imported via `componentStyles()` in the owning component's `static styles`.
   `src/styles/component-styles.ts` is the only `unsafeCSS` call site (first-party build-time CSS only).
@@ -92,7 +92,7 @@ After every migration phase or major change, complete all five steps before decl
 - `mise.toml` — task definitions (source of truth for all commands).
 - `mise.lock` — pinned toolchain versions (commit updates).
 - `.opencode/opencode.json` — project TypeScript LSP (`mise exec` wrapper, committed).
-- `src/index.tsx` — composition root, single entrypoint.
+- `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
 - `src/config/application.ts` — shared details URL, iframe variant, dialog title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
 - `src/adapters/browser-details-dialog.css` — adapter-owned dialog styles.

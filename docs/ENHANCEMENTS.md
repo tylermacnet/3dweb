@@ -23,4 +23,13 @@ test discovery, reporting, execution time, dependency maintenance, and duplicate
 If adopted, provide a dedicated `mise run test-bdd` task and include it in the appropriate
 quality gate without making Cucumber a runtime or production-bundle dependency.
 
+## Alternative listing views (for example map-based)
+
+Alternative presentations are not current scope but are anticipated as new
+independent components on the same layers: reuse `domain`, `ListingController`
+(or a sibling controller), `ports`, `adapters`, and `config`, add one
+`src/components/*` element, register it in the single bundle entry, and demo it
+independently. Do not add a root component or couple the new view to
+`property-listings`.
+
 For the full command reference and architecture constraints, see `AGENTS.md`.

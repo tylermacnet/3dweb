@@ -81,9 +81,11 @@ accepting no arguments intentionally keep their project configuration fixed; use
 such as `format`, `lint`, or a test task when selecting files.
 
 The demo host page at `public/index.html` consumes only the generated
-`public/dist/bundle.js` artifact, matching how an external site embeds the component. It must not
-reference TypeScript source files or development/watch scripts. Use `mise run dev` or
-`mise run serve` for local development; those tasks build the artifact before serving it.
+`public/dist/bundle.js` artifact, matching how an external site embeds any subset
+of the library (`<property-listings>`, `<listing-card>`, `<listing-filters>`,
+`<listing-details>`). It must not reference TypeScript source files or
+development/watch scripts. Use `mise run dev` or `mise run serve` for local
+development; those tasks build the artifact before serving it.
 
 When `public/index.html` is opened directly from `file://`, the page displays a development notice:
 the bundled client still executes, but successful live feed requests require an HTTP(S) origin.
@@ -125,12 +127,17 @@ Keep changes within the project boundaries described in the migration plan:
   depends on ports rather than concrete adapters.
 - Keep Lit custom elements in `src/components/`. Components render state and emit semantic
   events; they do not fetch feeds or implement business rules.
-- Keep concrete dependency construction in the composition root for the relevant component or
-  demo entry point. Multiple independent components may have separate static entry points; do
-  not add a service locator, global singleton, or dependency-injection framework.
+- There is no root component. The single bundle entry (`src/index.tsx`) registers
+  all public elements (`property-listings`, `listing-card`, `listing-filters`,
+  `listing-details`) so each works standalone on an external site. Assemble safe
+  port defaults in the bundle entry and let hosts override them per element via
+  properties/attributes; do not add a service locator, global singleton, or
+  dependency-injection framework. Future listing views (for example a map-based
+  plan) add a new component on the same layers without changing existing
+  elements.
 - Component styles belong to their owning component and are bundled through that component's
-  `static styles` via `componentStyles()` from `src/styles/component-styles.ts`; composition
-  entry points should not own presentation styles. `componentStyles()` is the project's only
+  `static styles` via `componentStyles()` from `src/styles/component-styles.ts`; the bundle
+  entry must not own presentation styles. `componentStyles()` is the project's only
   `unsafeCSS` call site: pass only first-party `.css` bundled at build time, never runtime,
   user, or feed-derived strings.
 - Write stylesheets with native CSS nesting (Baseline): `:host` is the encapsulation boundary
@@ -187,7 +194,7 @@ Filtering preserves source order and does not mutate the input. Missing bedroom 
 values are rejected at the domain construction boundary rather than guessed by the filtering
 layer.
 
-## Card and dialog policy
+## Card, dialog, and details-iframe policy
 
 Each listing card renders a single stretched link to the canonical details URL from
 `getListingDetailsUrl()` in `src/config/application.ts`. An unmodified primary click on a fine
@@ -196,6 +203,12 @@ coarse pointers and modified clicks (new-tab gestures) fall through to normal li
 while environments without pointer detection keep the dialog path. The `hidenav` chromeless variant is iframe-only and must
 never appear in card links. Dialog headers are prefixed with the listing location
 (`formatDialogTitle()`), using the same region/area vocabulary as the card.
+
+`<listing-details>` is the standalone iframe-to-listing element. It accepts
+`listing-id` with a `src` override, resolves both through the same canonical URL
+helpers, always forces `hidenav` for its iframe, and validates external URLs
+before rendering. It never replaces the dialog; it is for hosts that want a
+bare embeddable details view.
 
 Cards render client-side, so true no-script operation still shows no listings; the anchor
 provides dialog-failure degradation, new-tab and copy-link behavior, and crawlable links, not
