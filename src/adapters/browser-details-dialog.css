@@ -29,16 +29,42 @@
   background: var(--dialog-bg);
   color: var(--dialog-ink);
   box-shadow: 0 0.625rem 1.5625rem rgb(0 0 0 / 20%);
+  transition:
+    opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    display 0.15s allow-discrete,
+    overlay 0.15s allow-discrete;
 
   &::backdrop {
     background: rgb(15 23 42 / 60%);
     backdrop-filter: blur(0.25rem);
+    opacity: 1;
+    transition:
+      opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      display 0.15s allow-discrete,
+      overlay 0.15s allow-discrete;
   }
 }
 
 @starting-style {
+  .sc-property-dialog:popover-open {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+
   .sc-property-dialog:popover-open::backdrop {
-    background-color: transparent;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-property-dialog,
+  .sc-property-dialog::backdrop {
+    transition: none;
+  }
+
+  .sc-property-dialog:popover-open {
+    transform: none;
   }
 }
 
@@ -99,4 +125,46 @@
   flex: 1;
   width: 100%;
   border: none;
+}
+
+.sc-dialog-iframe[hidden] {
+  display: none;
+}
+
+/* Loading skeleton: same slot as the iframe so the swap paints no shift. */
+.sc-dialog-skeleton {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: var(--dialog-soft);
+
+  &[hidden] {
+    display: none;
+  }
+
+  & .skeleton-line {
+    height: 1rem;
+    border-radius: 0.375rem;
+    background: var(--dialog-line);
+    animation: sc-skeleton-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes sc-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-dialog-skeleton .skeleton-line {
+    animation: none;
+  }
 }

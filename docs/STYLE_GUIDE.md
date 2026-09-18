@@ -233,6 +233,8 @@ as the public theming API.
 - Name the details popover from its visible listing title (`aria-labelledby`), not a generic label.
 - Use `role="status"` and `aria-live` for changing result counts and loading states.
 - Provide visible `:focus-visible` indicators with at least a `2px` outline and offset.
+- Keep overlay motion short (at most `0.2s`, ease-out, opacity/transform only) and disable it
+  entirely under `prefers-reduced-motion` (including any residual transform).
 - Preserve readable contrast for all text and controls.
 - Do not use color alone to communicate loading, empty, error, or active states.
 

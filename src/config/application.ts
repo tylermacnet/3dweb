@@ -60,6 +60,26 @@ export function resolveDetailsIframeUrl(options: DetailsIframeUrlOptions): strin
   return null;
 }
 
+/**
+ * Derives the chromeless iframe URL for a card anchor href. Used for
+ * hover/focus prefetch: the anchor carries the plain details URL while the
+ * iframe loads the `hidenav` variant (a different cache key), so prefetching
+ * the href itself would warm the wrong entry. Returns null for anything off
+ * the canonical origin so prefetch never touches a host-controlled URL.
+ */
+export function hideNavVariantOf(href: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') return null;
+  if (url.origin !== new URL(DETAILS_BASE_URL).origin) return null;
+  url.searchParams.set('hidenav', 'true');
+  return url.toString();
+}
+
 /** Dialog header title: location prefix (same vocabulary as the card) + address. */
 export function formatDialogTitle(listing: Listing): string {
   const location = [cleanRegionName(listing.address.regionName), listing.address.areaName]

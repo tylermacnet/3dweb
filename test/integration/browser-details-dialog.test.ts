@@ -152,6 +152,41 @@ test('opens listing details in a chromeless auto popover iframe', async () => {
       'https://example.com/details/listing-42?hidenav=true',
     );
     assert.match(iframe?.getAttribute('src') ?? '', /hidenav=true/);
+    assert.equal(iframe?.getAttribute('fetchpriority'), 'high');
+  } finally {
+    dom.restore();
+  }
+});
+
+test('covers the shell with a skeleton until the live document paints', async () => {
+  // Arrange
+  const { BrowserDetailsDialog } = await dialogModule();
+  const dom = installDialogDom();
+
+  try {
+    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+
+    // Act
+    detailsDialog.open(listing);
+
+    // Assert: busy shell while the cross-origin navigation is in flight.
+    const panel = document.querySelector('[popover="auto"]');
+    const skeleton = panel?.querySelector('.sc-dialog-skeleton');
+    const iframe = document.querySelector('iframe');
+    assert.equal(panel?.getAttribute('aria-busy'), 'true');
+    assert.ok(skeleton);
+    assert.equal(skeleton?.getAttribute('aria-hidden'), 'true');
+    assert.equal((skeleton as HTMLElement | null)?.hidden, false);
+    assert.equal((iframe as unknown as { hidden: boolean } | null)?.hidden, true);
+
+    // Act: the live document reports its first paint.
+    iframe?.dispatchEvent(new dom.window.Event('load'));
+
+    // Assert: skeleton retires, frame takes the slot with no layout shift.
+    assert.equal(panel?.getAttribute('aria-busy'), null);
+    assert.equal((skeleton as HTMLElement | null)?.hidden, true);
+    assert.equal((iframe as unknown as { hidden: boolean } | null)?.hidden, false);
+    assert.match(iframe?.title ?? '', /144 King Street Unit 3/);
   } finally {
     dom.restore();
   }
@@ -188,6 +223,7 @@ test('names the popover from its visible header with an icon close action', asyn
 
     // Act
     detailsDialog.open(listing);
+    document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
 
     // Assert
     const panel = document.querySelector('[popover="auto"]');
@@ -206,7 +242,7 @@ test('names the popover from its visible header with an icon close action', asyn
   }
 });
 
-test('closing resets the iframe so the cross-origin page stops running', async () => {
+test('reopens the same listing with no new navigation', async () => {
   // Arrange
   const { BrowserDetailsDialog } = await dialogModule();
   const dom = installDialogDom();
@@ -214,16 +250,118 @@ test('closing resets the iframe so the cross-origin page stops running', async (
   try {
     const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
     detailsDialog.open(listing);
-
-    // Act
+    document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
     detailsDialog.close();
 
+    // Act: reopen the same listing while the document is retained.
+    const handled = detailsDialog.open(listing);
+
+    // Assert: reshown with the live document, no second navigation.
+    assert.equal(handled, true);
+    assert.equal(
+      document.querySelector('iframe')?.getAttribute('src'),
+      'https://example.com/details/listing-42?hidenav=true',
+    );
+    assert.equal(dom.calls.filter((call) => call.method === 'show').length, 2);
+    assert.equal(document.querySelector('[popover="auto"]')?.getAttribute('aria-busy'), null);
+  } finally {
+    dom.restore();
+  }
+});
+
+test('navigates when opening a different listing', async () => {
+  // Arrange
+  const { BrowserDetailsDialog } = await dialogModule();
+  const dom = installDialogDom();
+
+  try {
+    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    detailsDialog.open(listing);
+    document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
+
+    // Act
+    detailsDialog.open({ ...listing, id: 'listing-7' });
+
+    // Assert: the shell returns to loading for the new document.
+    assert.equal(
+      document.querySelector('iframe')?.getAttribute('src'),
+      'https://example.com/details/listing-7?hidenav=true',
+    );
+    assert.equal(document.querySelector('[popover="auto"]')?.getAttribute('aria-busy'), 'true');
+  } finally {
+    dom.restore();
+  }
+});
+
+test('discards the retained document only after it sits unused', async () => {
+  // Arrange
+  const { BrowserDetailsDialog } = await dialogModule();
+  const dom = installDialogDom();
+
+  try {
+    const detailsDialog = new BrowserDetailsDialog('https://example.com/details', 20);
+    detailsDialog.open(listing);
+    detailsDialog.close();
+
+    // Act: let the idle window expire.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
     // Assert
-    const panel = document.querySelector('[popover="auto"]') as HTMLElement | null;
-    assert.ok(panel);
-    assert.equal(dom.calls[1]?.method, 'hide');
-    assert.equal(dom.openPopovers.has(panel), false);
     assert.equal(document.querySelector('iframe')?.getAttribute('src'), 'about:blank');
+  } finally {
+    dom.restore();
+  }
+});
+
+test('cancels the discard when the listing reopens in time', async () => {
+  // Arrange
+  const { BrowserDetailsDialog } = await dialogModule();
+  const dom = installDialogDom();
+
+  try {
+    const detailsDialog = new BrowserDetailsDialog('https://example.com/details', 30);
+    detailsDialog.open(listing);
+    detailsDialog.close();
+
+    // Act: reopen before the idle window expires, then outlive it.
+    detailsDialog.open(listing);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    // Assert: the live document survived because the timer was cancelled.
+    assert.equal(
+      document.querySelector('iframe')?.getAttribute('src'),
+      'https://example.com/details/listing-42?hidenav=true',
+    );
+  } finally {
+    dom.restore();
+  }
+});
+
+test('warm premounts, styles, and preconnects exactly once', async () => {
+  // Arrange
+  const { BrowserDetailsDialog } = await dialogModule();
+  const dom = installDialogDom();
+
+  try {
+    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+
+    // Act
+    detailsDialog.warm();
+    detailsDialog.warm();
+
+    // Assert
+    assert.equal(document.querySelectorAll('[popover="auto"]').length, 1);
+    assert.equal(
+      document.querySelectorAll('link[rel="preconnect"][href="https://example.com"]').length,
+      1,
+    );
+
+    // Act: opening after a warm reuses the mounted shell.
+    const handled = detailsDialog.open(listing);
+
+    // Assert
+    assert.equal(handled, true);
+    assert.equal(document.querySelectorAll('[popover="auto"]').length, 1);
   } finally {
     dom.restore();
   }
@@ -290,6 +428,10 @@ test('adopts the popover stylesheet exactly once with opaque token fallbacks', a
     assert.match(adopted[0].cssText, /background:\s*var\(--dialog-bg\)/);
     assert.match(adopted[0].cssText, /&::backdrop\s*\{[^}]*background:\s*rgb\(15 23 42 \/ 60%\)/);
     assert.match(adopted[0].cssText, /:popover-open::backdrop/);
+    assert.match(adopted[0].cssText, /transition:\s*opacity 0\.15s/);
+    assert.match(adopted[0].cssText, /allow-discrete/);
+    assert.match(adopted[0].cssText, /prefers-reduced-motion:\s*reduce/);
+    assert.match(adopted[0].cssText, /\.sc-dialog-skeleton/);
   } finally {
     dom.restore();
   }

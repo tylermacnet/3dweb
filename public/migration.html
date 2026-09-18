@@ -398,6 +398,35 @@
           </li>
         </ul>
       </section>
+
+      <section aria-labelledby="phase-eight-followup-title">
+        <h2 id="phase-eight-followup-title">Phase 8 follow-up: details open latency</h2>
+        <ul>
+          <li>
+            <strong>Problem:</strong> the popover shell painted empty (title only) for up to a
+            second on cold opens of different listings, costing attention and traffic. The
+            cross-origin document itself is untouchable, so all latency work stays on our side of
+            the timeline.
+          </li>
+          <li>
+            <strong>Response:</strong> the shell now opens with a geometry-exact skeleton
+            (<code>aria-busy</code>) in the click frame while the iframe navigation starts on the
+            next animation frame; a 150ms ease-out fade/rise (opacity/transform only, disabled under
+            <code>prefers-reduced-motion</code>) smooths the entry; the overlay is premounted,
+            styled, and preconnected at idle via the optional <code>DetailsDialog.warm()</code>;
+            hover/focus intent prefetches the exact iframe URL through
+            <code>hideNavVariantOf()</code> (deduped, skipped on Save-Data); the live document is
+            reused on same-listing reopen and discarded to <code>about:blank</code> only after a
+            5-minute staleness window; the iframe carries <code>fetchpriority="high"</code>.
+            Deliberately out: prefetch-all, prerender, and speculation rules (cross-site prerender
+            is impossible; cross-site prefetch is credentialless and cookie-gated).
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 73
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
     </main>
   </body>
 </html>

@@ -211,6 +211,27 @@ test('encodes the listing id consistently in link URLs too', async () => {
   );
 });
 
+test('derives the chromeless prefetch URL from a card href', async () => {
+  // Arrange
+  const { hideNavVariantOf } = await applicationConfig();
+
+  // Act and assert
+  assert.equal(
+    hideNavVariantOf('https://3dmanagement.managebuilding.com/Resident/public/rentals/abc'),
+    'https://3dmanagement.managebuilding.com/Resident/public/rentals/abc?hidenav=true',
+  );
+  assert.equal(
+    hideNavVariantOf(
+      'https://3dmanagement.managebuilding.com/Resident/public/rentals/abc?hidenav=true',
+    ),
+    'https://3dmanagement.managebuilding.com/Resident/public/rentals/abc?hidenav=true',
+  );
+  assert.equal(hideNavVariantOf('https://evil.example/x?hidenav=true'), null);
+  assert.equal(hideNavVariantOf('http://3dmanagement.managebuilding.com/x'), null);
+  assert.equal(hideNavVariantOf('/relative/path'), null);
+  assert.equal(hideNavVariantOf('not a url'), null);
+});
+
 test('prefixes the dialog title with the listing location', async () => {
   // Arrange
   const { formatDialogTitle } = await applicationConfig();

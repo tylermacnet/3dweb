@@ -68,12 +68,27 @@ export function configurePropertyListings(root?: ParentNode): void {
 function autoWire(): void {
   if (typeof document === 'undefined') return;
   configurePropertyListings();
+  warmDetailsOverlay();
   // Late-added elements (host DOM changed after load) are wired as they appear.
   // Shadow-root rendering never retriggers this observer (subtree does not
   // traverse into shadow roots).
   if (typeof MutationObserver === 'undefined') return;
   const observer = new MutationObserver(() => configurePropertyListings());
   observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+// Mounts the shared overlay, adopts its styles, and warms the details
+// connection off the critical path. requestIdleCallback is advisory: when it
+// is unavailable the warm still happens, just sooner.
+function warmDetailsOverlay(): void {
+  const warm = (): void => {
+    defaultsFor(document).detailsDialog.warm?.();
+  };
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => warm());
+    return;
+  }
+  globalThis.setTimeout(warm, 1);
 }
 
 if (typeof document !== 'undefined') {

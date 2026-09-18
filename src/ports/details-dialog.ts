@@ -9,4 +9,9 @@ export interface DetailsDialog {
    */
   open(listing: Listing, invoker?: HTMLElement): boolean;
   close(): void;
+  /**
+   * Optional off-critical-path preparation (mount, styles, connection hints).
+   * Called at idle time when available; `open()` must work without it.
+   */
+  warm?(): void;
 }

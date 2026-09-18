@@ -45,23 +45,48 @@ function supportsPopover(): boolean {
   );
 }
 
+function nextFrame(callback: () => void): void {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => callback());
+    return;
+  }
+  callback();
+}
+
 export class BrowserDetailsDialog implements DetailsDialog {
   private panel: HTMLElement | null = null;
   private iframe: HTMLIFrameElement | null = null;
+  private skeleton: HTMLElement | null = null;
   private titleEl: HTMLElement | null = null;
   private closeBtn: HTMLButtonElement | null = null;
   private shown = false;
+  private currentUrl: string | null = null;
+  private resetTimer: number | undefined;
 
   private readonly detailsBaseUrl: string;
+  private readonly resetDelayMs: number;
 
-  constructor(detailsBaseUrl = DETAILS_BASE_URL) {
+  constructor(detailsBaseUrl = DETAILS_BASE_URL, resetDelayMs = 5 * 60 * 1000) {
     this.detailsBaseUrl = detailsBaseUrl;
+    this.resetDelayMs = resetDelayMs;
+  }
+
+  /**
+   * Mounts the overlay, adopts styles, and warms the details connection off
+   * the critical path. Safe to call repeatedly; `open()` works without it.
+   */
+  warm(): void {
+    if (!globalThis.document || !globalThis.window) return;
+    if (!supportsPopover()) return;
+    this.mount();
+    this.preconnect();
   }
 
   open(listing: Listing, invoker?: HTMLElement): boolean {
     if (!globalThis.document || !globalThis.window) return false;
     if (!supportsPopover()) return false;
 
+    this.cancelReset();
     this.mount();
 
     const detailsUrl = getListingDetailsUrl(listing, {
@@ -74,12 +99,23 @@ export class BrowserDetailsDialog implements DetailsDialog {
       this.titleEl.textContent = titleText;
       this.titleEl.setAttribute('title', titleText);
     }
-    if (this.iframe) {
-      this.iframe.src = detailsUrl;
-      this.iframe.title = `Details for ${titleText}`;
+
+    if (this.currentUrl === detailsUrl) {
+      // Same document is already live: reshow it with no navigation.
+      this.show(invoker);
+      return true;
     }
 
+    // New document: show the shell in this frame so the click is answered
+    // instantly, then start the cross-origin navigation on the next frame
+    // behind a skeleton.
+    this.currentUrl = detailsUrl;
+    this.showLoading();
     this.show(invoker);
+    nextFrame(() => {
+      if (this.currentUrl !== detailsUrl || !this.iframe) return;
+      this.iframe.src = detailsUrl;
+    });
     return true;
   }
 
@@ -87,12 +123,61 @@ export class BrowserDetailsDialog implements DetailsDialog {
     if (!this.panel || !this.shown) return;
     this.shown = false;
     this.panel.hidePopover();
+    // Keep the live document for fast reopen; discard it only after it has
+    // sat unused long enough to be stale.
+    this.scheduleReset();
   }
 
   private show(invoker: HTMLElement | undefined): void {
     if (!this.panel || this.shown) return;
     this.shown = true;
     this.panel.showPopover(invoker === undefined ? undefined : { source: invoker });
+  }
+
+  private showLoading(): void {
+    if (this.panel) this.panel.setAttribute('aria-busy', 'true');
+    if (this.skeleton) this.skeleton.hidden = false;
+    if (this.iframe) {
+      this.iframe.hidden = true;
+      this.iframe.title = 'Loading property listing details';
+    }
+  }
+
+  private hideLoading(): void {
+    if (this.panel) this.panel.removeAttribute('aria-busy');
+    if (this.skeleton) this.skeleton.hidden = true;
+    if (this.iframe) this.iframe.hidden = false;
+  }
+
+  private scheduleReset(): void {
+    this.cancelReset();
+    this.resetTimer = globalThis.setTimeout(() => {
+      this.resetTimer = undefined;
+      if (this.shown || this.currentUrl === null) return;
+      this.currentUrl = null;
+      if (this.iframe) this.iframe.src = 'about:blank';
+    }, this.resetDelayMs);
+  }
+
+  private cancelReset(): void {
+    if (this.resetTimer !== undefined) {
+      globalThis.clearTimeout(this.resetTimer);
+      this.resetTimer = undefined;
+    }
+  }
+
+  private preconnect(): void {
+    let origin: string;
+    try {
+      origin = new URL(this.detailsBaseUrl).origin;
+    } catch {
+      return;
+    }
+    if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    document.head.appendChild(link);
   }
 
   private mount(): void {
@@ -120,15 +205,27 @@ export class BrowserDetailsDialog implements DetailsDialog {
     closeButton.setAttribute('aria-label', 'Close dialog');
     closeButton.autofocus = true;
     closeButton.append(createCloseIcon(document));
+    const skeleton = document.createElement('div');
+    skeleton.className = 'sc-dialog-skeleton';
+    skeleton.setAttribute('aria-hidden', 'true');
+    for (const width of ['70%', '40%', '90%']) {
+      const line = document.createElement('div');
+      line.className = 'skeleton-line';
+      line.style.width = width;
+      skeleton.append(line);
+    }
     const iframe = document.createElement('iframe');
     iframe.className = 'sc-dialog-iframe';
     iframe.allowFullscreen = true;
     iframe.title = 'Property listing detail view';
+    iframe.setAttribute('fetchpriority', 'high');
+    iframe.hidden = true;
 
     header.append(title, closeButton);
-    layout.append(header, iframe);
+    layout.append(header, skeleton, iframe);
     panel.append(layout);
     this.titleEl = title;
+    this.skeleton = skeleton;
     this.iframe = iframe;
     this.closeBtn = closeButton;
     this.panel = panel;
@@ -142,14 +239,21 @@ export class BrowserDetailsDialog implements DetailsDialog {
     if (!this.panel) return;
 
     // The toggle event is the single source of truth for open/closed state,
-    // covering Esc, light-dismiss, and programmatic show/hide. On close the
-    // cross-origin iframe is discarded so its page does not keep running.
+    // covering Esc, light-dismiss, and programmatic show/hide.
     this.panel.addEventListener('toggle', (event: Event) => {
       const state = (event as ToggleEvent).newState;
-      if (state === 'closed') {
-        this.shown = false;
-        if (this.iframe) this.iframe.src = 'about:blank';
+      if (state === 'closed') this.shown = false;
+    });
+
+    // The skeleton covers the shell until the live document paints. The
+    // about:blank reset navigation also fires load, so only a real document
+    // completes loading.
+    this.iframe?.addEventListener('load', () => {
+      if (!this.currentUrl || this.iframe?.getAttribute('src') === 'about:blank') return;
+      if (this.titleEl && this.iframe) {
+        this.iframe.title = `Details for ${this.titleEl.textContent ?? 'this listing'}`;
       }
+      this.hideLoading();
     });
 
     this.closeBtn?.addEventListener('click', () => this.close());

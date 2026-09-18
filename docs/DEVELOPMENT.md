@@ -213,9 +213,22 @@ never appear in card links. Popover headers are prefixed with the listing locati
 The details overlay is a native Popover API element (`div[popover="auto"]`, `role="dialog"`) that
 gives cross-browser backdrop, `Esc`, and light-dismiss without the Chromium-only `closedby`.
 `BrowserDetailsDialog` mirrors the platform open/closed state from the `toggle` event, hands the
-triggering card to `showPopover({ source })` for native focus return, resets the cross-origin
-iframe to `about:blank` on close, and mounts nothing at all when `showPopover` is unsupported
+triggering card to `showPopover({ source })` for native focus return, and mounts nothing at all
+when `showPopover` is unsupported
 (the port returns `false` so the card navigates instead).
+
+Open latency is owned on our side of the timeline (the cross-origin document itself is
+untouchable): the overlay is premounted, styled, and preconnected at idle via the optional
+`DetailsDialog.warm()` (wired by the bundle entry; `open()` works without it); `open()` shows
+the shell with a skeleton (`aria-busy`) in the click frame and starts the iframe navigation on
+the next animation frame, retiring the skeleton on the iframe `load` event; reopening the same
+listing reuses the live document with no navigation, while a different listing always
+navigates and an unused document is discarded to `about:blank` after a staleness window
+(5 minutes by default, cancelable by reopen); hover/focus intent over the results grid
+prefetches the exact iframe URL via `hideNavVariantOf()` (the `hidenav` variant is a different
+cache key from the anchor href), deduped and skipped on Save-Data. The overlay opens with a
+short ease-out fade/rise (opacity/transform only, `allow-discrete` for symmetric exits) that is
+fully disabled under `prefers-reduced-motion`.
 
 `<listing-details>` is the standalone iframe-to-listing element. It accepts
 `listing-id` with a `src` override, and resolves both through

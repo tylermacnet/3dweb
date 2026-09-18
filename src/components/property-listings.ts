@@ -5,7 +5,7 @@ import type { Listing } from '../domain/listing.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
 import { ListingFeedLoader, type ListingLoadState } from '../application/listing-feed-loader.js';
 import { ListingFilterStore } from '../application/listing-filter-store.js';
-import { APPLICATION_URL } from '../config/application.js';
+import { APPLICATION_URL, hideNavVariantOf } from '../config/application.js';
 import { getListingLocationGroups, LISTING_FILTER_CONFIG } from '../config/listing-filters.js';
 import theme from '../styles/listing-theme.css';
 import { componentStyles } from '../styles/component-styles.js';
@@ -52,6 +52,35 @@ export class PropertyListings extends LitElement {
     if (handled) event.preventDefault();
   }
 
+  private readonly prefetched = new Set<string>();
+
+  /**
+   * Hover/focus intent prefetch: warms the exact iframe URL (the `hidenav`
+   * variant, a different cache key from the anchor href) before the click.
+   * Deduped, skipped on Save-Data, and harmless where prefetch is unsupported
+   * (the link element is simply ignored). Touch users never reach this path:
+   * coarse pointers navigate to the full details page instead.
+   */
+  private handleGridIntent(event: Event): void {
+    if (typeof document === 'undefined') return;
+    const anchor = (event.target as Element | null)?.closest?.('a[href]');
+    const variant = anchor?.getAttribute('href')
+      ? hideNavVariantOf(anchor.getAttribute('href') as string)
+      : null;
+    if (!variant || this.prefetched.has(variant)) return;
+    const saveData =
+      typeof navigator !== 'undefined' &&
+      (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData ===
+        true;
+    if (saveData) return;
+    this.prefetched.add(variant);
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.setAttribute('as', 'document');
+    link.href = variant;
+    document.head.appendChild(link);
+  }
+
   updated(changedProperties: Map<string, unknown>): void {
     if (changedProperties.has('feed')) this.syncLoader();
   }
@@ -74,7 +103,12 @@ export class PropertyListings extends LitElement {
         ${
           state.kind === 'ready'
             ? html`
-                <ol class="listing-grid" aria-label="Property listings results">
+                <ol
+                  class="listing-grid"
+                  aria-label="Property listings results"
+                  @pointerover=${this.handleGridIntent}
+                  @focusin=${this.handleGridIntent}
+                >
                   ${visibleListings.map(
                     (listing) => html`
                       <li>

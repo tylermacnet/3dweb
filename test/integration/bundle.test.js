@@ -29,6 +29,8 @@ test('esbuild bundles the web component and CSS', async () => {
     assert.match(bundle, /showPopover/);
     assert.match(bundle, /hidePopover/);
     assert.match(bundle, /popover/);
+    assert.match(bundle, /prefetch/);
+    assert.match(bundle, /fetchpriority/);
     assert.doesNotMatch(bundle, /showModal|closedby/);
     assert.doesNotMatch(bundle, /phase-five-harness/);
   } finally {
