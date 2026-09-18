@@ -30,20 +30,21 @@ global page layout.
 Use these tokens as CSS custom properties at the component boundary. The values match the legacy
 embed and the visual relationships in the screenshot.
 
-| Token                      | Value     | Usage                                              |
-| -------------------------- | --------- | -------------------------------------------------- |
-| `--sc-brand-primary`       | `#0284c7` | Links, location text, range thumb, active controls |
-| `--sc-brand-primary-hover` | `#0369a1` | Hover and pressed interactive states               |
-| `--sc-brand-deep`          | `#0f2c59` | Primary dark actions and brand authority           |
-| `--sc-surface-bg`          | `#ffffff` | Cards, controls, and main content surfaces         |
-| `--sc-surface-alt`         | `#f8fafc` | Filter panel, card footer, muted backgrounds       |
-| `--sc-border-color`        | `#cbd5e1` | Form controls and visible component boundaries     |
-| `--sc-border-light`        | `#e2e8f0` | Low-emphasis separators and card borders           |
-| `--sc-text-main`           | `#0f172a` | Headings and primary content                       |
-| `--sc-text-label`          | `#475569` | Form labels and secondary labels                   |
-| `--sc-text-muted`          | `#64748b` | Result counts and supporting copy                  |
-| `--sc-state-danger`        | `#ef4444` | Reset hover or destructive feedback                |
-| `--sc-state-danger-bg`     | `#fef2f2` | Destructive hover background                       |
+| Token                      | Value     | Usage                                                                                                                                                          |
+| -------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--sc-brand-primary`       | `#0284c7` | Links, range thumb, active controls, focus rings                                                                                                               |
+| `--sc-brand-primary-hover` | `#0369a1` | Hover and pressed interactive states                                                                                                                           |
+| `--sc-brand-text`          | `#0369a1` | Small text: location, rent, price output (5.93:1 on white; intentionally deeper than legacy `#0284c7`, which measures 4.10:1 and fails WCAG AA for small text) |
+| `--sc-brand-deep`          | `#0f2c59` | Primary dark actions and brand authority                                                                                                                       |
+| `--sc-surface-bg`          | `#ffffff` | Cards, controls, and main content surfaces                                                                                                                     |
+| `--sc-surface-alt`         | `#f8fafc` | Filter panel, card footer, muted backgrounds                                                                                                                   |
+| `--sc-border-color`        | `#cbd5e1` | Form controls and visible component boundaries                                                                                                                 |
+| `--sc-border-light`        | `#e2e8f0` | Low-emphasis separators and card borders                                                                                                                       |
+| `--sc-text-main`           | `#0f172a` | Headings and primary content                                                                                                                                   |
+| `--sc-text-label`          | `#475569` | Form labels and secondary labels                                                                                                                               |
+| `--sc-text-muted`          | `#64748b` | Result counts and supporting copy                                                                                                                              |
+| `--sc-state-danger`        | `#ef4444` | Reset hover or destructive feedback                                                                                                                            |
+| `--sc-state-danger-bg`     | `#fef2f2` | Destructive hover background                                                                                                                                   |
 
 The host shell may use a darker charcoal/navy palette independently. Avoid leaking host-shell
 styles into the shadow DOM of the listings components.
@@ -178,18 +179,18 @@ Cards are white, bordered, and image-led:
 
 The card hierarchy is:
 
-1. Property image
+1. Property image (decorative; the card link provides the accessible name)
 2. Address line one, strongly emphasized
 3. Address line two, muted and secondary
-4. Location in brand blue
+4. Location in `--sc-brand-text` blue
 5. Bedroom/bathroom metadata
-6. Rent in brand blue
+6. Rent in `--sc-brand-text` blue
 7. Optional description hook
-8. Details action in the card footer
+8. Details action in the card footer (visual only; the whole card is one stretched link)
 
 Reserve consistent title space so cards in the same row align even when one address has a second
-line and another does not. Keep the card action keyboard accessible and ensure the image has
-meaningful alternative text when it conveys listing information.
+line and another does not. Keep the single card link keyboard accessible with one tab stop per
+card; the footer call-to-action is `aria-hidden` and must never be a separate control.
 
 ## Responsive Behavior
 
@@ -199,13 +200,27 @@ shrinking desktop controls:
 - Desktop: adaptive filter columns and multi-column card grid
 - Mobile: two filter columns
 - Mobile: price range spans the full filter width
+- Mobile: reset spans the full filter width
 - Mobile: listing cards become one column
 - Labels and controls remain readable without horizontal scrolling
-- Touch targets remain at least `2.75rem`
+- Touch targets remain at least `2.75rem` (slider thumbs at least `24px` per WCAG target-size minimum)
 
-Use CSS media queries inside the component stylesheet. Component-owned styles must be declared
-by the owning Lit component with `unsafeCSS` and bundled through `src/index.tsx`; the composition
-root must not own presentation styles.
+Use CSS media queries inside the component stylesheet, nested directly inside the affected
+element's rule. Component-owned styles must be declared
+by the owning Lit component with `componentStyles()` from `src/styles/component-styles.ts` (the
+project's single `unsafeCSS` trust boundary for first-party build-time CSS) and bundled through
+`src/index.tsx`; the composition root must not own presentation styles. See
+`docs/DEVELOPMENT.md` for the native-nesting rules (`:host` boundary, flat internals, states and
+responsive contexts only, max depth 3). The adapter-backed
+details dialog is the exception: it lives in light DOM, so `BrowserDetailsDialog` owns
+`src/adapters/browser-details-dialog.css` and applies it via a constructed stylesheet. Its
+stylesheet mirrors the tokens it needs under `:root` with literal `var()` fallbacks, because
+`:host` tokens do not resolve outside shadow roots (unresolved tokens rendered the dialog
+transparent in an earlier attempt).
+
+Shadow-DOM internals use short semantic class names without a prefix (the shadow boundary is
+the namespace); the light-DOM dialog keeps the `sc-` prefix, and `--sc-*` tokens are unchanged
+as the public theming API.
 
 ## Accessibility
 
@@ -213,6 +228,9 @@ root must not own presentation styles.
   they represent the content structure.
 - Keep the filter group discoverable as a search region with an accessible label.
 - Associate every form control with a label.
+- Keep card interaction to a single stretched link per card so keyboard users get one tab stop;
+  never intercept modified or non-primary clicks.
+- Name the details dialog from its visible listing title (`aria-labelledby`), not a generic label.
 - Use `role="status"` and `aria-live` for changing result counts and loading states.
 - Provide visible `:focus-visible` indicators with at least a `2px` outline and offset.
 - Preserve readable contrast for all text and controls.
@@ -233,7 +251,9 @@ Production-facing custom elements should remain focused:
 Application behavior belongs in `src/application/listing-controller.ts`, not in a component.
 The controller depends on `ListingFeed` and `DetailsDialog` ports, while concrete
 implementations are wired by `src/index.tsx`. The browser details experience is currently an
-adapter-backed dialog, not a `property-dialog` custom element.
+adapter-backed dialog, not a `property-dialog` custom element. Shared details concerns live in
+`src/config/application.ts`: the canonical details URL (used by both the card link and the
+adapter), the iframe-only `hidenav` variant, and the location-prefixed dialog title.
 
 The host page owns surrounding branding and layout. The component owns its internal presentation and
 ships its styles through the bundled entrypoint.

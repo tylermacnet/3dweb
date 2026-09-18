@@ -1,0 +1,102 @@
+/* Dialog lives in light DOM outside any shadow root, where :host tokens do not
+   resolve (unresolved tokens made earlier attempts render transparent). Mirror
+   the tokens this dialog uses from src/styles/listing-theme.css and keep them
+   in sync. Critical surfaces additionally carry literal var() fallbacks. */
+:root {
+  --sc-brand-primary: #0284c7;
+  --sc-brand-primary-hover: #0369a1;
+  --sc-surface-bg: #ffffff;
+  --sc-surface-alt: #f8fafc;
+  --sc-border-light: #e2e8f0;
+  --sc-text-main: #0f172a;
+  --sc-text-muted: #64748b;
+}
+
+.sc-property-dialog {
+  --dialog-bg: var(--sc-surface-bg, #ffffff);
+  --dialog-soft: var(--sc-surface-alt, #f8fafc);
+  --dialog-line: var(--sc-border-light, #e2e8f0);
+  --dialog-ink: var(--sc-text-main, #0f172a);
+  --dialog-muted: var(--sc-text-muted, #64748b);
+  --dialog-accent: var(--sc-brand-primary, #0284c7);
+  width: 90vw;
+  max-width: 56.25rem;
+  height: 85vh;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--dialog-bg);
+  color: var(--dialog-ink);
+  box-shadow: 0 0.625rem 1.5625rem rgb(0 0 0 / 20%);
+
+  &::backdrop {
+    background: rgb(15 23 42 / 60%);
+    backdrop-filter: blur(0.25rem);
+  }
+}
+
+@starting-style {
+  .sc-property-dialog:open::backdrop {
+    background-color: transparent;
+  }
+}
+
+.sc-dialog-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sc-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border-bottom: 1px solid var(--dialog-line);
+  background: var(--dialog-soft);
+}
+
+.sc-dialog-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--dialog-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-dialog-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--dialog-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--dialog-line);
+    color: var(--dialog-ink);
+  }
+
+  &:focus-visible {
+    outline: 0.125rem solid var(--dialog-accent);
+    outline-offset: 0.125rem;
+  }
+}
+
+.sc-dialog-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}

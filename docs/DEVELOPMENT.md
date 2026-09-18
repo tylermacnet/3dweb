@@ -66,7 +66,10 @@ declare the work complete until this review is performed:
    branches, edge cases, regressions, and integration contracts.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
    architecture, contracts, naming, workflow, or user-facing behavior changes.
-5. Run the repository validation commands listed below and report their results in the handoff.
+5. Update `public/migration.html` before committing: promote completed phases, add a
+   review-evidence section for each newly completed phase, and refresh the header summary and
+   test counts.
+6. Run the repository validation commands listed below and report their results in the handoff.
 
 Targeted validation is useful during implementation, but it does not replace this process review.
 If any review step is incomplete, the phase remains incomplete even when all commands pass.
@@ -78,7 +81,7 @@ Keep changes within the project boundaries described in the migration plan:
 - Put pure listing rules and types in `src/domain/`; domain modules must not import Lit,
   DOM APIs, `fetch`, `DOMParser`, or browser globals.
 - Put orchestration and view state in `src/application/`. `ListingController` owns feed
-  loading, cancellation, filtering, sorting, and dialog requests for the listing container.
+  loading, cancellation, filtering, and dialog requests for the listing container.
 - Define capabilities in `src/ports/` and implement them in `src/adapters/`. Application code
   depends on ports rather than concrete adapters.
 - Keep Lit custom elements in `src/components/`. Components render state and emit semantic
@@ -87,7 +90,21 @@ Keep changes within the project boundaries described in the migration plan:
   demo entry point. Multiple independent components may have separate static entry points; do
   not add a service locator, global singleton, or dependency-injection framework.
 - Component styles belong to their owning component and are bundled through that component's
-  `static styles`; composition entry points should not own presentation styles.
+  `static styles` via `componentStyles()` from `src/styles/component-styles.ts`; composition
+  entry points should not own presentation styles. `componentStyles()` is the project's only
+  `unsafeCSS` call site: pass only first-party `.css` bundled at build time, never runtime,
+  user, or feed-derived strings.
+- Write stylesheets with native CSS nesting (Baseline): `:host` is the encapsulation boundary
+  with external tokens mapped to local `var()` fallbacks at the top; keep template internals
+  flat with explicit classes; nest only states, modifiers, pseudo-elements, and responsive
+  contexts; maximum nesting depth is 3; always include `&` when chaining pseudo-classes,
+  compound classes, or reversed context. Never use Sass-style `&__child` concatenation.
+- The adapter-backed details dialog is styled by its adapter, not by a component or the
+  composition root. `BrowserDetailsDialog` owns `src/adapters/browser-details-dialog.css` and
+  applies it once per document as a constructed stylesheet (plain `<style>` fallback only when
+  unsupported). The dialog stylesheet mirrors the tokens it needs under `:root` with literal
+  `var()` fallbacks: `:host` tokens do not resolve in light DOM, and unresolved tokens rendered
+  the dialog transparent in an earlier attempt.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries instead of
   inventing repeated validation helpers. Bundle it for the external embed; do not add a second
   runtime validation library for the same boundary. The lightweight-dependency constraint applies
@@ -130,3 +147,17 @@ configured produce no matches, while non-finite rent criteria are ignored.
 Filtering preserves source order and does not mutate the input. Missing bedroom and location
 values are rejected at the domain construction boundary rather than guessed by the filtering
 layer.
+
+## Card and dialog policy
+
+Each listing card renders a single stretched link to the canonical details URL from
+`getListingDetailsUrl()` in `src/config/application.ts`. An unmodified primary click on a fine
+pointer cancels navigation and opens the dialog through the `DetailsDialog` port instead;
+coarse pointers and modified clicks (new-tab gestures) fall through to normal link navigation,
+while environments without pointer detection keep the dialog path. The `hidenav` chromeless variant is iframe-only and must
+never appear in card links. Dialog headers are prefixed with the listing location
+(`formatDialogTitle()`), using the same region/area vocabulary as the card.
+
+Cards render client-side, so true no-script operation still shows no listings; the anchor
+provides dialog-failure degradation, new-tab and copy-link behavior, and crawlable links, not
+full no-script rendering.

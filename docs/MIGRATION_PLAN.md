@@ -102,7 +102,10 @@ After every migration phase or major architecture, behavior, or public-contract 
    add focused tests for missing behavior, edge cases, and regressions.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
    architecture, contracts, naming, workflow, or user-facing behavior changes.
-5. Run the validation commands in **Post-Migration Quality Gates** and record the results in the
+5. Update `public/migration.html` before committing: promote completed phases, add a
+   review-evidence section for each newly completed phase, and refresh the header summary and
+   test counts.
+6. Run the validation commands in **Post-Migration Quality Gates** and record the results in the
    phase handoff before declaring the phase complete.
 
 Passing commands alone is not sufficient evidence of completion; the architecture, SOLID,
@@ -230,6 +233,9 @@ evidence for that review and are also required before merge or final migration s
       and assistive-technology-friendly status updates.
     - Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, this plan, and `AGENTS.md` when
       commands, public contracts, architecture, or naming conventions change.
+    - Update `public/migration.html` before committing: promote completed phases, add a
+      review-evidence section for each newly completed phase, and refresh the header summary
+      and test counts.
 
 12. **Pull request code review**
     - Open a pull request containing the migration as reviewable commits or clearly

@@ -22,7 +22,13 @@
         min-height: 100vh;
         background: var(--page-bg);
         color: var(--page-text);
-        font-family: 'Segoe UI', sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
       }
 
       .page-shell {
@@ -62,8 +68,9 @@
         letter-spacing: 0.06em;
       }
 
-      .host-brand strong {
+      .host-brand h1 {
         display: block;
+        margin: 0;
         font-size: 1rem;
       }
 
@@ -107,7 +114,7 @@
         <div class="host-brand">
           <span class="host-logo">3D</span>
           <div>
-            <strong>Property Listings</strong>
+            <h1>Property Listings</h1>
             <span>Available rentals</span>
           </div>
         </div>

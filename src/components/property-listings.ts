@@ -1,13 +1,17 @@
-import { LitElement, html, unsafeCSS } from 'lit';
+import { LitElement, html } from 'lit';
 import type { ListingFeed } from '../ports/listing-feed.js';
 import type { DetailsDialog } from '../ports/details-dialog.js';
 import type { Listing } from '../domain/listing.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
 import { ListingController } from '../application/listing-controller.js';
+import { APPLICATION_URL } from '../config/application.js';
 import theme from '../styles/listing-theme.css';
+import { componentStyles } from '../styles/component-styles.js';
 import styles from './property-listings.css';
 import './listing-filters.js';
 import './listing-card.js';
+
+const SKELETON_COUNT = 6;
 
 export class PropertyListings extends LitElement {
   static properties = {
@@ -15,7 +19,7 @@ export class PropertyListings extends LitElement {
     detailsDialog: { attribute: false },
   };
 
-  static styles = unsafeCSS(`${theme}\n${styles}`);
+  static styles = componentStyles(theme, styles);
 
   feed: ListingFeed | undefined;
   detailsDialog: DetailsDialog | undefined;
@@ -30,7 +34,7 @@ export class PropertyListings extends LitElement {
 
   render() {
     return html`
-      <section class="listing-page" aria-labelledby="listings-title">
+      <section class="listing-page" aria-label="Property listings">
         <listing-filters
           .options=${this.controller.options}
           .locationGroups=${this.controller.locationGroups}
@@ -42,7 +46,7 @@ export class PropertyListings extends LitElement {
         ${
           this.controller.state === 'ready'
             ? html`
-                <ol class="listing-grid" aria-label="Property listings">
+                <ol class="listing-grid" aria-label="Property listings results">
                   ${this.controller.visibleListings.map(
                     (listing) => html`
                       <li>
@@ -65,7 +69,28 @@ export class PropertyListings extends LitElement {
   private renderStatus() {
     switch (this.controller.state) {
       case 'loading':
-        return html`<p class="results-status" role="status">Loading listings…</p>`;
+        return html`
+          <p class="results-status" role="status">
+            <span class="visually-hidden">Loading listings…</span>
+          </p>
+          <ol class="listing-grid" aria-label="Property listings results" aria-busy="true">
+            ${Array.from(
+              { length: SKELETON_COUNT },
+              () => html`
+                <li>
+                  <div class="skeleton-card" aria-hidden="true">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-content">
+                      <div class="skeleton-line" style="width: 70%;"></div>
+                      <div class="skeleton-line" style="width: 40%;"></div>
+                      <div class="skeleton-line" style="width: 90%;"></div>
+                    </div>
+                  </div>
+                </li>
+              `,
+            )}
+          </ol>
+        `;
       case 'error':
         return html`
           <div class="results-status" role="alert">
@@ -75,15 +100,21 @@ export class PropertyListings extends LitElement {
         `;
       case 'ready':
         return html`<p class="results-status" role="status">
-          Showing <strong>${this.controller.visibleListings.length}</strong> available listings
+          Showing <strong>${this.controller.visibleListings.length}</strong> available
+          listing${this.controller.visibleListings.length === 1 ? '' : 's'}
         </p>`;
       case 'empty':
         return html`
-          <div class="results-status" role="status">
-            <p>No available listings match the selected criteria.</p>
-            <button type="button" @click=${() => this.controller.setOptions({})}>
-              Clear filters
-            </button>
+          <div class="empty-state" role="status">
+            <p>No available listings match your selected criteria right now.</p>
+            <div class="empty-actions">
+              <button type="button" @click=${() => this.controller.setOptions({})}>
+                Clear filters
+              </button>
+              <a href=${APPLICATION_URL} target="_blank" rel="noopener noreferrer" class="apply-cta"
+                >Apply Online Now &rarr;</a
+              >
+            </div>
           </div>
         `;
       default:

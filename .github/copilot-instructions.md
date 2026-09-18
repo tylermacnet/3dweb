@@ -13,7 +13,10 @@
 - Components: Extend base classes via post-construction/constructor controller wiring orLit properties. Preserve lowercase custom element contracts (e.g., `<listing-card>`, `<property-listings>`).
 - State Management: Encapsulate application/UI state inside Lit `ReactiveController` instances.
 - CSS Handling: Import component-owned CSS from the component that owns the styles using
-  `unsafeCSS`; the composition root should only register components and wire dependencies.
+  `componentStyles()` from `src/styles/component-styles.ts` (the project's only `unsafeCSS`
+  call site; first-party build-time CSS only); the composition root should only register
+  components and wire dependencies. The light-DOM details dialog is styled by its adapter via
+  a constructed stylesheet, never by the composition root.
 - Network Resilience: Use `AbortSignal.timeout(5000)` instead of manual timer clearing.
 - Dependency policy: keep shipped runtime dependencies lightweight and purposeful; development-only
   dependencies may be added when their maintenance and workflow cost is justified.
@@ -22,6 +25,8 @@
 
 - Use the native Node.js test runner (`node:test`) co-located under `test/`.
 - Keep pure domain tests in `test/unit/` and adapter, parser, DOM, network, and bundle tests in `test/integration/`.
+- Integration tests importing `src/` TypeScript with runtime imports must bundle via esbuild
+  first (`nodenext` `.js` specifiers do not resolve to `.ts` on disk).
 - Structure each test using Arrange, Act, Assert; keep one observable behavior per test.
 - Run `mise run test-unit` for focused unit tests, `mise run test-integration` for focused integration tests, or `mise run test` for both.
 - Run `mise run check` to validate formatting, linting, type-checking, tests, and bundling before finalizing work on any slice.

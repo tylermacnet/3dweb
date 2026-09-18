@@ -1,34 +1,64 @@
-import { LitElement, html, unsafeCSS } from 'lit';
+import { LitElement, html } from 'lit';
 import theme from '../styles/listing-theme.css';
+import { componentStyles } from '../styles/component-styles.js';
 import styles from './listing-filters.css';
 import { BEDROOM_FILTER_OPTIONS, type ListingLocationGroup } from '../config/listing-filters.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
+
+const DEFAULT_MAX_RENT = 5000;
+
+export interface SplitLocationValue {
+  regionId?: string;
+  areaName?: string;
+}
+
+export function splitLocationValue(value: string): SplitLocationValue {
+  const [regionId, areaName] = value.split('||');
+  return {
+    ...(regionId && regionId !== 'ALL' ? { regionId } : {}),
+    ...(areaName && areaName !== 'ALL' ? { areaName } : {}),
+  };
+}
+
+export function formatMaxRentLabel(maxRent: number): string {
+  return `Up to $${maxRent.toLocaleString()} / mo`;
+}
 
 export class ListingFilters extends LitElement {
   static properties = {
     options: { attribute: false },
     locationGroups: { attribute: false },
+    priceMin: { attribute: false },
+    priceMax: { attribute: false },
   };
 
-  static styles = unsafeCSS(`${theme}\n${styles}`);
+  static styles = componentStyles(theme, styles);
 
   options: ListingFilterOptions = {};
   locationGroups: readonly ListingLocationGroup[] = [];
+  priceMin = 0;
+  priceMax: number | undefined;
+
+  private priceDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    clearTimeout(this.priceDebounceTimer);
+  }
 
   render() {
+    const maxRent = this.options.maxRent ?? this.priceMax ?? DEFAULT_MAX_RENT;
     return html`
       <section class="filters-panel" role="search" aria-label="Property filter options">
-        <fieldset>
-          <legend>Filter available property listings</legend>
-          <label>
-            Location
-            <select
-              id="location-filter"
-              aria-label="Location"
-              .value=${this.locationValue}
-              @change=${this.handleChange}
-            >
-              ${this.locationGroups.map(
+        <fieldset class="filter-fields">
+          <legend class="filter-legend">Filter available property listings</legend>
+          <div class="field">
+            <label for="location-filter">Location</label>
+            <select id="location-filter" .value=${this.locationValue} @change=${this.handleSelect}>
+              ${this.allLocationsOptions.map(
+                (option) => html`<option value=${option.value}>${option.label}</option>`,
+              )}
+              ${this.regionGroups.map(
                 (group) => html`
                   <optgroup label=${group.regionName}>
                     ${group.options.map(
@@ -38,58 +68,67 @@ export class ListingFilters extends LitElement {
                 `,
               )}
             </select>
-          </label>
-          <label>
-            Bedrooms
+          </div>
+          <div class="field">
+            <label for="bedroom-filter">Bedrooms</label>
             <select
-              aria-label="Bedrooms"
+              id="bedroom-filter"
               .value=${this.options.bedroomRule ?? 'all'}
-              @change=${this.handleChange}
+              @change=${this.handleSelect}
             >
               ${BEDROOM_FILTER_OPTIONS.map(
                 (option) => html`<option value=${option.value}>${option.label}</option>`,
               )}
             </select>
-          </label>
-          <div class="price-group">
+          </div>
+          <div class="field price-field">
             <label for="max-rent">Max Rent</label>
-            <output id="max-rent-value" for="max-rent">
-              Up to ${this.options.maxRent ?? 5000} / mo
-            </output>
+            <output id="max-rent-value" for="max-rent" aria-live="polite"
+              >${formatMaxRentLabel(maxRent)}</output
+            >
             <input
               id="max-rent"
               type="range"
-              min="0"
-              max="5000"
+              min=${String(this.priceMin)}
+              max=${String(this.priceMax ?? DEFAULT_MAX_RENT)}
               step="100"
-              .value=${String(this.options.maxRent ?? 5000)}
-              @input=${this.handleChange}
+              .value=${String(maxRent)}
+              aria-describedby="max-rent-value"
+              @input=${this.handlePriceInput}
+              @change=${this.handlePriceCommit}
             />
           </div>
-          <button type="button" @click=${this.reset}>Reset Filters</button>
+          <div class="field reset-field">
+            <button type="button" class="reset-btn" @click=${this.reset}>Reset Filters</button>
+          </div>
         </fieldset>
       </section>
     `;
   }
 
-  private handleChange(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement) && !(target instanceof HTMLInputElement)) return;
+  private handleSelect(): void {
+    this.dispatchOptions(this.readControlValues());
+  }
 
-    const bedroomRule = this.selectValue('Bedrooms');
-    const location = this.selectValue('Location') ?? 'ALL';
-    const [regionId, areaName] = location.split('||');
-    const nextOptions: ListingFilterOptions = {
-      ...(regionId && regionId !== 'ALL' ? { regionId } : {}),
-      ...(areaName && areaName !== 'ALL' ? { areaName } : {}),
-      ...(bedroomRule && bedroomRule !== 'all' ? { bedroomRule } : {}),
-      maxRent: Number(this.maxRentInput?.value ?? 5000),
-    };
+  private handlePriceInput(): void {
+    const priceDisplay = this.renderRoot.querySelector<HTMLElement>('#max-rent-value');
+    const priceInput = this.priceInput;
+    if (priceDisplay && priceInput) {
+      priceDisplay.textContent = formatMaxRentLabel(Number(priceInput.value));
+    }
+    clearTimeout(this.priceDebounceTimer);
+    this.priceDebounceTimer = setTimeout(() => {
+      this.dispatchOptions(this.readControlValues());
+    }, 150);
+  }
 
-    this.dispatchOptions(nextOptions);
+  private handlePriceCommit(): void {
+    clearTimeout(this.priceDebounceTimer);
+    this.dispatchOptions(this.readControlValues());
   }
 
   private reset(): void {
+    clearTimeout(this.priceDebounceTimer);
     this.dispatchOptions({});
   }
 
@@ -104,7 +143,19 @@ export class ListingFilters extends LitElement {
     );
   }
 
-  private get maxRentInput(): HTMLInputElement | null {
+  private readControlValues(): ListingFilterOptions {
+    const location =
+      this.renderRoot.querySelector<HTMLSelectElement>('#location-filter')?.value ?? 'ALL';
+    const bedroomRule =
+      this.renderRoot.querySelector<HTMLSelectElement>('#bedroom-filter')?.value ?? 'all';
+    return {
+      ...splitLocationValue(location),
+      ...(bedroomRule && bedroomRule !== 'all' ? { bedroomRule } : {}),
+      maxRent: Number(this.priceInput?.value ?? DEFAULT_MAX_RENT),
+    };
+  }
+
+  private get priceInput(): HTMLInputElement | null {
     return this.renderRoot.querySelector<HTMLInputElement>('#max-rent');
   }
 
@@ -116,10 +167,12 @@ export class ListingFilters extends LitElement {
     return 'ALL';
   }
 
-  private selectValue(label: string): string | undefined {
-    return Array.from(this.renderRoot.querySelectorAll('select')).find(
-      (select) => select.getAttribute('aria-label') === label,
-    )?.value;
+  private get allLocationsOptions(): readonly { value: string; label: string }[] {
+    return this.locationGroups.find((group) => group.regionId === 'ALL')?.options ?? [];
+  }
+
+  private get regionGroups(): readonly ListingLocationGroup[] {
+    return this.locationGroups.filter((group) => group.regionId !== 'ALL');
   }
 }
 

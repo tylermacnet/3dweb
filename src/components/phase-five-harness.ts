@@ -1,8 +1,9 @@
-import { LitElement, html, unsafeCSS } from 'lit';
+import { LitElement, html } from 'lit';
 import type { DetailsDialog } from '../ports/details-dialog.js';
 import type { Listing } from '../domain/listing.js';
 import type { ListingFeed } from '../ports/listing-feed.js';
 import theme from '../styles/listing-theme.css';
+import { componentStyles } from '../styles/component-styles.js';
 import styles from './phase-five-harness.css';
 
 type HarnessState = 'idle' | 'loading' | 'ready' | 'error';
@@ -16,7 +17,7 @@ export class PhaseFiveHarness extends LitElement {
     errorMessage: { state: true },
   };
 
-  static styles = unsafeCSS(`${theme}\n${styles}`);
+  static styles = componentStyles(theme, styles);
 
   feed: ListingFeed | undefined;
   detailsDialog: DetailsDialog | undefined;

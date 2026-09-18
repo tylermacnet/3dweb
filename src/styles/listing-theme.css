@@ -1,6 +1,7 @@
 :host {
   --sc-brand-primary: #0284c7;
   --sc-brand-primary-hover: #0369a1;
+  --sc-brand-text: #0369a1;
   --sc-brand-deep: #0f2c59;
   --sc-surface-bg: #ffffff;
   --sc-surface-alt: #f8fafc;

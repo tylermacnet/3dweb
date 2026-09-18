@@ -18,6 +18,7 @@ Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent
 | `mise run test-integration [files...]` | Run integration tests (default: `test/integration`) |
 | `mise run test`                        | Unit + integration                                  |
 | `mise run check`                       | format-check → lint → typecheck → test → build      |
+| `mise run chat`                        | Launch OpenCode AI agent in local project context   |
 
 Direct commands are only allowed when no `mise` task exists or when diagnosing a failed `mise` task — then return to the `mise` task for final validation.
 
@@ -31,7 +32,7 @@ index.tsx  -> composition root (wires everything)
 ```
 
 - **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- **Application** (`src/application/`): `ListingController` is a Lit `ReactiveController` — owns feed loading, cancellation, filtering, sorting, dialog requests.
+- **Application** (`src/application/`): `ListingController` is a Lit `ReactiveController` — owns feed loading, cancellation, filtering, dialog requests.
 - **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsDialog`).
 - **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser dialog).
 - **Components** (`src/components/`): Lit custom elements, presentational only. Lowercase kebab-case names (`<listing-card>`, `<listing-filters>`, `<property-listings>`).
@@ -41,7 +42,11 @@ index.tsx  -> composition root (wires everything)
 
 - No DI containers, service locators, or global singletons. Explicit TypeScript wiring only in `src/index.tsx`.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
-- CSS is component-owned: imported via `unsafeCSS` in the owning component's `static styles`.
+- CSS is component-owned: imported via `componentStyles()` in the owning component's `static styles`.
+  `src/styles/component-styles.ts` is the only `unsafeCSS` call site (first-party build-time CSS only).
+  Exception: the light-DOM details dialog is styled by its adapter
+  (`src/adapters/browser-details-dialog.css`, constructed stylesheet, `:root` token mirror) —
+  `:host` tokens do not resolve outside shadow roots.
 - Use `AbortSignal.timeout(5000)` for network resilience, not manual timer clearing.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries.
 - Use Lit HTML templates only — never manual `innerHTML` concatenation.
@@ -53,6 +58,9 @@ index.tsx  -> composition root (wires everything)
 - `test-src/sample/listingFeeds.xml` — sample XML feed for integration tests.
 - Tests use `node:test` (native Node runner). Run with `mise run test-unit` or `mise run test-integration`.
 - Structure tests: Arrange, Act, Assert — one observable behavior per test.
+- Integration tests importing `src/` TypeScript with runtime imports must bundle via esbuild first
+  (`nodenext` `.js` specifiers do not resolve to `.ts` on disk); direct imports only work for
+  type-only or dependency-free modules.
 
 ## Post-change mandatory process
 
@@ -62,7 +70,8 @@ After every migration phase or major change, complete all five steps before decl
 2. Review SOLID principles and 2026 platform practices.
 3. Assess test coverage for changed behavior; add focused tests for missing branches/edge cases.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, `AGENTS.md` if contracts or naming change.
-5. Run `mise run check` and report results.
+5. Update `public/migration.html` before committing: promote completed phases, add a review-evidence section for each newly completed phase, and refresh the header summary and test counts.
+6. Run `mise run check` and report results.
 
 ## Style and formatting
 
@@ -75,6 +84,9 @@ After every migration phase or major change, complete all five steps before decl
 
 - `mise.toml` — task definitions (source of truth for all commands).
 - `src/index.tsx` — composition root, single entrypoint.
+- `src/config/application.ts` — shared details URL, iframe variant, dialog title policy.
+- `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
+- `src/adapters/browser-details-dialog.css` — adapter-owned dialog styles.
 - `public/index.html` — host page consuming `public/dist/bundle.js`.
 - `public/test.html` — legacy embed (migration source).
 - `public/migration.html` — static demo, not part of production listings API.
