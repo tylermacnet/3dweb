@@ -37,6 +37,7 @@ Use the task that matches the work:
 | `mise run test-integration [files...]` | Run selected integration tests                           | Optional paths; defaults to `test/integration` |
 | `mise run test`                        | Run all unit and integration tests                       | None                                           |
 | `mise run check`                       | Run formatting, linting, type checking, tests, and build | None                                           |
+| `mise run skills`                      | Link active tool agent skills into `.agents/skills`      | None                                           |
 | `mise run chat`                        | Launch OpenCode AI agent in local project context        | None                                           |
 
 Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Within `mise.toml` task definitions, call bare binaries (`esbuild`, `prettier`, `oxlint`, `tsc`, `node`); `mise` provides them via `node_modules/.bin` on `PATH` (`[env] _.path`). Direct commands are permitted only when:
@@ -68,6 +69,10 @@ If a direct diagnostic command is necessary, return to the corresponding `mise` 
   edit `mise.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
   for JS deps, then `mise run check` to prove the bumps are safe before committing
   `mise.toml` + `mise.lock` + `package.json`/`package-lock.json`.
+- Agent skills declared by pinned tools sync into `.agents/skills` automatically after
+  installs (`[settings.skills]` with `auto_sync` and `prune` in `mise.toml`). The links
+  point at machine-local installs and are gitignored; run `mise run skills` to re-sync
+  manually, for example after changing tool versions.
 
 Formatting tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
 

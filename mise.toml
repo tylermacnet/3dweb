@@ -70,6 +70,10 @@ run = "node --test {{ usage.files | join(sep=' ') }}"
 description = "Run all checks and create a production bundle"
 depends = ["format-check", "lint", "typecheck", "test", "build"]
 
+[tasks.skills]
+description = "Link active tool agent skills into .agents/skills"
+run = "mise skills sync"
+
 [settings]
 experimental = true
 

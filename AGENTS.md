@@ -9,7 +9,7 @@ Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
 3. `mise run chat` launches OpenCode with the project toolchain and TypeScript LSP.
-4. Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`).
+4. Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run skills` re-syncs manually.
 
 | Task                                   | Purpose                                             |
 | -------------------------------------- | --------------------------------------------------- |
@@ -25,6 +25,7 @@ Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent
 | `mise run test-integration [files...]` | Run integration tests (default: `test/integration`) |
 | `mise run test`                        | Unit + integration                                  |
 | `mise run check`                       | format-check → lint → typecheck → test → build      |
+| `mise run skills`                      | Link active tool agent skills into `.agents/skills` |
 | `mise run chat`                        | Launch OpenCode AI agent in local project context   |
 
 Direct commands are only allowed when no `mise` task exists or when diagnosing a failed `mise` task — then return to the `mise` task for final validation.
