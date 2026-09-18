@@ -8,23 +8,23 @@ import { build } from 'esbuild';
 import { parseHTML } from 'linkedom';
 import type { Listing } from '../../src/domain/listing.ts';
 
-type DialogModule = typeof import('../../src/adapters/browser-details-dialog.ts');
+type ModalModule = typeof import('../../src/adapters/browser-details-modal.ts');
 
-let cached: DialogModule | undefined;
+let cached: ModalModule | undefined;
 
-async function dialogModule(): Promise<DialogModule> {
+async function modalModule(): Promise<ModalModule> {
   if (!cached) {
-    const temporaryDirectory = await mkdtemp(join(tmpdir(), '3dweb-dialog-'));
-    const outputFile = join(temporaryDirectory, 'browser-details-dialog.js');
+    const temporaryDirectory = await mkdtemp(join(tmpdir(), '3dweb-modal-'));
+    const outputFile = join(temporaryDirectory, 'browser-details-modal.js');
     await build({
-      entryPoints: ['src/adapters/browser-details-dialog.ts'],
+      entryPoints: ['src/adapters/browser-details-modal.ts'],
       bundle: true,
       format: 'esm',
       platform: 'node',
       loader: { '.css': 'text' },
       outfile: outputFile,
     });
-    cached = (await import(`${pathToFileURL(outputFile).href}?test=${Date.now()}`)) as DialogModule;
+    cached = (await import(`${pathToFileURL(outputFile).href}?test=${Date.now()}`)) as ModalModule;
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
   return cached;
@@ -54,7 +54,7 @@ interface ShowCall {
   source?: HTMLElement;
 }
 
-interface DialogDom {
+interface ModalDom {
   window: ReturnType<typeof parseHTML>['window'];
   openPopovers: Set<HTMLElement>;
   calls: ShowCall[];
@@ -65,7 +65,7 @@ interface DialogDom {
 // platform owns in real browsers: showPopover/hidePopover fire toggle events
 // (used by the adapter to reset the iframe and track open state) and the stub
 // records invocations so focus-source handoff can be asserted.
-function installDialogDom(): DialogDom {
+function installModalDom(): ModalDom {
   const { window } = parseHTML('<!doctype html><html><body></body></html>');
   const previous = {
     window: globalThis.window,
@@ -126,24 +126,24 @@ function installDialogDom(): DialogDom {
 
 test('opens listing details in a chromeless auto popover iframe', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    const handled = detailsDialog.open(listing);
+    const handled = detailsModal.open(listing);
 
     // Assert
     const panel = document.querySelector('[popover="auto"]');
     const iframe = document.querySelector('iframe');
     assert.equal(handled, true);
     assert.ok(panel);
-    assert.equal(panel.className, 'sc-property-dialog');
+    assert.equal(panel.className, 'sc-property-modal');
     assert.equal(panel.getAttribute('popover'), 'auto');
     assert.equal(panel.getAttribute('role'), 'dialog');
-    assert.equal(panel.getAttribute('aria-labelledby'), 'sc-dialog-title');
+    assert.equal(panel.getAttribute('aria-labelledby'), 'sc-modal-title');
     assert.ok(dom.openPopovers.has(panel as HTMLElement));
     assert.equal(dom.calls[0]?.method, 'show');
     assert.equal(dom.calls[0]?.source, undefined);
@@ -160,18 +160,18 @@ test('opens listing details in a chromeless auto popover iframe', async () => {
 
 test('covers the shell with a skeleton until the live document paints', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.open(listing);
+    detailsModal.open(listing);
 
     // Assert: busy shell while the cross-origin navigation is in flight.
     const panel = document.querySelector('[popover="auto"]');
-    const skeleton = panel?.querySelector('.sc-dialog-skeleton');
+    const skeleton = panel?.querySelector('.sc-modal-skeleton');
     const iframe = document.querySelector('iframe');
     assert.equal(panel?.getAttribute('aria-busy'), 'true');
     assert.ok(skeleton);
@@ -194,16 +194,16 @@ test('covers the shell with a skeleton until the live document paints', async ()
 
 test('hands the triggering element to the platform for focus return', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
     const trigger = document.createElement('button');
     document.body.appendChild(trigger);
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.open(listing, trigger);
+    detailsModal.open(listing, trigger);
 
     // Assert
     assert.equal(dom.calls[0]?.method, 'show');
@@ -215,14 +215,14 @@ test('hands the triggering element to the platform for focus return', async () =
 
 test('names the popover from its visible header with an icon close action', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.open(listing);
+    detailsModal.open(listing);
     document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
 
     // Assert
@@ -233,7 +233,7 @@ test('names the popover from its visible header with an icon close action', asyn
     assert.equal(title?.textContent, expectedTitle);
     assert.equal(title?.getAttribute('title'), expectedTitle);
     const closeButton = panel?.querySelector('button');
-    assert.equal(closeButton?.getAttribute('aria-label'), 'Close dialog');
+    assert.equal(closeButton?.getAttribute('aria-label'), 'Close modal');
     assert.equal(closeButton?.autofocus, true);
     assert.ok(closeButton?.querySelector('svg'));
     assert.match(document.querySelector('iframe')?.title ?? '', /144 King Street Unit 3/);
@@ -244,17 +244,17 @@ test('names the popover from its visible header with an icon close action', asyn
 
 test('reopens the same listing with no new navigation', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
-    detailsDialog.open(listing);
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
+    detailsModal.open(listing);
     document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
-    detailsDialog.close();
+    detailsModal.close();
 
     // Act: reopen the same listing while the document is retained.
-    const handled = detailsDialog.open(listing);
+    const handled = detailsModal.open(listing);
 
     // Assert: reshown with the live document, no second navigation.
     assert.equal(handled, true);
@@ -271,16 +271,16 @@ test('reopens the same listing with no new navigation', async () => {
 
 test('navigates when opening a different listing', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
-    detailsDialog.open(listing);
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
+    detailsModal.open(listing);
     document.querySelector('iframe')?.dispatchEvent(new dom.window.Event('load'));
 
     // Act
-    detailsDialog.open({ ...listing, id: 'listing-7' });
+    detailsModal.open({ ...listing, id: 'listing-7' });
 
     // Assert: the shell returns to loading for the new document.
     assert.equal(
@@ -295,13 +295,13 @@ test('navigates when opening a different listing', async () => {
 
 test('discards the retained document only after it sits unused', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details', 20);
-    detailsDialog.open(listing);
-    detailsDialog.close();
+    const detailsModal = new BrowserDetailsModal('https://example.com/details', 20);
+    detailsModal.open(listing);
+    detailsModal.close();
 
     // Act: let the idle window expire.
     await new Promise((resolve) => setTimeout(resolve, 60));
@@ -315,16 +315,16 @@ test('discards the retained document only after it sits unused', async () => {
 
 test('cancels the discard when the listing reopens in time', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details', 30);
-    detailsDialog.open(listing);
-    detailsDialog.close();
+    const detailsModal = new BrowserDetailsModal('https://example.com/details', 30);
+    detailsModal.open(listing);
+    detailsModal.close();
 
     // Act: reopen before the idle window expires, then outlive it.
-    detailsDialog.open(listing);
+    detailsModal.open(listing);
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     // Assert: the live document survived because the timer was cancelled.
@@ -339,15 +339,15 @@ test('cancels the discard when the listing reopens in time', async () => {
 
 test('warm premounts, styles, and preconnects exactly once', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.warm();
-    detailsDialog.warm();
+    detailsModal.warm();
+    detailsModal.warm();
 
     // Assert
     assert.equal(document.querySelectorAll('[popover="auto"]').length, 1);
@@ -357,7 +357,7 @@ test('warm premounts, styles, and preconnects exactly once', async () => {
     );
 
     // Act: opening after a warm reuses the mounted shell.
-    const handled = detailsDialog.open(listing);
+    const handled = detailsModal.open(listing);
 
     // Assert
     assert.equal(handled, true);
@@ -369,8 +369,8 @@ test('warm premounts, styles, and preconnects exactly once', async () => {
 
 test('refuses to work (and mounts nothing) when popover is unsupported', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
   (
     dom.window.HTMLElement.prototype as unknown as {
       showPopover?: unknown;
@@ -385,10 +385,10 @@ test('refuses to work (and mounts nothing) when popover is unsupported', async (
   ).hidePopover = undefined;
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    const handled = detailsDialog.open(listing);
+    const handled = detailsModal.open(listing);
 
     // Assert
     assert.equal(handled, false);
@@ -399,10 +399,35 @@ test('refuses to work (and mounts nothing) when popover is unsupported', async (
   }
 });
 
+test('warm mounts nothing when popover is unsupported', async () => {
+  // Arrange
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
+  (
+    dom.window.HTMLElement.prototype as unknown as {
+      showPopover?: unknown;
+      hidePopover?: unknown;
+    }
+  ).showPopover = undefined;
+
+  try {
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
+
+    // Act
+    detailsModal.warm();
+
+    // Assert
+    assert.equal(document.querySelector('[popover="auto"]'), null);
+    assert.equal(document.body.childElementCount, 0);
+  } finally {
+    dom.restore();
+  }
+});
+
 test('adopts the popover stylesheet exactly once with opaque token fallbacks', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
   const adopted: { cssText: string }[] = [];
   class FakeStyleSheet {
     cssText = '';
@@ -415,23 +440,23 @@ test('adopts the popover stylesheet exactly once with opaque token fallbacks', a
   Object.assign(document, { adoptedStyleSheets: [] });
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.open(listing);
-    detailsDialog.open(listing);
+    detailsModal.open(listing);
+    detailsModal.open(listing);
 
     // Assert
     assert.equal(adopted.length, 1);
     assert.match(adopted[0].cssText, /:root\s*\{[^}]*--sc-surface-bg:\s*#ffffff/);
-    assert.match(adopted[0].cssText, /--dialog-bg:\s*var\(--sc-surface-bg,\s*#ffffff\)/);
-    assert.match(adopted[0].cssText, /background:\s*var\(--dialog-bg\)/);
+    assert.match(adopted[0].cssText, /--modal-bg:\s*var\(--sc-surface-bg,\s*#ffffff\)/);
+    assert.match(adopted[0].cssText, /background:\s*var\(--modal-bg\)/);
     assert.match(adopted[0].cssText, /&::backdrop\s*\{[^}]*background:\s*rgb\(15 23 42 \/ 60%\)/);
     assert.match(adopted[0].cssText, /:popover-open::backdrop/);
     assert.match(adopted[0].cssText, /transition:\s*opacity 0\.15s/);
     assert.match(adopted[0].cssText, /allow-discrete/);
     assert.match(adopted[0].cssText, /prefers-reduced-motion:\s*reduce/);
-    assert.match(adopted[0].cssText, /\.sc-dialog-skeleton/);
+    assert.match(adopted[0].cssText, /\.sc-modal-skeleton/);
   } finally {
     dom.restore();
   }
@@ -439,24 +464,24 @@ test('adopts the popover stylesheet exactly once with opaque token fallbacks', a
 
 test('falls back to a single style element without constructed stylesheets', async () => {
   // Arrange
-  const { BrowserDetailsDialog } = await dialogModule();
-  const dom = installDialogDom();
+  const { BrowserDetailsModal } = await modalModule();
+  const dom = installModalDom();
   delete (globalThis as Record<string, unknown>).CSSStyleSheet;
 
   try {
-    const detailsDialog = new BrowserDetailsDialog('https://example.com/details');
+    const detailsModal = new BrowserDetailsModal('https://example.com/details');
 
     // Act
-    detailsDialog.open(listing);
-    detailsDialog.open(listing);
+    detailsModal.open(listing);
+    detailsModal.open(listing);
 
     // Assert
-    const styles = document.querySelectorAll('style[data-sc-dialog-styles]');
+    const styles = document.querySelectorAll('style[data-sc-modal-styles]');
     assert.equal(styles.length, 1);
     const cssText = styles[0].textContent ?? '';
     assert.match(cssText, /:root\s*\{[^}]*--sc-surface-bg:\s*#ffffff/);
-    assert.match(cssText, /--dialog-bg:\s*var\(--sc-surface-bg,\s*#ffffff\)/);
-    assert.match(cssText, /background:\s*var\(--dialog-bg\)/);
+    assert.match(cssText, /--modal-bg:\s*var\(--sc-surface-bg,\s*#ffffff\)/);
+    assert.match(cssText, /background:\s*var\(--modal-bg\)/);
   } finally {
     dom.restore();
   }

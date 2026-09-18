@@ -1,7 +1,7 @@
 # 3D Property Listings Style Guide
 
 This guide documents the visual language shown in the supplied production screenshot and the
-legacy `public/test.html` embed. It separates the host site's chrome from the property-listings
+frozen legacy `public/test.html` embed (kept byte-identical for parity comparison only). It separates the host site's chrome from the property-listings
 web component so the component can be embedded in another production page without requiring the
 host navigation or hero.
 
@@ -212,8 +212,8 @@ project's single `unsafeCSS` trust boundary for first-party build-time CSS) and 
 the single bundle entry; the bundle entry must not own presentation styles. See
 `docs/DEVELOPMENT.md` for the native-nesting rules (`:host` boundary, flat internals, states and
 responsive contexts only, max depth 3). The adapter-backed
-details popover is the exception: it lives in light DOM, so `BrowserDetailsDialog` owns
-`src/adapters/browser-details-dialog.css` and applies it via a constructed stylesheet. Its
+details popover is the exception: it lives in light DOM, so `BrowserDetailsModal` owns
+`src/adapters/browser-details-modal.css` and applies it via a constructed stylesheet. Its
 stylesheet mirrors the tokens it needs under `:root` with literal `var()` fallbacks, because
 `:host` tokens do not resolve outside shadow roots (unresolved tokens rendered the popover
 transparent in an earlier attempt).
@@ -249,14 +249,13 @@ Each works standalone on an external site once the single bundle is loaded:
 - `listing-details`: standalone iframe-to-listing element accepting `listing-id` with a `src` override
 - `public/migration.html`: static development/demo migration report; never part of the production
   listings API
-- `src/components/phase-five-harness.ts`: migration debugging harness; never part of the production
-  listings API
+- `public/test.html`: frozen legacy embed for parity comparison only; never edited
 
 Application behavior belongs in `src/application/`, not in a component:
 `ListingFeedLoader` drives feed loading through the `ListingFeed` port and
 `ListingFilterStore` owns filter state, while safe defaults are assembled in
 the bundle entry (`src/index.tsx`) and overridable per element. The browser details
-experience is an adapter-backed popover, not a `property-dialog` custom element. Shared
+experience is an adapter-backed popover modal, not a `property-modal` custom element. Shared
 details concerns live in `src/config/application.ts`: the canonical details URL
 (used by the card link, the adapter, and `listing-details`), the iframe-only
 `hidenav` variant (enforced by `resolveDetailsIframeUrl()`), and the

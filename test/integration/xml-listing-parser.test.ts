@@ -139,3 +139,51 @@ test('preserves required listing fields and handles optional fields when absent'
     assert.equal(listing?.hook, '');
   });
 });
+
+test('fails fast with a typed record error instead of dropping malformed records', async () => {
+  await withParser((parser) => {
+    const feed = `
+      <PhysicalProperty>
+        <Property>
+          <PropertyID>
+            <Address>
+              <Address>12 Main St</Address>
+              <City>Saint John</City>
+              <PostalCode>E2L 1A1</PostalCode>
+            </Address>
+          </PropertyID>
+          <Information><LongDescription /></Information>
+          <Floorplan>
+            <Identification><IDValue>good-id</IDValue></Identification>
+            <Room RoomType="Bedroom"><Count>1</Count></Room>
+          </Floorplan>
+        </Property>
+        <Property>
+          <PropertyID>
+            <Address>
+              <Address>13 Main St</Address>
+              <City>Saint John</City>
+              <PostalCode>E2L 1A1</PostalCode>
+            </Address>
+          </PropertyID>
+          <Information><LongDescription /></Information>
+          <Floorplan>
+            <Identification><IDValue></IDValue></Identification>
+            <Room RoomType="Bedroom"><Count>1</Count></Room>
+          </Floorplan>
+        </Property>
+      </PhysicalProperty>
+    `;
+
+    assert.throws(
+      () => parser.parse(feed),
+      (error: Record<string, any>) => {
+        assert.equal(error?.constructor?.name, 'ListingParseError');
+        assert.match(error.message, /listing record 1/);
+        assert.equal(error.recordIndex, 1);
+        assert.ok(error.cause);
+        return true;
+      },
+    );
+  });
+});

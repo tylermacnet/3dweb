@@ -232,30 +232,30 @@ test('derives the chromeless prefetch URL from a card href', async () => {
   assert.equal(hideNavVariantOf('not a url'), null);
 });
 
-test('prefixes the dialog title with the listing location', async () => {
+test('prefixes the modal title with the listing location', async () => {
   // Arrange
-  const { formatDialogTitle } = await applicationConfig();
+  const { formatModalTitle } = await applicationConfig();
   const listing = listingFixture('listing-42');
 
   // Act
-  const title = formatDialogTitle(listing);
+  const title = formatModalTitle(listing);
 
   // Assert
   assert.equal(title, 'Fredericton • Downtown / South Side — 144 King Street');
 });
 
-test('falls back gracefully for incomplete dialog title data', async () => {
+test('falls back gracefully for incomplete modal title data', async () => {
   // Arrange
-  const { formatDialogTitle } = await applicationConfig();
+  const { formatModalTitle } = await applicationConfig();
   const base = listingFixture('listing-42');
 
   // Act and assert each observable fallback
   assert.equal(
-    formatDialogTitle({ ...base, address: { ...base.address, line1: '', line2: '' } }),
+    formatModalTitle({ ...base, address: { ...base.address, line1: '', line2: '' } }),
     'Fredericton • Downtown / South Side',
   );
   assert.equal(
-    formatDialogTitle({
+    formatModalTitle({
       ...base,
       address: { ...base.address, line1: '', line2: '', regionName: '', areaName: '' },
     }),

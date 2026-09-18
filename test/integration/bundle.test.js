@@ -33,6 +33,7 @@ test('esbuild bundles the web component and CSS', async () => {
     assert.match(bundle, /fetchpriority/);
     assert.doesNotMatch(bundle, /showModal|closedby/);
     assert.doesNotMatch(bundle, /phase-five-harness/);
+    assert.doesNotMatch(bundle, /DetailsDialog|BrowserDetailsDialog|formatDialogTitle/);
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

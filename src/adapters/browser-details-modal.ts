@@ -1,11 +1,7 @@
 import type { Listing } from '../domain/listing.js';
-import type { DetailsDialog } from '../ports/details-dialog.js';
-import {
-  DETAILS_BASE_URL,
-  formatDialogTitle,
-  getListingDetailsUrl,
-} from '../config/application.js';
-import dialogCss from './browser-details-dialog.css';
+import type { DetailsModal } from '../ports/details-modal.js';
+import { DETAILS_BASE_URL, formatModalTitle, getListingDetailsUrl } from '../config/application.js';
+import modalCss from './browser-details-modal.css';
 
 const adoptedSheets = new WeakMap<Document, CSSStyleSheet>();
 
@@ -24,18 +20,18 @@ function createCloseIcon(doc: Document): SVGElement {
   return svg as unknown as SVGElement;
 }
 
-function ensureDialogStyles(doc: Document): void {
-  if (adoptedSheets.has(doc) || doc.querySelector('style[data-sc-dialog-styles]')) return;
+function ensureModalStyles(doc: Document): void {
+  if (adoptedSheets.has(doc) || doc.querySelector('style[data-sc-modal-styles]')) return;
   if (typeof CSSStyleSheet !== 'undefined' && Array.isArray(doc.adoptedStyleSheets)) {
     const sheet = new CSSStyleSheet();
-    sheet.replaceSync(dialogCss);
+    sheet.replaceSync(modalCss);
     doc.adoptedStyleSheets.push(sheet);
     adoptedSheets.set(doc, sheet);
     return;
   }
   const style = doc.createElement('style');
-  style.setAttribute('data-sc-dialog-styles', '');
-  style.textContent = dialogCss;
+  style.setAttribute('data-sc-modal-styles', '');
+  style.textContent = modalCss;
   doc.head.appendChild(style);
 }
 
@@ -53,7 +49,7 @@ function nextFrame(callback: () => void): void {
   callback();
 }
 
-export class BrowserDetailsDialog implements DetailsDialog {
+export class BrowserDetailsModal implements DetailsModal {
   private panel: HTMLElement | null = null;
   private iframe: HTMLIFrameElement | null = null;
   private skeleton: HTMLElement | null = null;
@@ -82,6 +78,13 @@ export class BrowserDetailsDialog implements DetailsDialog {
     this.preconnect();
   }
 
+  /**
+   * Shows the details modal for a listing. This is a product modal backed by
+   * the native Popover API: a non-modal `popover="auto"` top-layer element
+   * with `role="dialog"`, light dismiss, and `Esc` handling from the
+   * platform. Focus returns natively via `showPopover({ source })`.
+   */
+
   open(listing: Listing, invoker?: HTMLElement): boolean {
     if (!globalThis.document || !globalThis.window) return false;
     if (!supportsPopover()) return false;
@@ -94,7 +97,7 @@ export class BrowserDetailsDialog implements DetailsDialog {
       hideNav: true,
     });
 
-    const titleText = formatDialogTitle(listing);
+    const titleText = formatModalTitle(listing);
     if (this.titleEl) {
       this.titleEl.textContent = titleText;
       this.titleEl.setAttribute('title', titleText);
@@ -167,55 +170,57 @@ export class BrowserDetailsDialog implements DetailsDialog {
   }
 
   private preconnect(): void {
+    if (!globalThis.document) return;
     let origin: string;
     try {
       origin = new URL(this.detailsBaseUrl).origin;
     } catch {
       return;
     }
-    if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
-    const link = document.createElement('link');
+    if (globalThis.document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
+    const link = globalThis.document.createElement('link');
     link.rel = 'preconnect';
     link.href = origin;
-    document.head.appendChild(link);
+    globalThis.document.head.appendChild(link);
   }
 
   private mount(): void {
     if (!globalThis.document || this.panel) return;
 
-    const panel = document.createElement('div');
-    panel.className = 'sc-property-dialog';
+    const doc = globalThis.document;
+    const panel = doc.createElement('div');
+    panel.className = 'sc-property-modal';
     panel.setAttribute('popover', 'auto');
     panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-labelledby', 'sc-dialog-title');
+    panel.setAttribute('aria-labelledby', 'sc-modal-title');
     // Native popover semantics: auto type gives the top-layer backdrop, Esc
     // and light-dismiss cross-browser, and (via showPopover({ source })) focus
     // return to the triggering element. No manual focus, trap, or dismiss code.
-    const layout = document.createElement('div');
-    layout.className = 'sc-dialog-layout';
-    const header = document.createElement('div');
-    header.className = 'sc-dialog-header';
-    const title = document.createElement('h3');
-    title.className = 'sc-dialog-title';
-    title.id = 'sc-dialog-title';
+    const layout = doc.createElement('div');
+    layout.className = 'sc-modal-layout';
+    const header = doc.createElement('div');
+    header.className = 'sc-modal-header';
+    const title = doc.createElement('h3');
+    title.className = 'sc-modal-title';
+    title.id = 'sc-modal-title';
     title.textContent = 'Property Details';
-    const closeButton = document.createElement('button');
+    const closeButton = doc.createElement('button');
     closeButton.type = 'button';
-    closeButton.className = 'sc-dialog-close';
-    closeButton.setAttribute('aria-label', 'Close dialog');
+    closeButton.className = 'sc-modal-close';
+    closeButton.setAttribute('aria-label', 'Close modal');
     closeButton.autofocus = true;
-    closeButton.append(createCloseIcon(document));
-    const skeleton = document.createElement('div');
-    skeleton.className = 'sc-dialog-skeleton';
+    closeButton.append(createCloseIcon(doc));
+    const skeleton = doc.createElement('div');
+    skeleton.className = 'sc-modal-skeleton';
     skeleton.setAttribute('aria-hidden', 'true');
     for (const width of ['70%', '40%', '90%']) {
-      const line = document.createElement('div');
+      const line = doc.createElement('div');
       line.className = 'skeleton-line';
       line.style.width = width;
       skeleton.append(line);
     }
-    const iframe = document.createElement('iframe');
-    iframe.className = 'sc-dialog-iframe';
+    const iframe = doc.createElement('iframe');
+    iframe.className = 'sc-modal-iframe';
     iframe.allowFullscreen = true;
     iframe.title = 'Property listing detail view';
     iframe.setAttribute('fetchpriority', 'high');
@@ -231,8 +236,8 @@ export class BrowserDetailsDialog implements DetailsDialog {
     this.panel = panel;
 
     this.bindEvents();
-    ensureDialogStyles(document);
-    document.body.appendChild(panel);
+    ensureModalStyles(doc);
+    doc.body.appendChild(panel);
   }
 
   private bindEvents(): void {

@@ -80,8 +80,8 @@ export function hideNavVariantOf(href: string): string | null {
   return url.toString();
 }
 
-/** Dialog header title: location prefix (same vocabulary as the card) + address. */
-export function formatDialogTitle(listing: Listing): string {
+/** Modal header title: location prefix (same vocabulary as the card) + address. */
+export function formatModalTitle(listing: Listing): string {
   const location = [cleanRegionName(listing.address.regionName), listing.address.areaName]
     .filter(Boolean)
     .join(' • ');

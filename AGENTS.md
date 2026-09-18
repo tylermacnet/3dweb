@@ -34,25 +34,26 @@ Direct commands are only allowed when no `mise` task exists or when diagnosing a
 ```
 components -> application -> ports -> domain
 adapters   -> ports       -> domain
-config     -> domain
+config     -> shared kernel (immutable product policy; imported by all layers,
+               type-only from domain)
 index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
 
 - **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
 - **Application** (`src/application/`): `ListingFeedLoader` (Lit `ReactiveController`) owns feed loading, request cancellation, and the load-state machine; `ListingFilterStore` owns filter criteria and derived visible listings/location groups.
-- **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsDialog`).
+- **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsModal`).
 - **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser popover).
 - **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (iframe-to-listing element accepting `listing-id` with a `src` override). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `property-listings` composes `listing-card` and `listing-filters` but does not own them.
-- **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs).
+- **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs). Shared kernel: every layer may import it; `domain` imports it type-only so runtime purity holds.
 
 ## Key constraints
 
-- No DI containers, service locators, or global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled in the bundle entry. No root component.
+- No DI containers, service locators, or mutable global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled per document in the bundle entry (shared immutable location resolver, fresh feed per element, one popover modal per document). No root component.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
 - CSS is component-owned: imported via `componentStyles()` in the owning component's `static styles`.
   `src/styles/component-styles.ts` is the only `unsafeCSS` call site (first-party build-time CSS only).
   Exception: the light-DOM details popover is styled by its adapter
-  (`src/adapters/browser-details-dialog.css`, constructed stylesheet, `:root` token mirror) —
+  (`src/adapters/browser-details-modal.css`, constructed stylesheet, `:root` token mirror) —
   `:host` tokens do not resolve outside shadow roots.
 - Use `AbortSignal.timeout(5000)` for network resilience, not manual timer clearing.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries.
@@ -71,7 +72,7 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 
 ## Post-change mandatory process
 
-After every migration phase or major change, complete all five steps before declaring work done:
+After every migration phase or major change, complete all six steps before declaring work done:
 
 1. Review dependency direction against architecture layers (domain purity, port ownership, adapter boundaries).
 2. Review SOLID principles and 2026 platform practices.
@@ -93,13 +94,12 @@ After every migration phase or major change, complete all five steps before decl
 - `mise.lock` — pinned toolchain versions (commit updates).
 - `.opencode/opencode.json` — project TypeScript LSP (`mise exec` wrapper, committed).
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
-- `src/config/application.ts` — shared details URL, iframe variant, popover title policy.
+- `src/config/application.ts` — shared details URL, iframe variant, modal title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
-- `src/adapters/browser-details-dialog.css` — adapter-owned popover styles.
+- `src/adapters/browser-details-modal.css` — adapter-owned popover styles.
 - `public/index.html` — host page consuming `public/dist/bundle.js`.
-- `public/test.html` — legacy embed (migration source).
+- `public/test.html` — frozen legacy embed, kept byte-identical for feature-parity comparison only.
 - `public/migration.html` — static demo, not part of production listings API.
-- `src/components/phase-five-harness.ts` — migration debugging harness, never part of production API.
 - `src/env.d.ts` — CSS module type declarations.
 
 ## Docs

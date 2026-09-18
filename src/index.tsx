@@ -2,43 +2,43 @@ import './components/property-listings.js';
 import './components/listing-card.js';
 import './components/listing-filters.js';
 import './components/listing-details.js';
-import { BrowserDetailsDialog } from './adapters/browser-details-dialog.js';
+import { BrowserDetailsModal } from './adapters/browser-details-modal.js';
 import { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
 import { XmlListingParser } from './adapters/xml-listing-parser.js';
 import { NEW_BRUNSWICK_REGIONS } from './config/regions.js';
 import { LocationResolver } from './domain/location-resolver.js';
-import type { DetailsDialog } from './ports/details-dialog.js';
+import type { DetailsModal } from './ports/details-modal.js';
 import type { ListingFeed } from './ports/listing-feed.js';
 import type { PropertyListings } from './components/property-listings.js';
 
 const locationResolver = new LocationResolver(NEW_BRUNSWICK_REGIONS);
-const dialogByDocument = new WeakMap<Document, DetailsDialog>();
+const modalByDocument = new WeakMap<Document, DetailsModal>();
 
 const PROPERTY_LISTINGS_TAG = 'property-listings';
 
 interface ListingDefaults {
   createFeed(): ListingFeed;
-  detailsDialog: DetailsDialog;
+  detailsModal: DetailsModal;
 }
 
 // Immutable shared per bundle; a fresh stateless feed per element; exactly one
 // popover per document (a single shared overlay is correct sharing, not a
 // singleton smell).
 function defaultsFor(doc: Document): ListingDefaults {
-  let detailsDialog = dialogByDocument.get(doc);
-  if (!detailsDialog) {
-    detailsDialog = new BrowserDetailsDialog();
-    dialogByDocument.set(doc, detailsDialog);
+  let detailsModal = modalByDocument.get(doc);
+  if (!detailsModal) {
+    detailsModal = new BrowserDetailsModal();
+    modalByDocument.set(doc, detailsModal);
   }
   return {
     createFeed: () => new ManageBuildingFeed(new XmlListingParser(locationResolver)),
-    detailsDialog,
+    detailsModal,
   };
 }
 
 function wireElement(element: PropertyListings, defaults: ListingDefaults): void {
   if (element.feed == null) element.feed = defaults.createFeed();
-  if (element.detailsDialog == null) element.detailsDialog = defaults.detailsDialog;
+  if (element.detailsModal == null) element.detailsModal = defaults.detailsModal;
 }
 
 /**
@@ -82,7 +82,7 @@ function autoWire(): void {
 // is unavailable the warm still happens, just sooner.
 function warmDetailsOverlay(): void {
   const warm = (): void => {
-    defaultsFor(document).detailsDialog.warm?.();
+    defaultsFor(document).detailsModal.warm?.();
   };
   if (typeof requestIdleCallback === 'function') {
     requestIdleCallback(() => warm());

@@ -2,15 +2,15 @@
 
 ## Core Principles
 
-- Migrate iteratively from `public/test.html` into vertical slices under `src/`.
-- Architecture Layers: `components -> application -> ports -> domain` and `adapters -> ports -> domain`.
+- Migrate iteratively from the frozen `public/test.html` baseline (kept byte-identical for parity comparison; never edit it) into vertical slices under `src/`.
+- Architecture Layers: `components -> application -> ports -> domain` and `adapters -> ports -> domain`; `config` is a shared kernel (immutable product policy imported by all layers, type-only from domain).
 - Static Embed Constraints: Single bundle entry at `src/index.tsx` registers all public elements (`property-listings`, `listing-card`, `listing-filters`, `listing-details`). There is no root component; each element must work standalone on an external site. Do NOT introduce DI framework containers or server runtimes. Each element accepts its ports via properties/attributes with safe defaults assembled in the bundle entry.
 - Strict Domain Purity: Domain modules MUST NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals (`window`, `document`).
 
 ## Technical Stack & Mechanics
 
 - UI Layer: Lit framework (`lit`). Use Lit HTML templates (`html```); never use manual string `innerHTML` concatenation.
-- Components: Extend base classes via post-construction/constructor controller wiring or Lit properties. Preserve lowercase custom element contracts (`<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>`). Copy functionality from `public/test.html` while improving artifacts to modern standards: Lit templates, Valibot boundaries, `AbortSignal.timeout(5000)`, token-based CSS. Sorting stays intentionally out of scope.
+- Components: Extend base classes via post-construction/constructor controller wiring or Lit properties. Preserve lowercase custom element contracts (`<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>`). Copy functionality from the frozen `public/test.html` baseline while improving artifacts to modern standards: Lit templates, Valibot boundaries, `AbortSignal.timeout(5000)`, token-based CSS. Sorting stays intentionally out of scope.
 - State Management: Encapsulate application/UI state inside Lit `ReactiveController` instances.
 - CSS Handling: Import component-owned CSS from the component that owns the styles using
   `componentStyles()` from `src/styles/component-styles.ts` (the project's only `unsafeCSS`

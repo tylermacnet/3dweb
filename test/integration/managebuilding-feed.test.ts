@@ -124,3 +124,52 @@ test('throws when every feed request fails', async () => {
     message: 'Unable to retrieve XML feed.',
   });
 });
+
+test('wraps parser failures with feed context', async () => {
+  // Arrange
+  const { ManageBuildingFeed } = await loadFeed();
+  const fetchFn = async () =>
+    ({ ok: true, text: async () => '<Property><id>x</id></Property>' }) as Response;
+  const parser = {
+    parse: () => {
+      throw new Error('bad record');
+    },
+  };
+  const feed = new ManageBuildingFeed(parser, fetchFn as typeof fetch);
+
+  // Act and assert
+  await assert.rejects(feed.getListings(), {
+    message: 'Unable to parse listing feed.',
+  });
+});
+
+test('rethrows caller aborts instead of falling through the proxy chain', async () => {
+  // Arrange
+  const { ManageBuildingFeed } = await loadFeed();
+  const requestedUrls: string[] = [];
+  const abortError = new DOMException('This operation was aborted', 'AbortError');
+  const fetchFn = async (url: string) => {
+    requestedUrls.push(url);
+    throw abortError;
+  };
+  const controller = new AbortController();
+  controller.abort();
+  const feed = new ManageBuildingFeed({ parse: () => [] }, fetchFn as typeof fetch);
+
+  // Act and assert
+  await assert.rejects(feed.getListings(controller.signal), (error) => error === abortError);
+  assert.equal(requestedUrls.length, 1);
+});
+
+test('rejects successful responses without property listings', async () => {
+  // Arrange
+  const { ManageBuildingFeed } = await loadFeed();
+  const fetchFn = async () =>
+    ({ ok: true, text: async () => '<PhysicalProperty></PhysicalProperty>' }) as Response;
+  const feed = new ManageBuildingFeed({ parse: () => [] }, fetchFn as typeof fetch);
+
+  // Act and assert
+  await assert.rejects(feed.fetchXml(), {
+    message: 'Unable to retrieve XML feed.',
+  });
+});

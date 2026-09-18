@@ -1,5 +1,5 @@
 // ConfigurePropertyListings owns the entry wiring contract: fill only unset
-// ports, fresh stateless feed per element, one dialog per document, host
+// ports, fresh stateless feed per element, one modal per document, host
 // overrides preserved. Linkedom cannot upgrade/run these custom elements, so
 // we exercise the pure DOM-wiring function on plain custom-element tags.
 import assert from 'node:assert/strict';
@@ -49,7 +49,7 @@ function freshDocument(markup: string): ReturnType<typeof parseHTML>['window'] {
   return parseHTML(`<!doctype html><html><body>${markup}</body></html>`).window;
 }
 
-test('fills unset ports on every property-listings with a fresh feed and shared dialog', async () => {
+test('fills unset ports on every property-listings with a fresh feed and shared modal', async () => {
   // Arrange
   const { configurePropertyListings } = await entryModule();
   const window = freshDocument(
@@ -62,33 +62,33 @@ test('fills unset ports on every property-listings with a fresh feed and shared 
   // Assert
   const elements = window.document.querySelectorAll('property-listings');
   assert.equal(elements.length, 2);
-  const [first, second] = elements as unknown as Array<{ feed?: unknown; detailsDialog?: unknown }>;
+  const [first, second] = elements as unknown as Array<{ feed?: unknown; detailsModal?: unknown }>;
   assert.ok(first?.feed);
   assert.notEqual(first?.feed, second?.feed);
   assert.equal(typeof first?.feed?.getListings, 'function');
-  assert.ok(first?.detailsDialog);
-  assert.equal(first?.detailsDialog, second?.detailsDialog);
+  assert.ok(first?.detailsModal);
+  assert.equal(first?.detailsModal, second?.detailsModal);
 });
 
-test('preserves a host-supplied feed and dialog per element', async () => {
+test('preserves a host-supplied feed and modal per element', async () => {
   // Arrange
   const { configurePropertyListings } = await entryModule();
   const window = freshDocument('<property-listings></property-listings>');
   const hostFeed = { getListings: async () => [] };
-  const hostDialog = { open: () => true, close: () => undefined };
+  const hostModal = { open: () => true, close: () => undefined };
   const element = window.document.querySelector('property-listings') as unknown as {
     feed?: unknown;
-    detailsDialog?: unknown;
+    detailsModal?: unknown;
   };
   element.feed = hostFeed;
-  element.detailsDialog = hostDialog;
+  element.detailsModal = hostModal;
 
   // Act
   configurePropertyListings(window.document);
 
   // Assert
   assert.equal(element.feed, hostFeed);
-  assert.equal(element.detailsDialog, hostDialog);
+  assert.equal(element.detailsModal, hostModal);
 });
 
 test('scopes wiring to the given root and is idempotent across calls', async () => {
@@ -121,7 +121,7 @@ test('wires the root element itself when it is a property-listings', async () =>
   const window = freshDocument('<property-listings></property-listings>');
   const element = window.document.querySelector('property-listings') as unknown as {
     feed?: unknown;
-    detailsDialog?: unknown;
+    detailsModal?: unknown;
   };
 
   // Act
@@ -129,5 +129,5 @@ test('wires the root element itself when it is a property-listings', async () =>
 
   // Assert
   assert.ok(element.feed);
-  assert.ok(element.detailsDialog);
+  assert.ok(element.detailsModal);
 });

@@ -1,8 +1,26 @@
 import { AddressNormalizer } from '../domain/address-normalizer.js';
 import { createListing, type Listing } from '../domain/listing.js';
 import { getFSA, LocationResolver } from '../domain/location-resolver.js';
+import type { ListingParser } from '../ports/listing-parser.js';
 
-export class XmlListingParser {
+/**
+ * Typed parse failure. The parser is fail-fast by explicit product policy: a
+ * single malformed `<Property>` record aborts the whole feed (surfacing as
+ * the loader `error` + retry state) rather than silently dropping records.
+ * `recordIndex` identifies the offending record; the `cause` preserves the
+ * underlying Valibot/DOM error.
+ */
+export class ListingParseError extends Error {
+  readonly recordIndex: number | undefined;
+
+  constructor(message: string, options?: { cause?: unknown; recordIndex?: number }) {
+    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
+    this.name = 'ListingParseError';
+    this.recordIndex = options?.recordIndex;
+  }
+}
+
+export class XmlListingParser implements ListingParser {
   private readonly locationResolver: LocationResolver;
 
   constructor(locationResolver: LocationResolver) {
@@ -14,12 +32,20 @@ export class XmlListingParser {
 
     const document = new DOMParser().parseFromString(xmlString, 'text/xml');
     if (document.querySelector('parsererror')) {
-      throw new Error('Unable to parse XML listing feed.');
+      throw new ListingParseError('Unable to parse XML listing feed.');
     }
 
-    return Array.from(document.querySelectorAll('Property')).map((property) =>
-      this.parseProperty(property),
-    );
+    const properties = Array.from(document.querySelectorAll('Property'));
+    return properties.map((property, recordIndex) => {
+      try {
+        return this.parseProperty(property);
+      } catch (error) {
+        throw new ListingParseError(`Unable to parse listing record ${recordIndex}.`, {
+          cause: error,
+          recordIndex,
+        });
+      }
+    });
   }
 
   private parseProperty(property: Element): Listing {

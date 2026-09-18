@@ -180,13 +180,14 @@
           The project ships a library of independent web components with no root component:
           <code>property-listings</code>, <code>listing-card</code>, <code>listing-filters</code>,
           and the iframe-to-listing <code>listing-details</code>, all registered by the single
-          bundle. Phases 1–8 are complete, including focused presentation components with a
-          native-only adapter-backed details popover (Popover API <code>popover="auto"</code>,
+          bundle. Phases 1–8 are complete, including focused presentation components with an
+          adapter-backed details modal (product term for a non-modal Popover API
+          <code>popover="auto"</code> element with <code>role="dialog"</code>,
           <code>autofocus</code>, native focus return, no manual focus or dismiss code), a
           four-element public surface with an SSR-safe auto-wiring bundle entry, and
           origin-restricted <code>hidenav</code> iframe embeds; sorting is intentionally out of
-          scope. Phases 4–5 remain under review against the parser-error, adapter-resilience, and
-          coverage requirements.
+          scope. The legacy <code>public/test.html</code> embed is frozen byte-identical for parity
+          comparison, and the Phase 5 debug harness has been removed.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -209,15 +210,15 @@
             <span>Listing filtering</span>
             <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase review">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">4</span>
             <span>Feed ports and XML parser</span>
-            <strong class="phase-status">Under review</strong>
+            <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase review">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">5</span>
             <span>HTTP feed and popover adapters</span>
-            <strong class="phase-status">Under review</strong>
+            <strong class="phase-status">Complete</strong>
           </li>
           <li class="phase complete">
             <span class="phase-number" aria-hidden="true">6</span>
@@ -317,13 +318,105 @@
         </ul>
       </section>
 
+      <section aria-labelledby="phase-four-review-title">
+        <h2 id="phase-four-review-title">Phase 4 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> narrow <code>ListingFeed</code>,
+            <code>ListingParser</code>, and <code>DetailsModal</code> ports;
+            <code>XmlListingParser implements ListingParser</code> so the contract is
+            compiler-enforced. Vendor field names and DOM parsing stay inside the adapter; no
+            XML/DOM types leak into ports or domain modules.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> fail-fast by explicit policy — a single
+            malformed <code>&lt;Property&gt;</code> record aborts the whole feed with a typed
+            <code>ListingParseError</code> (offending record index plus the underlying validation
+            <code>cause</code>) instead of silently dropping records. The loader surfaces this as
+            its error-plus-retry state.
+          </li>
+          <li>
+            <strong>Coverage:</strong> the 12-listing real-world feed, empty input,
+            <code>parsererror</code> documents, optional-field handling, and a mixed valid/invalid
+            feed proving the fail-fast record error (name, index, cause) are covered.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 78
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-five-review-title">
+        <h2 id="phase-five-review-title">Phase 5 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> <code>ManageBuildingFeed</code> owns the hardcoded feed
+            URL and a fixed direct-then-proxy chain with a 5s timeout per attempt (worst case ~15s),
+            rethrows caller aborts to preserve cancellation, accepts payloads on a structural
+            <code>&lt;Property&gt;</code> match with AllOrigins
+            <code>{ contents }</code> unwrapping, keeps every attempt error in the failure
+            <code>cause</code>, and wraps parser failures with feed context.
+            <code>BrowserDetailsModal</code> is a product modal backed by a non-modal
+            <code>popover="auto"</code> element: <code>showPopover</code> with invoker
+            <code>source</code>, <code>toggle</code>-event state, and <code>false</code> when
+            popover is unsupported so the card falls back to canonical-link navigation.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> <code>fetch</code>, <code>DOMParser</code>,
+            and popover APIs stay confined to adapters; error reporting is message plus ordered
+            causes (the loader collapses this to its <code>error</code> message). No manual focus
+            trap, backdrop handler, or <code>showModal</code>/<code>closedby</code> remnants.
+          </li>
+          <li>
+            <strong>Coverage:</strong> feed success, proxy fallback order, all-attempt failure,
+            parser-failure wrapping, abort rethrow without proxy fallthrough, and
+            successful-but-empty payloads are covered; modal open, skeleton handoff, invoker focus
+            return, location-prefixed naming, same-listing reuse, different-listing navigation,
+            stale-reset timing and cancellation, idle <code>warm()</code> (including unsupported
+            popover mounting nothing), stylesheet adoption with opaque token fallbacks, and the
+            no-constructed- stylesheet fallback are covered.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 78
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-six-review-title">
+        <h2 id="phase-six-review-title">Phase 6 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> <code>ListingFeedLoader</code> owns feed loading,
+            cancellation via explicit <code>setFeed()</code>, and the idle/loading/ready/empty/error
+            load-state machine; <code>ListingFilterStore</code> owns filter criteria with derived
+            visible listings and location groups.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> aborted and stale requests resolve silently
+            without corrupting state; errors collapse to actionable messages for the container
+            error-plus-retry UI.
+          </li>
+          <li>
+            <strong>Coverage:</strong> loader transitions (ready, empty, error, retry, stale-request
+            and feed-swap cancellation) and store derivation are covered; entry-wiring coverage is
+            attested under Phase 8.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 78
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
       <section aria-labelledby="phase-seven-review-title">
         <h2 id="phase-seven-review-title">Phase 7 review evidence</h2>
         <ul>
           <li>
             <strong>Architecture:</strong> presentational <code>listing-card</code> and
             <code>listing-filters</code> components with container loading, empty, error, and retry
-            states; details stay behind the <code>DetailsDialog</code> port. Component styles flow
+            states; details stay behind the <code>DetailsModal</code> port. Component styles flow
             through the single <code>componentStyles()</code> trust boundary while the light-DOM
             popover is styled by its adapter via a constructed stylesheet with a
             <code>:root</code> token mirror. Shared details concerns (canonical URL, iframe-only
@@ -339,8 +432,8 @@
           </li>
           <li>
             <strong>Coverage:</strong> card and filter view models, template structure, event
-            contracts, the fine/coarse/modified/unknown click matrix, dialog stylesheet adoption
-            with opaque-background regression guards, and the details URL/title helpers are covered.
+            contracts, the fine/coarse/modified/unknown click matrix, modal stylesheet adoption with
+            opaque-background regression guards, and the details URL/title helpers are covered.
           </li>
           <li>
             <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 40
@@ -389,8 +482,9 @@
             origin lock, blank-input fallthrough, encoded path segments), popover open/close/invoker
             and iframe-reset behavior, and a bundle test asserting all four element registrations,
             the <code>showPopover</code>/<code>hidePopover</code> surface, no
-            <code>showModal</code>/<code>closedby</code> remnants, plus the
-            <code>phase-five-harness</code> exclusion.
+            <code>showModal</code>/<code>closedby</code> remnants, no
+            <code>DetailsDialog</code>/<code>BrowserDetailsDialog</code> names, and an allowlist of
+            exactly the four public element registrations.
           </li>
           <li>
             <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 67
@@ -413,7 +507,7 @@
             (<code>aria-busy</code>) in the click frame while the iframe navigation starts on the
             next animation frame; a 150ms ease-out fade/rise (opacity/transform only, disabled under
             <code>prefers-reduced-motion</code>) smooths the entry; the overlay is premounted,
-            styled, and preconnected at idle via the optional <code>DetailsDialog.warm()</code>;
+            styled, and preconnected at idle via the optional <code>DetailsModal.warm()</code>;
             hover/focus intent prefetches the exact iframe URL through
             <code>hideNavVariantOf()</code> (deduped, skipped on Save-Data); the live document is
             reused on same-listing reopen and discarded to <code>about:blank</code> only after a

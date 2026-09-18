@@ -77,7 +77,7 @@ test('registers the property-listings element', async () => {
   assert.ok(globalThis.customElements.get('property-listings'));
 });
 
-test('declares feed and detailsDialog as non-attribute ports', async () => {
+test('declares feed and detailsModal as non-attribute ports', async () => {
   // Arrange
   const { PropertyListings } = await componentModule();
 
@@ -85,7 +85,7 @@ test('declares feed and detailsDialog as non-attribute ports', async () => {
   const properties = (PropertyListings as unknown as { properties: Record<string, unknown> })
     .properties;
   assert.deepEqual(properties.feed, { attribute: false });
-  assert.deepEqual(properties.detailsDialog, { attribute: false });
+  assert.deepEqual(properties.detailsModal, { attribute: false });
 });
 
 test('renders the container skeleton with filters while idle', async () => {

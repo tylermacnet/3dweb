@@ -1,6 +1,6 @@
 /* Popover lives in light DOM outside any shadow root, where :host tokens do not
    resolve (unresolved tokens made earlier attempts render transparent). Mirror
-   the tokens this dialog uses from src/styles/listing-theme.css and keep them
+   the tokens this modal uses from src/styles/listing-theme.css and keep them
    in sync. Critical surfaces additionally carry literal var() fallbacks. */
 :root {
   --sc-brand-primary: #0284c7;
@@ -12,13 +12,13 @@
   --sc-text-muted: #64748b;
 }
 
-.sc-property-dialog {
-  --dialog-bg: var(--sc-surface-bg, #ffffff);
-  --dialog-soft: var(--sc-surface-alt, #f8fafc);
-  --dialog-line: var(--sc-border-light, #e2e8f0);
-  --dialog-ink: var(--sc-text-main, #0f172a);
-  --dialog-muted: var(--sc-text-muted, #64748b);
-  --dialog-accent: var(--sc-brand-primary, #0284c7);
+.sc-property-modal {
+  --modal-bg: var(--sc-surface-bg, #ffffff);
+  --modal-soft: var(--sc-surface-alt, #f8fafc);
+  --modal-line: var(--sc-border-light, #e2e8f0);
+  --modal-ink: var(--sc-text-main, #0f172a);
+  --modal-muted: var(--sc-text-muted, #64748b);
+  --modal-accent: var(--sc-brand-primary, #0284c7);
   width: 90vw;
   max-width: 56.25rem;
   height: 85vh;
@@ -26,8 +26,8 @@
   overflow: hidden;
   border: none;
   border-radius: 0.75rem;
-  background: var(--dialog-bg);
-  color: var(--dialog-ink);
+  background: var(--modal-bg);
+  color: var(--modal-ink);
   box-shadow: 0 0.625rem 1.5625rem rgb(0 0 0 / 20%);
   transition:
     opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
@@ -47,56 +47,56 @@
 }
 
 @starting-style {
-  .sc-property-dialog:popover-open {
+  .sc-property-modal:popover-open {
     opacity: 0;
     transform: translateY(0.5rem) scale(0.98);
   }
 
-  .sc-property-dialog:popover-open::backdrop {
+  .sc-property-modal:popover-open::backdrop {
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sc-property-dialog,
-  .sc-property-dialog::backdrop {
+  .sc-property-modal,
+  .sc-property-modal::backdrop {
     transition: none;
   }
 
-  .sc-property-dialog:popover-open {
+  .sc-property-modal:popover-open {
     transform: none;
   }
 }
 
-.sc-dialog-layout {
+.sc-modal-layout {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.sc-dialog-header {
+.sc-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.5rem 0.5rem 0.5rem 1rem;
-  border-bottom: 1px solid var(--dialog-line);
-  background: var(--dialog-soft);
+  border-bottom: 1px solid var(--modal-line);
+  background: var(--modal-soft);
 }
 
-.sc-dialog-title {
+.sc-modal-title {
   flex: 1;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: var(--dialog-ink);
+  color: var(--modal-ink);
   font-size: 1rem;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.sc-dialog-close {
+.sc-modal-close {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -107,38 +107,38 @@
   border: none;
   border-radius: 0.5rem;
   background: transparent;
-  color: var(--dialog-muted);
+  color: var(--modal-muted);
   cursor: pointer;
 
   &:hover {
-    background: var(--dialog-line);
-    color: var(--dialog-ink);
+    background: var(--modal-line);
+    color: var(--modal-ink);
   }
 
   &:focus-visible {
-    outline: 0.125rem solid var(--dialog-accent);
+    outline: 0.125rem solid var(--modal-accent);
     outline-offset: 0.125rem;
   }
 }
 
-.sc-dialog-iframe {
+.sc-modal-iframe {
   flex: 1;
   width: 100%;
   border: none;
 }
 
-.sc-dialog-iframe[hidden] {
+.sc-modal-iframe[hidden] {
   display: none;
 }
 
 /* Loading skeleton: same slot as the iframe so the swap paints no shift. */
-.sc-dialog-skeleton {
+.sc-modal-skeleton {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.5rem;
-  background: var(--dialog-soft);
+  background: var(--modal-soft);
 
   &[hidden] {
     display: none;
@@ -147,7 +147,7 @@
   & .skeleton-line {
     height: 1rem;
     border-radius: 0.375rem;
-    background: var(--dialog-line);
+    background: var(--modal-line);
     animation: sc-skeleton-pulse 1.5s ease-in-out infinite;
   }
 }
@@ -164,7 +164,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sc-dialog-skeleton .skeleton-line {
+  .sc-modal-skeleton .skeleton-line {
     animation: none;
   }
 }

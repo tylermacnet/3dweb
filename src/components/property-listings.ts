@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
 import type { ListingFeed } from '../ports/listing-feed.js';
-import type { DetailsDialog } from '../ports/details-dialog.js';
+import type { DetailsModal } from '../ports/details-modal.js';
 import type { Listing } from '../domain/listing.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
 import { ListingFeedLoader, type ListingLoadState } from '../application/listing-feed-loader.js';
@@ -18,13 +18,13 @@ const SKELETON_COUNT = 6;
 export class PropertyListings extends LitElement {
   static properties = {
     feed: { attribute: false },
-    detailsDialog: { attribute: false },
+    detailsModal: { attribute: false },
   };
 
   static styles = componentStyles(theme, styles);
 
   feed: ListingFeed | undefined;
-  detailsDialog: DetailsDialog | undefined;
+  detailsModal: DetailsModal | undefined;
 
   private readonly loader = new ListingFeedLoader(this);
   private readonly filterStore = new ListingFilterStore(
@@ -44,8 +44,8 @@ export class PropertyListings extends LitElement {
   }
 
   private handleDetailsRequested(event: CustomEvent<Listing>): void {
-    if (!this.detailsDialog) return;
-    const handled = this.detailsDialog.open(
+    if (!this.detailsModal) return;
+    const handled = this.detailsModal.open(
       event.detail,
       event.target instanceof HTMLElement ? event.target : undefined,
     );

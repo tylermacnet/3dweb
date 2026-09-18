@@ -148,7 +148,7 @@ Keep changes within the project boundaries described in the migration plan:
   contexts; maximum nesting depth is 3; always include `&` when chaining pseudo-classes,
   compound classes, or reversed context. Never use Sass-style `&__child` concatenation.
 - The adapter-backed details popover is styled by its adapter, not by a component or the
-  composition root. `BrowserDetailsDialog` owns `src/adapters/browser-details-dialog.css` and
+  composition root. `BrowserDetailsModal` owns `src/adapters/browser-details-modal.css` and
   applies it once per document as a constructed stylesheet (plain `<style>` fallback only when
   unsupported). The popover stylesheet mirrors the tokens it needs under `:root` with literal
   `var()` fallbacks: `:host` tokens do not resolve in light DOM, and unresolved tokens rendered
@@ -201,25 +201,26 @@ layer.
 Each listing card renders a single stretched link to the canonical details URL from
 `getListingDetailsUrl()` in `src/config/application.ts`. An unmodified primary click on a fine
 pointer stops at the card and dispatches a cancelable, composed
-`listing-details-requested` event; the container opens the `DetailsDialog` port and, only when
-the dialog reports it handled the request, cancels the click so the anchor never navigates.
-If no dialog is wired (standalone card) or it declines (popover unsupported), the anchor keeps
+`listing-details-requested` event; the container opens the `DetailsModal` port and, only when
+the modal reports it handled the request, cancels the click so the anchor never navigates.
+If no modal is wired (standalone card) or it declines (popover unsupported), the anchor keeps
 its default navigation: coarse pointers and modified clicks (new-tab gestures) also fall through
 to normal link navigation, so old browsers and touch-first hosts degrade to the canonical link.
 The `hidenav` chromeless variant is iframe-only and must
 never appear in card links. Popover headers are prefixed with the listing location
-(`formatDialogTitle()`), using the same region/area vocabulary as the card.
+(`formatModalTitle()`), using the same region/area vocabulary as the card.
 
-The details overlay is a native Popover API element (`div[popover="auto"]`, `role="dialog"`) that
+The details overlay is a product modal backed by the native Popover API (a non-modal
+`div[popover="auto"]` top-layer element with `role="dialog"`) that
 gives cross-browser backdrop, `Esc`, and light-dismiss without the Chromium-only `closedby`.
-`BrowserDetailsDialog` mirrors the platform open/closed state from the `toggle` event, hands the
+`BrowserDetailsModal` mirrors the platform open/closed state from the `toggle` event, hands the
 triggering card to `showPopover({ source })` for native focus return, and mounts nothing at all
 when `showPopover` is unsupported
 (the port returns `false` so the card navigates instead).
 
 Open latency is owned on our side of the timeline (the cross-origin document itself is
 untouchable): the overlay is premounted, styled, and preconnected at idle via the optional
-`DetailsDialog.warm()` (wired by the bundle entry; `open()` works without it); `open()` shows
+`DetailsModal.warm()` (wired by the bundle entry; `open()` works without it); `open()` shows
 the shell with a skeleton (`aria-busy`) in the click frame and starts the iframe navigation on
 the next animation frame, retiring the skeleton on the iframe `load` event; reopening the same
 listing reuses the live document with no navigation, while a different listing always

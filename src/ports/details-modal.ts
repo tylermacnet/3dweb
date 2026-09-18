@@ -1,8 +1,10 @@
 import type { Listing } from '../domain/listing.js';
 
-export interface DetailsDialog {
+export interface DetailsModal {
   /**
-   * Presents listing details. Returns true when the dialog handled the request
+   * Presents listing details in the Popover API modal (product term; the
+   * platform mechanism is a non-modal `popover="auto"` element with
+   * `role="dialog"`). Returns true when the modal handled the request
    * (so the caller should cancel its default navigation); false when details
    * cannot be shown here and the caller should fall back to the canonical link.
    * The optional invoker is used for native focus restoration on close.

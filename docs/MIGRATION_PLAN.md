@@ -26,7 +26,8 @@ The target follows 2026 web engineering practices:
 ```text
 components -> application -> ports -> domain
 adapters   -> ports       -> domain
-config     -> domain (when configuration describes domain policy)
+config     -> shared kernel (immutable product policy; imported by all layers,
+               type-only from domain)
 index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
 
@@ -55,7 +56,7 @@ new component, without changing existing elements.
 - **Configuration (`src/config/`)**: Typed, immutable product policy such as regions
   and filter definitions. Configuration is not a substitute for domain logic.
 - **Bundle entry (`src/index.tsx`)**: The single static entry point registers all
-  public elements and assembles their safe port defaults (feed, parser, dialog).
+  public elements and assembles their safe port defaults (feed, parser, modal).
   It owns no presentation styles and is not a component. Each public element
   accepts its ports via properties/attributes so it works standalone on an
   external site; `property-listings` composes `listing-card` and
@@ -65,12 +66,12 @@ new component, without changing existing elements.
 
 - **Single Responsibility**: Each module has one reason to change; parsing, fetching,
   orchestration, rendering, and styling remain separate.
-- **Open/Closed**: Add a feed, parser, region, or dialog implementation through a
+- **Open/Closed**: Add a feed, parser, region, or modal implementation through a
   port/configuration extension rather than changing unrelated consumers.
 - **Liskov Substitution**: Every adapter must honor its port's return, error, and
   cancellation contract.
 - **Interface Segregation**: Keep ports narrow (`ListingFeed`, `ListingParser`,
-  `DetailsDialog`) so consumers depend only on capabilities they use.
+  `DetailsModal`) so consumers depend only on capabilities they use.
 - **Dependency Inversion**: Application code depends on ports; concrete adapters are
   supplied per element via properties/attributes, with safe defaults assembled in
   the bundle entry.
@@ -87,13 +88,13 @@ duplicate a rule already owned by the domain/configuration layer.
 - Name interfaces for capabilities (`ListingFeed`, `ListingParser`) and avoid
   implementation-prefixed interfaces such as `IListingFeed`.
 - Name adapters after the external mechanism (`ManageBuildingFeed`,
-  `XmlListingParser`, `BrowserDetailsDialog`), not after a generic `Service`.
+  `XmlListingParser`, `BrowserDetailsModal`), not after a generic `Service`.
 - Use singular domain concepts (`Listing`, `Address`) and plural collections
   (`listings`).
 - Preserve lowercase custom-element names and match the public element contract:
   `<property-listings>`, `<listing-card>`, `<listing-filters>`, and
   `<listing-details>` (iframe-to-listing element). The popover experience stays behind the
-  `DetailsDialog` port and `BrowserDetailsDialog` adapter; `listing-details` is
+  `DetailsModal` port and `BrowserDetailsModal` adapter; `listing-details` is
   the standalone iframe-to-listing element and never replaces the popover.
 - Keep one primary public concept per file. Co-locate a component stylesheet only
   when it is owned exclusively by that component.
@@ -163,33 +164,51 @@ documentation, and coverage reviews are required process steps.
 
 4. **Phase 4: Define ports and implement XML parsing**
    - Define `src/ports/listing-feed.ts`, `src/ports/listing-parser.ts`, and
-     `src/ports/details-dialog.ts`.
+     `src/ports/details-modal.ts`.
    - Create `src/adapters/xml-listing-parser.ts` to translate external XML into
      valid domain listings.
    - Keep vendor field names and parsing assumptions inside the adapter; do not
      leak XML/DOM types into ports or domain modules.
-   - Return typed, actionable parse failures and never silently drop malformed
-     records without an explicit policy.
+   - Fail fast with typed, actionable parse failures (`ListingParseError` with
+     the offending record index and `cause`): a single malformed record aborts
+     the whole feed into the loader `error` + retry state. Never silently drop
+     malformed records.
    - Add integration tests using `test-src/sample/listingFeeds.xml`, including
-     malformed and incomplete feed records.
+     malformed and incomplete feed records plus a mixed valid/invalid feed
+     proving the fail-fast record policy.
 
 5. **Phase 5: Implement network and browser adapters**
    - Create `src/adapters/managebuilding-feed.ts` and
-     `src/adapters/browser-details-dialog.ts`.
-   - Use `AbortSignal.timeout(5000)` for network resilience, preserve cancellation,
-     check HTTP responses, and map failures to a documented application error shape.
+     `src/adapters/browser-details-modal.ts`.
+   - Use `AbortSignal.timeout(5000)` per attempt for network resilience (worst
+     case ~15s across the fixed direct-then-proxy chain), preserve caller
+     cancellation by rethrowing aborts, check HTTP responses, and map failures
+     to the application error shape: message plus ordered attempt `cause`s. The
+     loader collapses this to `{ kind: 'error', message }`, so message quality
+     and cause preservation are the contract.
    - The feed URL is product policy owned by the adapter and hardcoded as
      `ManageBuildingFeed.FEED_URL`; the adapter keeps a fixed direct-then-proxy
      request chain consistent with what is known to be true for that URL.
-   - Keep `fetch`, `DOMParser`, and dialog APIs confined to adapters.
+     Payloads are accepted on a structural `<Property>` match (attributes
+     tolerated), including AllOrigins `{ contents }` JSON unwrapping.
+   - Parser failures are wrapped with feed context (`Unable to parse listing
+feed.` preserving the `ListingParseError` cause).
+   - Keep `fetch`, `DOMParser`, and Popover API (`showPopover`/`hidePopover`,
+     `toggle` event) confined to adapters.
    - Ensure external URLs are validated and opened with safe browser options.
-   - The details overlay is native-only Popover API semantics (`popover="auto"`,
-     `role="dialog"`, `autofocus` on the close control, focus return to the invoker
+   - The details modal is a product modal backed by the native-only Popover API
+     (a non-modal `popover="auto"` top-layer element with `role="dialog"`,
+     `autofocus` on the close control, focus return to the invoker
      via `showPopover({ source })`); no manual trap/dismiss/focus code. The port
      returns `false` when popover is unsupported so the container falls back to
-     the canonical link navigation.
+     the canonical link navigation. Idle preparation runs through the optional
+     `DetailsModal.warm()`; opens show a geometry-exact skeleton (`aria-busy`)
+     with next-frame iframe navigation, same-listing reuse, a 5-minute stale
+     reset to `about:blank`, preconnect, hover/focus prefetch of the exact
+     `hidenav` URL (deduped, skipped on Save-Data), and
+     `fetchpriority="high"`.
    - Add integration tests for success, HTTP failure, timeout/cancellation, parser
-     failure, and dialog behavior without relying on a live service.
+     failure, and modal behavior without relying on a live service.
 
 6. **Phase 6: Build the application controllers**
    - Create `src/application/listing-feed-loader.ts` (a Lit `ReactiveController`
@@ -198,15 +217,15 @@ documentation, and coverage reviews are required process steps.
      visible listings/location groups).
    - The loader accepts its port through an explicit `setFeed()` that cancels any
      in-flight request; the container composes loader and store and opens details
-     directly through the `DetailsDialog` port.
+     directly through the `DetailsModal` port.
    - Make state transitions explicit and race-safe when criteria change or a
      request is cancelled; do not hide errors behind success-shaped fallbacks.
    - Add focused tests for state transitions using test doubles for each port.
 
 7. **Phase 7: Build focused presentation components**
    - Implement `listing-card` and `listing-filters` under `src/components/`; keep
-     details presentation behind the `DetailsDialog` port and
-     `BrowserDetailsDialog` adapter unless a future component contract is explicitly
+     details presentation behind the `DetailsModal` port and
+     `BrowserDetailsModal` adapter unless a future component contract is explicitly
      required.
    - Use Lit templates only; never concatenate HTML or use manual `innerHTML`.
    - Keep components presentational and accessible: semantic elements, labels,
@@ -234,10 +253,10 @@ documentation, and coverage reviews are required process steps.
      late-added elements; it is SSR-safe (no import-time `document` access) and
      introduces no service locator, global mutable singleton, or DI framework.
    - The card dispatches a cancelable, composed `listing-details-requested`
-     event; the container opens the `DetailsDialog` port and cancels the click
-     only when the dialog returns handled, so the anchor's native navigation is
+     event; the container opens the `DetailsModal` port and cancels the click
+     only when the modal returns handled, so the anchor's native navigation is
      the progressive-enhancement fallback when popover is unsupported or no
-     dialog is wired.
+     modal is wired.
    - Keep component-owned CSS in the owning component and preserve public
      custom-element contracts; keep the entry limited to registration and safe
      defaults.
@@ -250,12 +269,14 @@ documentation, and coverage reviews are required process steps.
    - Update `public/index.html` to consume the single bundle and demonstrate
      each public element independently while preserving the host page's
      responsibilities for branding, layout, and navigation.
-   - Compare behavior against `public/test.html`: data, filters, details
+   - Compare behavior against the frozen `public/test.html` baseline (kept
+     byte-identical; never edited): data, filters, details
      interaction, responsive layout, loading, empty, and error states. Copy
      functionality while improving artifacts to modern standards (Lit
      templates, Valibot boundaries, `AbortSignal.timeout(5000)`, token CSS).
-   - Keep migration-only surfaces such as `public/migration.html` and
-     `phase-five-harness` out of the production listings API.
+   - `public/migration.html` is migration-only and never part of the production
+     listings API. The Phase 5 debug harness (`phase-five-harness`) has been
+     removed; the bundle asserts only the four public elements register.
    - Record intentional parity differences and their user-facing rationale:
      sorting stays out of scope; ambiguous/unknown locations resolve to
      explicit `OTHER` outcomes instead of the legacy first-match fallback.
