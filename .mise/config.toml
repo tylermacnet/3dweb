@@ -1,0 +1,26 @@
+min_version = "2026.9.11"
+
+[tools]
+node = "26.9.0"
+aube = "2.2.17"
+opencode = "1.18.31"
+
+# Built-in [deps.aube] requires aube-lock.yaml to exist, which this project
+# will never have (aube reads/writes package-lock.json in place). A custom
+# provider with explicit sources/outputs/run has no such precondition.
+[deps.install]
+auto = true
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules/"]
+run = "aube install"
+
+[settings]
+experimental = true
+
+[settings.packslip]
+exec = true
+
+[settings.skills]
+dir = ".agents/skills"
+auto_sync = true
+prune = true

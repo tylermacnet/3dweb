@@ -4,11 +4,11 @@
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
-3. `mise run chat` launches OpenCode with the project toolchain and TypeScript LSP.
+3. `mise run tool:chat` (alias `mise run chat`) launches OpenCode with the project toolchain and TypeScript LSP.
 
-Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock`
+Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`) with `mise.lock`
 committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
-no extra tool). JS libraries stay in
+`tool:lsp` alias `lsp`, no extra tool). JS libraries stay in
 `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them
 (`lit`, `valibot`, `esbuild`, `linkedom`); `mise` auto-installs them through `[deps.install]`
 (backed by pinned `aube`; `package-lock.json` format is preserved) before tasks run,
@@ -17,79 +17,61 @@ when switching between `npm` and `aube`.
 
 ## Use mise tasks first
 
-Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`. Task definitions are sourced from `mise.toml`.
+Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`. Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
 
-See `AGENTS.md` for the complete command reference.
+All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (format → lint → type → test → build); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
 
-Use the task that matches the work:
-
-| Task                                   | Purpose                                                  | Arguments                                      |
-| -------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| `mise run build`                       | Create the production bundle                             | None                                           |
-| `mise run watch`                       | Rebuild the bundle when source files change              | None                                           |
-| `mise run serve`                       | Build and serve `public/` on port 8000                   | None                                           |
-| `mise run dev`                         | Build, watch, and serve the site                         | None                                           |
-| `mise run format [files...]`           | Format selected files or the repository                  | Optional paths; defaults to `.`                |
-| `mise run format-check [files...]`     | Check formatting for selected files or the repository    | Optional paths; defaults to `.`                |
-| `mise run lint [files...]`             | Lint selected files or the repository                    | Optional paths; defaults to `.`                |
-| `mise run typecheck`                   | Type-check the project                                   | None                                           |
-| `mise run test-unit [files...]`        | Run selected unit tests                                  | Optional paths; defaults to `test/unit`        |
-| `mise run test-integration [files...]` | Run selected integration tests                           | Optional paths; defaults to `test/integration` |
-| `mise run test`                        | Run all unit and integration tests                       | None                                           |
-| `mise run check`                       | Run formatting, linting, type checking, tests, and build | None                                           |
-| `mise run skills`                      | Link active tool agent skills into `.agents/skills`      | None                                           |
-| `mise run chat`                        | Launch OpenCode AI agent in local project context        | None                                           |
-
-Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Within `mise.toml` task definitions, call bare binaries (`esbuild`, `prettier`, `oxlint`, `tsc`, `node`); `mise` provides them via `node_modules/.bin` on `PATH` (`[env] _.path`). Direct commands are permitted only when:
-
-1. no suitable `mise` task exists; or
-2. a `mise` task has failed and a direct command is needed to diagnose that failure.
-
-If a direct diagnostic command is necessary, return to the corresponding `mise` task for final validation.
+Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Never use `mise exec` wrappers — run the task instead (for example `mise run tool:lsp` via alias `mise run lsp`, not `mise exec -- tsc --lsp -stdio`). Within task definitions, call JS CLIs via `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and `node`/`opencode` bare; `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved). Prefer project file tasks: `mise tasks add --file <ns>:<name> --description "..." -- <command>` or an executable script in `.mise/tasks/<ns>/<name>` with a `#MISE description="..."` header (and `#USAGE` for args, `#MISE alias="..."` where an alias is intentional) — tasks in `.mise/tasks/` are committed and isolated to this repo (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored), not global. Keep `.mise/config.toml` for `[tools]`, `[env]`, `[deps.install]`, and `[settings]` only. Direct commands are never run bare — even when no `mise` task exists, use `mise exec -- <command>` (canonical, `mise x` is alias) so the pinned toolchain applies. If the command will recur, create a task instead (`mise tasks add --file <ns>:<name>` or a file in `.mise/tasks/<ns>/<name>`). Diagnosing a failed `mise` task may use `mise exec --` for parity, then return to `mise run <task>` for final validation.
 
 ## Toolchain and language server
 
-- `mise.toml` is the source of truth for runtimes, CLIs, env, tasks, and project
+- `.mise/config.toml` is the source of truth for runtimes, CLIs, env, and project
   dependencies (custom `[deps.install]` with `auto = true` runs `aube install` over
-  `package.json`/`package-lock.json` before `mise run`/`mise exec`). A custom provider
+  `package.json`/`package-lock.json` before `mise run`); tasks live as project file tasks in `.mise/tasks/<ns>/<name>` (isolated to this repo, committed — `.gitignore` allows all mise files except local). A custom provider
   ID is used because built-in `[deps.aube]` requires an `aube-lock.yaml` this project
   will never have; aube reads/writes `package-lock.json` in place.
 - Before migrating tooling, prune regenerables (`node_modules/`, `public/dist/`) and
   orphaned stores (`aube store prune`, `mise prune --yes`); keep `package.json` and
   `package-lock.json` as the JS pinning source.
 - Project TypeScript LSP lives in `.opencode/opencode.json` and launches the workspace
-  compiler's native server via `mise exec -- tsc --lsp -stdio`. Only the `typescript`
-  server is enabled; lint/type diagnostics come from `mise run lint` / `mise run typecheck`.
+  compiler's native server via `mise run tool:lsp` (alias `mise run lsp`, `tsc --lsp -stdio`). Only the `typescript`
+  server is enabled; lint/type diagnostics come from `mise run check:lint` / `mise run check:type`.
   (`typescript-language-server` cannot be used: it wraps the classic `tsserver.js`,
   which TypeScript 7 no longer ships. Verified live: pull diagnostics report TS2322
   and hover resolves symbols; push `publishDiagnostics` was not observed, so the agent
-  loop still prefers the `lint`/`typecheck` tasks for diagnostics.)
+  loop still prefers the `lint`/`type` tasks for diagnostics.)
+- The same file enables the `mise` MCP server (`mise mcp`, `type: local`,
+  `enabled: true`), so OpenCode chat can list tools/tasks/env/config and run tasks.
+  No `.mise/config.toml` change was needed: the server is built into the pinned mise binary
+  and `[settings] experimental = true` already enables it (verified: `mise mcp`
+  answers `initialize` without `MISE_EXPERIMENTAL`, and `opencode mcp list` reports
+  `mise` connected).
 - Verify with `mise ls --current` and `opencode debug config`.
 - Pins are reproducible, not self-updating. To bump to latest releases: `mise self-update --yes`,
-  edit `mise.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
+  edit `.mise/config.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
   for JS deps, then `mise run check` to prove the bumps are safe before committing
-  `mise.toml` + `mise.lock` + `package.json`/`package-lock.json`.
+  `.mise/config.toml` + `mise.lock` + `package.json`/`package-lock.json`.
 - Agent skills declared by pinned tools sync into `.agents/skills` automatically after
-  installs (`[settings.skills]` with `auto_sync` and `prune` in `mise.toml`). The links
-  point at machine-local installs and are gitignored; run `mise run skills` to re-sync
+  installs (`[settings.skills]` with `auto_sync` and `prune` in `.mise/config.toml`). The links
+  point at machine-local installs and are gitignored; run `mise run tool:skills` (alias `mise run skills`) to re-sync
   manually, for example after changing tool versions.
 
-Formatting tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
+Formatting and lint tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
 
 ```text
 mise run format src/adapters/managebuilding-feed.ts test/integration
-mise run format-check src/adapters/managebuilding-feed.ts test/integration
+mise run check:format src/adapters/managebuilding-feed.ts test/integration
 ```
 
-Every task exposes its supported arguments through `mise run <task> --help`. Tasks documented as
+Every task exposes its supported arguments through `mise run <task> --help` (discover tasks via `mise tasks ls`). Tasks documented as
 accepting no arguments intentionally keep their project configuration fixed; use a focused task
-such as `format`, `lint`, or a test task when selecting files.
+such as `format`, `check:lint`, or a test task when selecting files.
 
 The demo host page at `public/index.html` consumes only the generated
 `public/dist/bundle.js` artifact, matching how an external site embeds any subset
 of the library (`<property-listings>`, `<listing-card>`, `<listing-filters>`,
 `<listing-details>`). It must not reference TypeScript source files or
-development/watch scripts. Use `mise run dev` or `mise run serve` for local
+development/watch scripts. Use `mise run dev` or `mise run build:serve` for local
 development; those tasks build the artifact before serving it.
 
 When `public/index.html` is opened directly from `file://`, the page displays a development notice:

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Check formatting for selected files or the repository (prettier --check)"
+#USAGE arg "[files]..." default="." help="Files or directories to check (default: .)"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec npx --no-install prettier --check "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec npx --no-install prettier --check .
+else
+  exec npx --no-install prettier --check "$@"
+fi

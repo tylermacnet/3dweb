@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#MISE description="Run all checks and create a production bundle"
+#MISE depends=["check:format", "check:lint", "check:type", "test", "build"]

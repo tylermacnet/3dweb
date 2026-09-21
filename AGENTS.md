@@ -2,33 +2,20 @@
 
 ## Commands — always use `mise run <task>`
 
-Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Use `mise run <task>` for every workflow. Within task definitions, call bare binaries (`esbuild`, `prettier`, `oxlint`, `tsc`, `node`); `mise` provides them via `node_modules/.bin` on `PATH` (`[env] _.path`) and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+Do not invoke `npm`, `node`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Use `mise run <task>` for every workflow. Never use `mise exec` wrappers — run the task instead (for example `mise run tool:lsp` via alias `mise run lsp`, not `mise exec -- tsc --lsp -stdio`). Within task definitions, call JS CLIs via `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and `node`/`opencode` bare; `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+
+Prefer project file tasks over inline `.mise/config.toml` tasks: define tasks as executable scripts in `.mise/tasks/<ns>/<name>` (or `.mise/tasks/<name>` for top-level; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself — see https://mise.jdx.dev/tasks/file-tasks.html#task-grouping) with a `#MISE description="..."` header (and `#USAGE` for args, `#MISE alias="..."` where an alias is intentional). Keep `.mise/config.toml` for `[tools]`, `[env]`, `[deps.install]`, and `[settings]` only. Create new tasks with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored).
+
+All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not enumerate tasks here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments.
 
 ## Onboarding — only `mise` is required
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
-2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
-3. `mise run chat` launches OpenCode with the project toolchain and TypeScript LSP.
-4. Tool versions are pinned in `mise.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run skills` re-syncs manually.
+2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle (canonical validation gate — keep this hard-coded).
+3. `mise run tool:chat` (alias `mise run chat`) launches OpenCode with the project toolchain and TypeScript LSP.
+4. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
 
-| Task                                   | Purpose                                             |
-| -------------------------------------- | --------------------------------------------------- |
-| `mise run build`                       | Bundle the web component                            |
-| `mise run watch`                       | Rebuild on source change                            |
-| `mise run serve`                       | Build and serve `public/` on localhost:8000         |
-| `mise run dev`                         | Build, watch, and serve                             |
-| `mise run format [files...]`           | Format files (default: `.`)                         |
-| `mise run format-check [files...]`     | Check formatting                                    |
-| `mise run lint [files...]`             | Lint files (default: `.`)                           |
-| `mise run typecheck`                   | `tsc --noEmit`                                      |
-| `mise run test-unit [files...]`        | Run unit tests (default: `test/unit`)               |
-| `mise run test-integration [files...]` | Run integration tests (default: `test/integration`) |
-| `mise run test`                        | Unit + integration                                  |
-| `mise run check`                       | format-check → lint → typecheck → test → build      |
-| `mise run skills`                      | Link active tool agent skills into `.agents/skills` |
-| `mise run chat`                        | Launch OpenCode AI agent in local project context   |
-
-Direct commands are only allowed when no `mise` task exists or when diagnosing a failed `mise` task — then return to the `mise` task for final validation.
+Direct commands are never run bare — even when no `mise` task exists, use `mise exec -- <command>` (canonical, `mise x` is alias) so the pinned toolchain applies. If the command will recur, create a task instead (`mise tasks add --file <ns>:<name>` or a file in `.mise/tasks/<ns>/<name>`). Diagnosing a failed `mise` task may use `mise exec --` for parity, then return to `mise run <task>` for final validation.
 
 ## Architecture layers
 
@@ -65,7 +52,7 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 - `test/unit/` — pure domain tests (listing, address-normalizer, location-resolver, listing-filter).
 - `test/integration/` — adapter, parser, DOM, network, bundle tests.
 - `test-src/sample/listingFeeds.xml` — sample XML feed for integration tests.
-- Tests use `node:test` (native Node runner). Run with `mise run test-unit` or `mise run test-integration`.
+- Tests use `node:test` (native Node runner). Discover test tasks with `mise tasks ls` (names under `test:`) and run `mise run test` for all or `mise run test:unit` / `mise run test:integration` for focused suites.
 - Structure tests: Arrange, Act, Assert — one observable behavior per test.
 - Integration tests importing `src/` TypeScript with runtime imports must bundle via esbuild first
   (`nodenext` `.js` specifiers do not resolve to `.ts` on disk); direct imports only work for
@@ -91,9 +78,10 @@ After every migration phase or major change, complete all six steps before decla
 
 ## Important files
 
-- `mise.toml` — task definitions (source of truth for all commands).
-- `mise.lock` — pinned toolchain versions (commit updates).
-- `.opencode/opencode.json` — project TypeScript LSP (`mise exec` wrapper, committed).
+- `.mise/config.toml` — toolchain, env, and settings (source of truth for runtimes; tasks live in `.mise/tasks/`).
+- `.mise/tasks/` — file tasks (executable scripts with `#MISE` header; preferred over inline `.mise/config.toml` tasks; hierarchies use subdirectories `ns/name` → `ns:name` with `ns/_default` for the `ns` task itself).
+- `mise.lock` — pinned toolchain versions (commit updates; lives at repo root, not under `.mise/`).
+- `.opencode/opencode.json` — project TypeScript LSP (`mise run tool:lsp` via alias `mise run lsp`) and mise MCP server (`mise mcp`), committed.
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
 - `src/config/application.ts` — shared details URL, iframe variant, modal title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.

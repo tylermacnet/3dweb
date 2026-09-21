@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Lint selected files or the repository (oxlint)"
+#USAGE arg "[files]..." default="." help="Files or directories to lint (default: .)"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec npx --no-install oxlint "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec npx --no-install oxlint .
+else
+  exec npx --no-install oxlint "$@"
+fi

@@ -9,7 +9,7 @@ testable, and usable.
 
 The target follows 2026 web engineering practices:
 
-- Use the `mise` task manager for all development workflows. Within `mise.toml`, call bare binaries; `mise` provides them via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`). Run `mise run <task>` from the repository root.
+- Use the `mise` task manager for all development workflows. Within `.mise/config.toml`, call bare binaries; `mise` provides them via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`). Run `mise run <task>` from the repository root. Tasks live in `.mise/tasks/<ns>/<name>` (hierarchical, discovered via `mise tasks ls`); all mise config under `.mise/` with `mise.lock` at repo root.
 
 - Keep business rules framework-agnostic and deterministic.
 - Prefer native browser and platform APIs over unnecessary runtime dependencies; lightweight
@@ -287,8 +287,8 @@ The process review above applies after every phase. These commands are the requi
 evidence for that review and are also required before merge or final migration sign-off:
 
 10. **Test coverage and regression protection**
-    - Run `mise run test-unit` and `mise run test-integration`, then
-      `mise run test`.
+    - Run `mise run test:unit` and `mise run test:integration`, then
+      `mise run test` (discover tasks via `mise tasks ls`).
     - Ensure every domain rule has meaningful branch/edge-case coverage and every
       adapter/application/component boundary has behavior-focused integration
       coverage; prioritize risk and behavior over a vanity percentage.

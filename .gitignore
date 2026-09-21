@@ -1,5 +1,11 @@
 node_modules/
 public/dist/
-.mise/
+.mise.local.toml
+mise.local.toml
+.mise/*.local.toml
+mise.local.lock
+.mise.local.lock
+.mise/*.local.lock
+.mise/locks/
 .agents/
 *.log

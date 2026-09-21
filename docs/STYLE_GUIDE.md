@@ -265,7 +265,7 @@ The host page owns surrounding branding and layout. Each component owns its inte
 ships its styles through the single bundle; the bundle entry itself owns no styles.
 
 For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
-`docs/DEVELOPMENT.md`. Within `mise.toml`, call bare binaries; `mise` provides them via
+`docs/DEVELOPMENT.md`. Within `.mise/config.toml`, call bare binaries; `mise` provides them via
 `node_modules/.bin` on `PATH`.
 
 ## Address display policy

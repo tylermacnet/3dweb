@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="Launch OpenCode AI agent in local project context"
+#MISE alias="chat"
+#USAGE arg "[args]..." help="Arguments to pass to opencode"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec opencode "${args[@]}"
+else
+  exec opencode "$@"
+fi

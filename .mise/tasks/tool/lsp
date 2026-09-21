@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run the workspace TypeScript language server over stdio"
+#MISE alias="lsp"
+exec npx --no-install tsc --lsp -stdio

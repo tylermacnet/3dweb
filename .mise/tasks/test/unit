@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Run selected unit tests or all unit tests"
+#USAGE arg "[files]..." default="test/unit" help="Unit test files or directories (default: test/unit)"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec node --test "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec node --test test/unit
+else
+  exec node --test "$@"
+fi

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Run selected integration tests or all integration tests"
+#USAGE arg "[files]..." default="test/integration" help="Integration test files or directories (default: test/integration)"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec node --test "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec node --test test/integration
+else
+  exec node --test "$@"
+fi

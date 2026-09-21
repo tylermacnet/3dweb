@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#MISE description="Bundle the web component and its CSS"
+exec npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js

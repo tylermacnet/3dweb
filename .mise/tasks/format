@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Format selected files or the repository"
+#USAGE arg "[files]..." default="." help="Files or directories to format (default: .)"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec npx --no-install prettier --write "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec npx --no-install prettier --write .
+else
+  exec npx --no-install prettier --write "$@"
+fi
