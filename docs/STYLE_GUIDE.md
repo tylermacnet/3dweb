@@ -227,9 +227,12 @@ as the public theming API.
 - Use semantic `section`, `fieldset`, `legend`, `label`, `output`, `ol`, and `li` elements where
   they represent the content structure.
 - Keep the filter group discoverable as a search region with an accessible label.
-- Associate every form control with a label.
+- Associate every form control with a label. `listing-filters` omits `aria-controls`
+  intentionally: cross-root `idref` would be invalid inside shadow DOM; wiring is
+  via `listing-filters-changed` (composed/bubbles) + `ListingFilterStore`.
 - Keep card interaction to a single stretched link per card so keyboard users get one tab stop;
-  never intercept modified or non-primary clicks.
+  never intercept modified or non-primary clicks. Modal is gated by
+  `pointer:fine` (capability) not viewport width — see `listing-card.ts:22`.
 - Name the details popover from its visible listing title (`aria-labelledby`), not a generic label.
 - Use `role="status"` and `aria-live` for changing result counts and loading states.
 - Provide visible `:focus-visible` indicators with at least a `2px` outline and offset.
@@ -265,8 +268,8 @@ The host page owns surrounding branding and layout. Each component owns its inte
 ships its styles through the single bundle; the bundle entry itself owns no styles.
 
 For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
-`docs/DEVELOPMENT.md`. Within `.mise/config.toml`, call bare binaries; `mise` provides them via
-`node_modules/.bin` on `PATH`.
+`docs/DEVELOPMENT.md`. Within `.mise/tasks/*`, call bare binaries via `npx --no-install`; `mise`
+provides them via `node_modules/.bin` on `PATH`.
 
 ## Address display policy
 

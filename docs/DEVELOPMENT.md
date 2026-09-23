@@ -15,13 +15,19 @@ committed; the TypeScript LSP is the workspace compiler's native server (`tsc --
 so no manual install is needed. Never mix installers in one tree: prune `node_modules/`
 when switching between `npm` and `aube`.
 
-## Use mise tasks first
+## Use mise tasks first — MUST use `mise run <task>`, NEVER call tools directly
 
-Copilot and contributors **must strongly prefer repository-defined `mise` tasks** for all development workflows. Run tasks from the repository root with `mise run <task>`. Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
+Agents and contributors MUST run every command via `mise run <task>` and MUST NEVER invoke `npm`, `node`, `npx`, `tsx`, `tsc`, `esbuild`, `prettier`, `oxlint`, or any other tool binary directly in the shell. This is a hard requirement, not a preference.
+
+If the needed invocation has no dedicated task, you MUST expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this) or create a new file task instead of falling back to a direct call. Create new tasks with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored). Never use `mise exec` / `mise x` wrappers as a shortcut — `mise run <task>` is the only entry point (the one exception is a one-off diagnostic `mise exec -- <cmd>` for parity, which must be followed by `mise run <task>` for final validation).
+
+Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `node`/`opencode` are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+
+Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
 
 All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (format → lint → type → test → build); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
 
-Do not invoke `node`, `npm`, `npx`, or tool binaries directly when an equivalent `mise` task exists. Never use `mise exec` wrappers — run the task instead (for example `mise run tool:lsp` via alias `mise run lsp`, not `mise exec -- tsc --lsp -stdio`). Within task definitions, call JS CLIs via `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and `node`/`opencode` bare; `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved). Prefer project file tasks: `mise tasks add --file <ns>:<name> --description "..." -- <command>` or an executable script in `.mise/tasks/<ns>/<name>` with a `#MISE description="..."` header (and `#USAGE` for args, `#MISE alias="..."` where an alias is intentional) — tasks in `.mise/tasks/` are committed and isolated to this repo (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored), not global. Keep `.mise/config.toml` for `[tools]`, `[env]`, `[deps.install]`, and `[settings]` only. Direct commands are never run bare — even when no `mise` task exists, use `mise exec -- <command>` (canonical, `mise x` is alias) so the pinned toolchain applies. If the command will recur, create a task instead (`mise tasks add --file <ns>:<name>` or a file in `.mise/tasks/<ns>/<name>`). Diagnosing a failed `mise` task may use `mise exec --` for parity, then return to `mise run <task>` for final validation.
+Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
 
 ## Toolchain and language server
 
@@ -68,11 +74,17 @@ accepting no arguments intentionally keep their project configuration fixed; use
 such as `format`, `check:lint`, or a test task when selecting files.
 
 The demo host page at `public/index.html` consumes only the generated
-`public/dist/bundle.js` artifact, matching how an external site embeds any subset
-of the library (`<property-listings>`, `<listing-card>`, `<listing-filters>`,
-`<listing-details>`). It must not reference TypeScript source files or
-development/watch scripts. Use `mise run dev` or `mise run build:serve` for local
-development; those tasks build the artifact before serving it.
+bundle artifacts (`public/dist/bundle.js` classic IIFE + `public/dist/bundle.esm.js`
+ESM), matching how an external site embeds any subset of the library
+(`<property-listings>`, `<listing-card>`, `<listing-filters>`,
+`<listing-details>`). The bundle is the source of truth for config
+(`NEW_BRUNSWICK_REGIONS`, `getListingLocationGroups`, `DETAILS_BASE_URL`):
+`public/index.html` imports from `bundle.esm.js` via `type="module"` (modern,
+CORS) with an IIFE `globalThis.__3DWEB_CONFIG__` fallback for classic
+`<script src="bundle.js">` or `file://` hosts. It must not reference
+TypeScript source files or development/watch scripts. Use `mise run dev` or
+`mise run build:serve` for local development; those tasks build the artifacts
+before serving them.
 
 When `public/index.html` is opened directly from `file://`, the page displays a development notice:
 the bundled client still executes, but successful live feed requests require an HTTP(S) origin.
@@ -177,7 +189,11 @@ the complete location dropdown configuration including the "All Locations" optio
 and per-region grouping with listing counts.
 Unknown rent is represented by `null` in the domain and uses the configured sentinel value `0` for
 filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
-configured produce no matches, while non-finite rent criteria are ignored.
+configured produce no matches, while non-finite rent criteria are ignored. The
+listing range (`priceMin`/`priceMax`) shown in `listing-filters` is derived from
+the loaded listings inside `property-listings` (`floor(min/100)*100`,
+`ceil(max/100)*100`, ignoring `null`/0) — `bundle.esm.js`/`bundle.js` is the
+source of truth for that derivation, not the host page.
 
 Filtering preserves source order and does not mutate the input. Missing bedroom and location
 values are rejected at the domain construction boundary rather than guessed by the filtering

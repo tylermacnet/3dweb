@@ -55,4 +55,27 @@ helpers in `src/application/` (DOM-free, unit-tested), container-owned binding,
 hash written on open and cleared on explicit close, unknown ids cleared without
 an error state unless the not-available body is also adopted.
 
+## Card affordance icons (FontAwesome vs inline SVG)
+
+Evaluated and deliberately deferred: restoring FontAwesome bed/bath/location
+icons to `listing-card` to match `public/test.html` `CardTemplate` (`fa-bed`,
+`fa-bath`, `fa-location-dot`). Current `listing-card` (`src/components/listing-card.ts:92`)
+keeps one inline SVG pin (location) and plain-text badges (`Bachelor`, `N Bed`,
+`N Bath`) without an external font.
+
+Deferred because FontAwesome requires a global `fa-*` stylesheet/webfont, a
+version pin, and an extra cross-origin request that would leak into every
+shadow root and violate the single-script embed contract (`docs/MIGRATION_PLAN.md:15`
+prefer native APIs; `src/styles/component-styles.ts:1` sole `unsafeCSS`
+boundary). The badges are `aria-hidden` decorative in legacy; the text badge
+itself is the accessible name, so dropping the decorative glyph is not an a11y
+regression. The location pin stays as `currentColor` inline SVG (no dep) for
+visual anchoring.
+
+Adopt only when product design requires stronger scan affordance. On adoption:
+add inline SVG only (no FontAwesome dep), `aria-hidden="true"`, `0.8em` /
+`currentColor` / token stroke, one icon per badge (bed, bath) and keep the
+existing pin. Keep `listing-card.css` as owner; do not load a global icon
+font. Revisit `docs/STYLE_GUIDE.md` card hierarchy when adopted.
+
 For the full command reference and architecture constraints, see `AGENTS.md`.

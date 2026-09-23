@@ -9,7 +9,7 @@ testable, and usable.
 
 The target follows 2026 web engineering practices:
 
-- Use the `mise` task manager for all development workflows. Within `.mise/config.toml`, call bare binaries; `mise` provides them via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`). Run `mise run <task>` from the repository root. Tasks live in `.mise/tasks/<ns>/<name>` (hierarchical, discovered via `mise tasks ls`); all mise config under `.mise/` with `mise.lock` at repo root.
+- Use the `mise` task manager for all development workflows — you MUST run every command via `mise run <task>` and MUST NEVER invoke `npm`, `node`, `npx`, `tsx`, `tsc`, `esbuild`, `prettier`, `oxlint`, or any other tool directly. If a task does not exist, expand an existing task's args (`mise run <task> -- <args>`) or create a new file task; `npx --no-install` is permitted ONLY inside `.mise/tasks/*` as the task's implementation. `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` on `PATH` and auto-installs project dependencies through `[deps.install]` (backed by pinned `aube`). Run `mise run <task>` from the repository root. Tasks live in `.mise/tasks/<ns>/<name>` (hierarchical, discovered via `mise tasks ls`); all mise config under `.mise/` with `mise.lock` at repo root.
 
 - Keep business rules framework-agnostic and deterministic.
 - Prefer native browser and platform APIs over unnecessary runtime dependencies; lightweight
