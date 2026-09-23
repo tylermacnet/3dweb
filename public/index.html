@@ -248,7 +248,11 @@
         document.documentElement.dataset.fileOrigin = '';
       }
     </script>
-    <script>
+    <script type="module">
+      import { getListingLocationGroups, DETAILS_BASE_URL } from './dist/bundle.esm.js';
+
+      const DETAILS_BASE = DETAILS_BASE_URL;
+
       (function () {
         var listingsEl = document.querySelector('property-listings');
         var cardEl = document.getElementById('staging-card');
@@ -264,182 +268,11 @@
         }
         if (!cardEl && !filtersEl) return;
 
-        var DETAILS_BASE = 'https://3dmanagement.managebuilding.com/Resident/public/rentals';
         var hydrated = false;
         var timer = null;
 
-        // Mirrors config/regions + getListingLocationGroups order.
-        // Keep in sync via `mise run check` review when regions change.
-        var STAGING_REGIONS = [
-          {
-            key: 'Greater Saint John',
-            id: 'GSJ',
-            areas: [
-              'Uptown / South End / Central',
-              'North End / Millidgeville',
-              'West Side / Lancaster',
-              'East Side / Loch Lomond',
-              'Rothesay',
-              'Quispamsis',
-              'Grand Bay-Westfield',
-              'Hampton',
-              'St. Martins & Rural Southeast',
-            ],
-          },
-          {
-            key: 'Greater Moncton',
-            id: 'GMA',
-            areas: [
-              'Moncton Central / Downtown',
-              'Moncton North / West / Sunny Brae',
-              'Moncton East',
-              'Dieppe',
-              'Riverview',
-              'Shediac & Coast',
-              'Sackville / Port Elgin / Memramcook',
-              'Bouctouche / Richibucto / Kent Region',
-            ],
-          },
-          {
-            key: 'Greater Fredericton',
-            id: 'GFA',
-            areas: [
-              'Downtown / South Side',
-              'North Side / Marysville',
-              'New Maryland / Kingsclear / Rural South',
-              'Oromocto / Burton / Geary',
-              'Minto / Chipman / Grand Lake',
-              'McAdam / Harvey / Southwest Rural',
-            ],
-          },
-          {
-            key: 'Greater Charlotte County',
-            id: 'GCC',
-            areas: [
-              'St. Stephen',
-              'St. Andrews',
-              'St. George',
-              'Blacks Harbour',
-              'Pennfield & Beaver Harbour',
-              'Grand Manan Island',
-              'Deer Island & Campobello Island',
-            ],
-          },
-          {
-            key: 'Greater Miramichi & River Valley',
-            id: 'GMR',
-            areas: [
-              'Miramichi City (Newcastle/Chatham)',
-              'Neguac & North Shore',
-              'Sunny Corner / Blackville / Southwest Miramichi',
-              'Rogersville / Rural South Miramichi',
-            ],
-          },
-          {
-            key: 'Greater Bathurst & Acadian Peninsula',
-            id: 'GBP',
-            areas: [
-              'Bathurst City',
-              'Beresford / Petit-Rocher / Chaleur Rural',
-              'Caraquet',
-              'Shippagan',
-              'Tracadie-Sheila',
-              'Lamèque & Miscou Islands',
-            ],
-          },
-          {
-            key: 'Greater Campbellton & Restigouche',
-            id: 'GCR',
-            areas: ['Campbellton', 'Dalhousie / Balmoral', 'Kedgwick / Saint-Quentin'],
-          },
-          {
-            key: 'Greater Edmundston & Madawaska',
-            id: 'GEM',
-            areas: [
-              'Edmundston Downtown',
-              'Saint-Jacques / Verret',
-              'Saint-Basile',
-              'Grand Falls / Grand-Sault',
-              'Saint-Léonard',
-            ],
-          },
-          {
-            key: 'Greater Woodstock & Central Upper Valley',
-            id: 'GWU',
-            areas: [
-              'Woodstock',
-              'Hartland',
-              'Florenceville-Bristol',
-              'Perth-Andover',
-              'Plaster Rock / Tobique Valley',
-              'Nackawic / Canterbury',
-            ],
-          },
-          {
-            key: 'Greater Sussex & Rural South Central',
-            id: 'GSR',
-            areas: [
-              'Sussex / Sussex Corner',
-              'Norton / Springfield / Apohaqui',
-              'Petitcodiac / Havelock / Salisbury',
-              'Albert County / Riverside-Albert / Alma',
-            ],
-          },
-        ];
-
-        function cleanRegionName(name) {
-          return name.replace(/^Greater\s+/i, '');
-        }
-
         function buildLocationGroups(listings) {
-          var areaCounts = new Map();
-          var regionCounts = new Map();
-          for (var i = 0; i < listings.length; i++) {
-            var l = listings[i];
-            var key = l.address.regionId + '||' + l.address.areaName;
-            areaCounts.set(key, (areaCounts.get(key) || 0) + 1);
-            regionCounts.set(l.address.regionId, (regionCounts.get(l.address.regionId) || 0) + 1);
-          }
-          var groups = STAGING_REGIONS.map(function (region) {
-            var cleaned = cleanRegionName(region.key);
-            var active = region.areas
-              .map(function (areaName) {
-                var c = areaCounts.get(region.id + '||' + areaName) || 0;
-                return c > 0
-                  ? {
-                      value: region.id + '||' + areaName,
-                      label: areaName + ' (' + c + ')',
-                      count: c,
-                    }
-                  : null;
-              })
-              .filter(Boolean);
-            if (active.length === 0) return null;
-            var options =
-              active.length > 1
-                ? [
-                    {
-                      value: region.id + '||ALL',
-                      label: 'All ' + cleaned + ' (' + (regionCounts.get(region.id) || 0) + ')',
-                      count: regionCounts.get(region.id) || 0,
-                    },
-                  ].concat(active)
-                : active;
-            return { regionId: region.id, regionName: cleaned, options: options };
-          }).filter(Boolean);
-          return [
-            {
-              regionId: 'ALL',
-              regionName: 'All Locations',
-              options: [
-                {
-                  value: 'ALL',
-                  label: 'All Locations (' + listings.length + ')',
-                  count: listings.length,
-                },
-              ],
-            },
-          ].concat(groups);
+          return getListingLocationGroups(listings);
         }
 
         function hydrate() {

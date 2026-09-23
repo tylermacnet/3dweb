@@ -50,4 +50,5 @@ export class ListingDetails extends LitElement {
   }
 }
 
-customElements.define('listing-details', ListingDetails);
+if (!customElements.get('listing-details'))
+  customElements.define('listing-details', ListingDetails);

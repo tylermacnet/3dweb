@@ -15,6 +15,21 @@ import './listing-card.js';
 
 const SKELETON_COUNT = 6;
 
+function priceBounds(listings: readonly Listing[]): { min: number; max: number } | null {
+  let rawMin = Infinity;
+  let rawMax = -Infinity;
+  let count = 0;
+  for (const l of listings) {
+    const rent = l.rent;
+    if (rent === null || rent <= 0) continue;
+    count++;
+    if (rent < rawMin) rawMin = rent;
+    if (rent > rawMax) rawMax = rent;
+  }
+  if (count === 0) return null;
+  return { min: Math.floor(rawMin / 100) * 100, max: Math.ceil(rawMax / 100) * 100 };
+}
+
 export class PropertyListings extends LitElement {
   static properties = {
     feed: { attribute: false },
@@ -90,11 +105,14 @@ export class PropertyListings extends LitElement {
     const listings = state.kind === 'ready' ? state.listings : [];
     const visibleListings = this.filterStore.visibleListings(listings);
     const locationGroups = this.filterStore.locationGroups(listings);
+    const bounds = priceBounds(listings);
     return html`
       <section class="listing-page" aria-label="Property listings">
         <listing-filters
           .options=${this.filterStore.options}
           .locationGroups=${locationGroups}
+          .priceMin=${bounds?.min ?? 0}
+          .priceMax=${bounds?.max}
           @listing-filters-changed=${(event: CustomEvent<ListingFilterOptions>) =>
             this.filterStore.setOptions(event.detail)}
         ></listing-filters>
@@ -186,4 +204,5 @@ export class PropertyListings extends LitElement {
   }
 }
 
-customElements.define('property-listings', PropertyListings);
+if (!customElements.get('property-listings'))
+  customElements.define('property-listings', PropertyListings);

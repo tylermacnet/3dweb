@@ -48,6 +48,10 @@ export class ListingFilters extends LitElement {
 
   render() {
     const maxRent = this.options.maxRent ?? this.priceMax ?? DEFAULT_MAX_RENT;
+    // `aria-controls` is omitted intentionally: filters and results live in
+    // separate shadow roots and the wiring is via `listing-filters-changed`
+    // (composed/bubbles) + `ListingFilterStore` — a cross-root `idref`
+    // would be invalid and brittle. See `docs/ENHANCEMENTS.md` collapsed.
     return html`
       <section class="filters-panel" role="search" aria-label="Property filter options">
         <fieldset class="filter-fields">
@@ -176,4 +180,5 @@ export class ListingFilters extends LitElement {
   }
 }
 
-customElements.define('listing-filters', ListingFilters);
+if (!customElements.get('listing-filters'))
+  customElements.define('listing-filters', ListingFilters);
