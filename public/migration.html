@@ -180,14 +180,17 @@
           The project ships a library of independent web components with no root component:
           <code>property-listings</code>, <code>listing-card</code>, <code>listing-filters</code>,
           and the iframe-to-listing <code>listing-details</code>, all registered by the single
-          bundle. Phases 1–8 are complete, including focused presentation components with an
+          bundle. Phases 1–9 are complete, including focused presentation components with an
           adapter-backed details modal (product term for a non-modal Popover API
           <code>popover="auto"</code> element with <code>role="dialog"</code>,
           <code>autofocus</code>, native focus return, no manual focus or dismiss code), a
-          four-element public surface with an SSR-safe auto-wiring bundle entry, and
-          origin-restricted <code>hidenav</code> iframe embeds; sorting is intentionally out of
+          four-element public surface with an SSR-safe auto-wiring bundle entry, origin-restricted
+          <code>hidenav</code> iframe embeds, and staging parity for external embeds via the
+          source-independent <code>Listing</code> target schema; sorting is intentionally out of
           scope. The legacy <code>public/test.html</code> embed is frozen byte-identical for parity
           comparison, and the Phase 5 debug harness has been removed.
+          <code>public/index.html</code> is staging for production on external websites and consumes
+          only <code>public/dist/bundle.js</code>.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -235,10 +238,10 @@
             <span>Public surface and bundle entry</span>
             <strong class="phase-status">Complete</strong>
           </li>
-          <li class="phase planned">
+          <li class="phase complete">
             <span class="phase-number" aria-hidden="true">9</span>
             <span>Host page parity</span>
-            <strong class="phase-status">Planned</strong>
+            <strong class="phase-status">Complete</strong>
           </li>
         </ol>
       </section>
@@ -516,7 +519,61 @@
             is impossible; cross-site prefetch is credentialless and cookie-gated).
           </li>
           <li>
-            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 73
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 78
+            integration tests, plus formatting, linting, type-checking, and production build.
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="phase-nine-review-title">
+        <h2 id="phase-nine-review-title">Phase 9 review evidence</h2>
+        <ul>
+          <li>
+            <strong>Architecture:</strong> staging <code>public/index.html</code> consumes only
+            <code>public/dist/bundle.js</code> via the single bundle entry
+            <code>src/index.tsx</code> (SSR-safe <code>configurePropertyListings(root?)</code>, no
+            import-time <code>document</code>, fresh stateless feed per element, one
+            <code>BrowserDetailsModal</code> per <code>Document</code> via <code>WeakMap</code>,
+            <code>MutationObserver</code> late-wire). Four elements (<code>property-listings</code>,
+            <code>listing-card</code>, <code>listing-filters</code>, <code>listing-details</code>)
+            are staged independently for external embeds; target schema <code>Listing</code> in
+            <code>src/domain/listing.ts</code> (Valibot, frozen, type-only config) is
+            source-independent — vendor field names and <code>DOMParser</code> stay in
+            <code>XmlListingParser</code>. Staging <code>listing-card</code> and
+            <code>listing-filters</code> hydrate at runtime from the live feed’s
+            <code>Listing</code> (no hard-coded listing, always fetch); off-origin/blank inputs on
+            <code>listing-details</code> render the error state without an iframe. File-origin
+            notice preserved; no TypeScript sources or watch scripts in the host page.
+          </li>
+          <li>
+            <strong>SOLID and 2026 practices:</strong> no DI container or mutable global singleton;
+            application owns <code>ListingFeedLoader</code>/<code>ListingFilterStore</code> behind
+            <code>ListingFeed</code>/<code>ListingParser</code>/<code>DetailsModal</code> ports;
+            host overrides win via properties/attributes with safe defaults assembled per document
+            in the bundle entry. Popover is native-only (<code>popover="auto"</code>,
+            <code>autofocus</code>, <code>showPopover({source})</code> focus return,
+            <code>toggle</code> state, returns <code>false</code> when unsupported so the stretched
+            anchor navigates). <code>resolveDetailsIframeUrl()</code>/<code
+              >hideNavVariantOf()</code
+            >
+            restrict iframe sources to HTTPS on the ManageBuilding canonical origin and always force
+            <code>hidenav</code>; price bounds remain static <code>DEFAULT_MAX_RENT=5000</code> per
+            intentional gap.
+          </li>
+          <li>
+            <strong>Coverage:</strong> parity verified against frozen
+            <code>public/test.html</code> — data (feed to listings), filters (location/bedroom/max
+            rent, “All Locations” leading), card hierarchy (one stretched link, pointer-gated
+            details, fallback navigation), responsive grid and token CSS, loading skeleton
+            (<code>aria-busy</code>), empty/error/retry
+            (<code>role="status"</code>/<code>role="alert"</code>), details latency mitigation
+            (skeleton + next-frame navigation, 5-minute staleness, deduped prefetch with Save-Data
+            skip) and hostile-URL matrix for <code>listing-details</code>. Bundle asserts exactly
+            four public element registrations and no <code>showModal</code>/<code>closedby</code>
+            remnants.
+          </li>
+          <li>
+            <strong>Validation:</strong> the full repository gate passes with 35 unit tests and 78
             integration tests, plus formatting, linting, type-checking, and production build.
           </li>
         </ul>

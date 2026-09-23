@@ -101,10 +101,62 @@
       }
 
       .host-main {
+        display: grid;
+        gap: 20px;
+      }
+
+      .staging-section {
         background: var(--page-surface);
         border: 1px solid var(--page-border);
         border-radius: 18px;
         padding: clamp(16px, 2vw, 28px);
+      }
+
+      .staging-eyebrow {
+        margin: 0 0 6px;
+        color: var(--page-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .staging-section h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+
+      .staging-caption {
+        margin: 0 0 14px;
+        color: var(--page-muted);
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+
+      .staging-caption code {
+        color: var(--page-text);
+        font-size: 0.8125rem;
+      }
+
+      .staging-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .staging-details-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .staging-note {
+        margin: 0;
+        color: var(--page-muted);
+        font-size: 0.8125rem;
+        line-height: 1.5;
+      }
+
+      .staging-note[role='status'] {
+        min-height: 1.25rem;
       }
     </style>
   </head>
@@ -119,17 +171,74 @@
           </div>
         </div>
         <div class="host-summary">
-          Host page wrapper for the listings component ·
+          Staging for external embeds ·
           <a href="./migration.html">Migration report</a>
         </div>
       </header>
       <p class="file-origin-notice" role="status">
-        You opened this demo from the file system. The bundled component is running, but live feed
-        requests require an HTTP(S) origin; use the project demo server for network validation.
+        You opened this staging page from the file system. The bundled components are running, but
+        live feed requests require an HTTP(S) origin; use the project staging server for network
+        validation.
       </p>
 
       <main class="host-main">
-        <property-listings></property-listings>
+        <section class="staging-section" aria-labelledby="staging-listings-title">
+          <p class="staging-eyebrow">Staging</p>
+          <h2 id="staging-listings-title">property-listings — full feed</h2>
+          <p class="staging-caption">
+            <code>&lt;property-listings&gt;&lt;/property-listings&gt;</code> renders the live feed
+            through the source-independent <code>Listing</code> target schema
+            (<code>domain/listing</code>). Same tag works on any external site after loading
+            <code>public/dist/bundle.js</code>.
+          </p>
+          <property-listings></property-listings>
+        </section>
+
+        <section class="staging-section" aria-labelledby="staging-card-title">
+          <p class="staging-eyebrow">Staging</p>
+          <h2 id="staging-card-title">listing-card — from live feed</h2>
+          <p class="staging-caption">
+            <code>&lt;listing-card&gt;.listing = listings[0]</code> — standalone card populated at
+            runtime from the live feed’s <code>Listing</code> (no hard-coded listing; source
+            independent). Empty until the feed loads; mirrors the first card above.
+          </p>
+          <div class="staging-grid">
+            <listing-card id="staging-card"></listing-card>
+          </div>
+          <p id="staging-card-note" class="staging-note" role="status">Waiting for feed…</p>
+        </section>
+
+        <section class="staging-section" aria-labelledby="staging-filters-title">
+          <p class="staging-eyebrow">Staging</p>
+          <h2 id="staging-filters-title">listing-filters — from live feed</h2>
+          <p class="staging-caption">
+            <code>&lt;listing-filters&gt;.locationGroups</code> derived from the same
+            <code>Listing</code> set. Emits <code>listing-filters-changed</code> on change.
+          </p>
+          <listing-filters id="staging-filters"></listing-filters>
+          <p id="staging-filters-note" class="staging-note" role="status">Waiting for feed…</p>
+        </section>
+
+        <section class="staging-section" aria-labelledby="staging-details-title">
+          <p class="staging-eyebrow">Staging</p>
+          <h2 id="staging-details-title">listing-details — iframe to listing</h2>
+          <p class="staging-caption">
+            <code>&lt;listing-details listing-id&gt;</code> and
+            <code>&lt;listing-details src&gt;</code> resolve through
+            <code>resolveDetailsIframeUrl()</code> — HTTPS + exact ManageBuilding origin, always
+            <code>hidenav</code>. Blank or off-origin input renders the error state without an
+            iframe.
+          </p>
+          <div class="staging-details-grid">
+            <listing-details id="staging-details-id"></listing-details>
+            <listing-details id="staging-details-src"></listing-details>
+            <listing-details
+              id="staging-details-error"
+              src="https://example.com/not-allowed"
+            ></listing-details>
+          </div>
+          <p id="staging-details-note" class="staging-note" role="status">Waiting for feed…</p>
+        </section>
       </main>
     </div>
 
@@ -138,6 +247,280 @@
       if (window.location.protocol === 'file:') {
         document.documentElement.dataset.fileOrigin = '';
       }
+    </script>
+    <script>
+      (function () {
+        var listingsEl = document.querySelector('property-listings');
+        var cardEl = document.getElementById('staging-card');
+        var cardNote = document.getElementById('staging-card-note');
+        var filtersEl = document.getElementById('staging-filters');
+        var filtersNote = document.getElementById('staging-filters-note');
+        var detailsIdEl = document.getElementById('staging-details-id');
+        var detailsSrcEl = document.getElementById('staging-details-src');
+        var detailsNote = document.getElementById('staging-details-note');
+        if (!listingsEl) {
+          if (cardNote) cardNote.textContent = 'Staging: property-listings not found.';
+          return;
+        }
+        if (!cardEl && !filtersEl) return;
+
+        var DETAILS_BASE = 'https://3dmanagement.managebuilding.com/Resident/public/rentals';
+        var hydrated = false;
+        var timer = null;
+
+        // Mirrors config/regions + getListingLocationGroups order.
+        // Keep in sync via `mise run check` review when regions change.
+        var STAGING_REGIONS = [
+          {
+            key: 'Greater Saint John',
+            id: 'GSJ',
+            areas: [
+              'Uptown / South End / Central',
+              'North End / Millidgeville',
+              'West Side / Lancaster',
+              'East Side / Loch Lomond',
+              'Rothesay',
+              'Quispamsis',
+              'Grand Bay-Westfield',
+              'Hampton',
+              'St. Martins & Rural Southeast',
+            ],
+          },
+          {
+            key: 'Greater Moncton',
+            id: 'GMA',
+            areas: [
+              'Moncton Central / Downtown',
+              'Moncton North / West / Sunny Brae',
+              'Moncton East',
+              'Dieppe',
+              'Riverview',
+              'Shediac & Coast',
+              'Sackville / Port Elgin / Memramcook',
+              'Bouctouche / Richibucto / Kent Region',
+            ],
+          },
+          {
+            key: 'Greater Fredericton',
+            id: 'GFA',
+            areas: [
+              'Downtown / South Side',
+              'North Side / Marysville',
+              'New Maryland / Kingsclear / Rural South',
+              'Oromocto / Burton / Geary',
+              'Minto / Chipman / Grand Lake',
+              'McAdam / Harvey / Southwest Rural',
+            ],
+          },
+          {
+            key: 'Greater Charlotte County',
+            id: 'GCC',
+            areas: [
+              'St. Stephen',
+              'St. Andrews',
+              'St. George',
+              'Blacks Harbour',
+              'Pennfield & Beaver Harbour',
+              'Grand Manan Island',
+              'Deer Island & Campobello Island',
+            ],
+          },
+          {
+            key: 'Greater Miramichi & River Valley',
+            id: 'GMR',
+            areas: [
+              'Miramichi City (Newcastle/Chatham)',
+              'Neguac & North Shore',
+              'Sunny Corner / Blackville / Southwest Miramichi',
+              'Rogersville / Rural South Miramichi',
+            ],
+          },
+          {
+            key: 'Greater Bathurst & Acadian Peninsula',
+            id: 'GBP',
+            areas: [
+              'Bathurst City',
+              'Beresford / Petit-Rocher / Chaleur Rural',
+              'Caraquet',
+              'Shippagan',
+              'Tracadie-Sheila',
+              'Lamèque & Miscou Islands',
+            ],
+          },
+          {
+            key: 'Greater Campbellton & Restigouche',
+            id: 'GCR',
+            areas: ['Campbellton', 'Dalhousie / Balmoral', 'Kedgwick / Saint-Quentin'],
+          },
+          {
+            key: 'Greater Edmundston & Madawaska',
+            id: 'GEM',
+            areas: [
+              'Edmundston Downtown',
+              'Saint-Jacques / Verret',
+              'Saint-Basile',
+              'Grand Falls / Grand-Sault',
+              'Saint-Léonard',
+            ],
+          },
+          {
+            key: 'Greater Woodstock & Central Upper Valley',
+            id: 'GWU',
+            areas: [
+              'Woodstock',
+              'Hartland',
+              'Florenceville-Bristol',
+              'Perth-Andover',
+              'Plaster Rock / Tobique Valley',
+              'Nackawic / Canterbury',
+            ],
+          },
+          {
+            key: 'Greater Sussex & Rural South Central',
+            id: 'GSR',
+            areas: [
+              'Sussex / Sussex Corner',
+              'Norton / Springfield / Apohaqui',
+              'Petitcodiac / Havelock / Salisbury',
+              'Albert County / Riverside-Albert / Alma',
+            ],
+          },
+        ];
+
+        function cleanRegionName(name) {
+          return name.replace(/^Greater\s+/i, '');
+        }
+
+        function buildLocationGroups(listings) {
+          var areaCounts = new Map();
+          var regionCounts = new Map();
+          for (var i = 0; i < listings.length; i++) {
+            var l = listings[i];
+            var key = l.address.regionId + '||' + l.address.areaName;
+            areaCounts.set(key, (areaCounts.get(key) || 0) + 1);
+            regionCounts.set(l.address.regionId, (regionCounts.get(l.address.regionId) || 0) + 1);
+          }
+          var groups = STAGING_REGIONS.map(function (region) {
+            var cleaned = cleanRegionName(region.key);
+            var active = region.areas
+              .map(function (areaName) {
+                var c = areaCounts.get(region.id + '||' + areaName) || 0;
+                return c > 0
+                  ? {
+                      value: region.id + '||' + areaName,
+                      label: areaName + ' (' + c + ')',
+                      count: c,
+                    }
+                  : null;
+              })
+              .filter(Boolean);
+            if (active.length === 0) return null;
+            var options =
+              active.length > 1
+                ? [
+                    {
+                      value: region.id + '||ALL',
+                      label: 'All ' + cleaned + ' (' + (regionCounts.get(region.id) || 0) + ')',
+                      count: regionCounts.get(region.id) || 0,
+                    },
+                  ].concat(active)
+                : active;
+            return { regionId: region.id, regionName: cleaned, options: options };
+          }).filter(Boolean);
+          return [
+            {
+              regionId: 'ALL',
+              regionName: 'All Locations',
+              options: [
+                {
+                  value: 'ALL',
+                  label: 'All Locations (' + listings.length + ')',
+                  count: listings.length,
+                },
+              ],
+            },
+          ].concat(groups);
+        }
+
+        function hydrate() {
+          if (hydrated) return;
+          var grid = null;
+          try {
+            grid = listingsEl.shadowRoot
+              ? listingsEl.shadowRoot.querySelector('.listing-grid')
+              : null;
+          } catch (_e) {
+            grid = null;
+          }
+          var cards = grid ? grid.querySelectorAll('listing-card') : null;
+          var source = cards && cards[0] ? cards[0].listing : null;
+          if (!source) return;
+
+          hydrated = true;
+          if (timer) clearInterval(timer);
+
+          try {
+            if (cardEl) {
+              cardEl.listing = source;
+              if (cardNote) cardNote.textContent = '';
+            }
+          } catch (_e) {
+            if (cardNote) cardNote.textContent = 'Card hydrate failed.';
+          }
+
+          try {
+            if (filtersEl) {
+              var listings = [];
+              for (var i = 0; i < cards.length; i++) {
+                if (cards[i].listing) listings.push(cards[i].listing);
+              }
+              filtersEl.locationGroups = buildLocationGroups(listings);
+              filtersEl.addEventListener('listing-filters-changed', function (e) {
+                if (filtersNote) filtersNote.textContent = 'Filters: ' + JSON.stringify(e.detail);
+              });
+              if (filtersNote) filtersNote.textContent = 'Filters ready from live feed.';
+            }
+          } catch (_e) {
+            if (filtersNote) filtersNote.textContent = 'Filters hydrate failed.';
+          }
+
+          try {
+            if (detailsIdEl) detailsIdEl.setAttribute('listing-id', source.id);
+            if (detailsSrcEl)
+              detailsSrcEl.setAttribute('src', DETAILS_BASE + '/' + encodeURIComponent(source.id));
+            if (detailsNote) detailsNote.textContent = '';
+          } catch (_e) {
+            if (detailsNote) detailsNote.textContent = 'Details hydrate failed.';
+          }
+        }
+
+        function startHydration() {
+          timer = setInterval(hydrate, 500);
+          setTimeout(function () {
+            if (!hydrated) {
+              hydrate();
+              if (!hydrated && timer) {
+                clearInterval(timer);
+                if (cardNote) cardNote.textContent = 'Feed unavailable in this origin.';
+                if (filtersNote) filtersNote.textContent = 'Feed unavailable in this origin.';
+                if (detailsNote) detailsNote.textContent = 'Feed unavailable in this origin.';
+              }
+            }
+          }, 16000);
+          hydrate();
+        }
+
+        if (window.customElements && customElements.whenDefined) {
+          Promise.all([
+            customElements.whenDefined('property-listings'),
+            customElements.whenDefined('listing-card'),
+            customElements.whenDefined('listing-filters'),
+            customElements.whenDefined('listing-details'),
+          ]).then(startHydration);
+        } else {
+          startHydration();
+        }
+      })();
     </script>
   </body>
 </html>
