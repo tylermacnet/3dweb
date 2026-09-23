@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 #MISE description="Build, watch, and serve the website locally"
-exec npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:8000 --watch
+#USAGE flag "--port <port>" help="Port to serve on (default: 8000)"
+port="${usage_port:-8000}"
+exec npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js --servedir=public --serve=localhost:"$port" --watch

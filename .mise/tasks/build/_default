@@ -1,3 +1,16 @@
 #!/usr/bin/env bash
-#MISE description="Bundle the web component and its CSS"
-exec npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js
+#MISE description="Bundle the web component and its CSS (IIFE for classic script + ESM for modern import/CORS)"
+set -e
+npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js
+npx --no-install esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.esm.js
+# Build-time inlined sample for file:// dev host (public/dev.html)
+if [ -f "public/dev.html" ] && [ -f "test-src/sample/listingFeeds.xml" ]; then
+  node -e "
+    import {readFile, writeFile} from 'node:fs/promises';
+    const xml = await readFile('test-src/sample/listingFeeds.xml','utf8');
+    const safe = xml.replace(/<\/script>/gi, '<\\/script>');
+    let html = await readFile('public/dev.html','utf8');
+    html = html.replace(/<script id=\"dev-sample-xml\"[^>]*>[\s\S]*?<\/script>/, '<script id=\"dev-sample-xml\" type=\"text\/xml\">' + safe + '<\/script>');
+    await writeFile('public/dev.html', html);
+  "
+fi

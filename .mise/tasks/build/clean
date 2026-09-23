@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Remove all generated bundle artifacts (public/dist)"
+rm -rf public/dist
+mkdir -p public/dist
