@@ -76,7 +76,6 @@ const defaultFeedByDocument = new WeakMap<Document, ListingFeed>();
 
 const PROPERTY_LISTINGS_TAG = 'property-listings';
 const LISTING_GRID_TAG = 'listing-grid';
-const LISTING_CARD_TAG = 'listing-card';
 
 interface ListingDefaults {
   createFeed(): ListingFeed;
@@ -199,29 +198,42 @@ function autoWire(): void {
   // The details overlay (mount + styles + preconnect) is only warmed when a
   // modal-capable element is present, so universal-head embeds on off-listing
   // pages stay idle. open() mounts on demand, so it works without warm.
+  // The observer re-checks so SPA-injected grids warm on arrival (warm is
+  // idempotent: mount early-returns, preconnect dedupes).
   if (hasModalCapableElement(document)) warmDetailsOverlay();
   if (typeof MutationObserver === 'undefined') return;
-  const observer = new MutationObserver(() => configurePropertyListings());
+  const observer = new MutationObserver(() => {
+    configurePropertyListings();
+    if (hasModalCapableElement(document)) warmDetailsOverlay();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
 function hasModalCapableElement(doc: Document): boolean {
-  return (
-    doc.querySelectorAll(`${PROPERTY_LISTINGS_TAG}, ${LISTING_GRID_TAG}, ${LISTING_CARD_TAG}`)
-      .length > 0
-  );
+  // Standalone <listing-card> only dispatches `listing-details-requested`;
+  // only <property-listings>/<listing-grid> call modal.open(), so only those
+  // count as modal-capable.
+  return doc.querySelector(`${PROPERTY_LISTINGS_TAG}, ${LISTING_GRID_TAG}`) !== null;
 }
 
 // Mounts the shared overlay, adopts its styles, and warms the details
 // connection off the critical path. requestIdleCallback is advisory: when it
-// is unavailable the warm still happens, just sooner.
+// is unavailable the warm still happens, just sooner. Idempotent: repeated
+// calls from the mutation observer are cheap after the first warm.
+let detailsWarmed = false;
 function warmDetailsOverlay(): void {
+  if (detailsWarmed) return;
+  detailsWarmed = true;
   const warm = (): void => {
     defaultsFor(document).detailsModal.warm?.();
   };
   if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(() => warm());
-    return;
+    try {
+      requestIdleCallback(() => warm(), { timeout: 3000 });
+      return;
+    } catch {
+      // fall through to the timer below
+    }
   }
   globalThis.setTimeout(warm, 1);
 }
