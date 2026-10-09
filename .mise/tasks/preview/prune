@@ -3,7 +3,7 @@
 set -e
 [ -d public/preview ] || exit 0
 git fetch origin --prune 2>/dev/null || true
-alive="$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | tr '/' '-' | tr -cd 'A-Za-z0-9._-\n')"
+alive="$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | LC_ALL=C tr '/' '-' | LC_ALL=C tr -cd 'A-Za-z0-9._\n-')"
 for dir in public/preview/*/; do
   [ -d "$dir" ] || continue
   name="$(basename "$dir")"
