@@ -2,14 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.0] - 2026-10-09
 
 ### <!-- 0 -->⛰️ Features
 
-- *(dev)* Separate filters, per-view collapsed sections, singleton-driven ([a5d7f0c](https://github.com/tylermacnet/3dweb/commit/a5d7f0c27ef68e7a23da3f55bca5e5a8333999d1))
-- *(dev)* Lazy collapsable sections via details ([2b06715](https://github.com/tylermacnet/3dweb/commit/2b067150069f65392bdc6cfa8ac7ce7d9ffeaecc))
-- *(dev)* Show card/compact/list layouts via composable listing-grid ([bc58a4e](https://github.com/tylermacnet/3dweb/commit/bc58a4e899cdc0133ded87c95b2c45dc422865d4))
-- Composable listing views with transparent lazy singleton ([35ad4d3](https://github.com/tylermacnet/3dweb/commit/35ad4d3d1382fba69e47a590d6748cbf3472a17e))
+- Composable listing views with transparent lazy singleton ([8b1c3d3](https://github.com/tylermacnet/3dweb/commit/8b1c3d3ce61e4462b8897de30c3e7de0f2f7dff1))
 - Expose bundle config and split staging and dev hosts ([6b08105](https://github.com/tylermacnet/3dweb/commit/6b08105c40cce038fcba1c432efeacd8f8d1dd45))
 - Complete phase 9 host page staging parity ([253c9a0](https://github.com/tylermacnet/3dweb/commit/253c9a08b1f153b67c6192c2067657df9a113c14))
 - Compose phase 8 public surface with native popover details ([7712f44](https://github.com/tylermacnet/3dweb/commit/7712f4404f9e4c6a9f345bde96c79ca32f9f3035))
@@ -26,8 +23,6 @@ All notable changes to this project will be documented in this file.
 
 ### <!-- 1 -->🐛 Bug Fixes
 
-- Reproduce and fix composable singleton bugs ([ae47f71](https://github.com/tylermacnet/3dweb/commit/ae47f71be1728825cb6b6a1003c8e5419b95ec58))
-- *(dev)* Refresh via singleton store so all listing-grid views update ([d631f63](https://github.com/tylermacnet/3dweb/commit/d631f632a4e0c8a5c22672a0ec07b36a9b8a29a2))
 - *(filters)* Align migrated listing filtering scope ([d88ea24](https://github.com/tylermacnet/3dweb/commit/d88ea241568ad15f45ba61c75bd0d9b96ed6f7ca))
 - *(domain)* Handle ambiguous address locations ([7815408](https://github.com/tylermacnet/3dweb/commit/7815408c4fd1a3d6bfb8df221f17c95cedebde5c))
 
@@ -37,7 +32,6 @@ All notable changes to this project will be documented in this file.
 
 ### <!-- 3 -->📚 Documentation
 
-- Capture composable listing views fix list ([8e2abcd](https://github.com/tylermacnet/3dweb/commit/8e2abcd8751711fd07dc51a3378b2ba7b647baee))
 - Tighten mise MUST to never call tools directly ([f110fc4](https://github.com/tylermacnet/3dweb/commit/f110fc49df65361f99376ee185470abd81fe4234))
 - Defer fragment deep-linking for listings to future enhancement ([2e60562](https://github.com/tylermacnet/3dweb/commit/2e605628c92f2f77566093a7f22715c6f299a5ae))
 - Clarify no-root multi-component library model ([b21b2ea](https://github.com/tylermacnet/3dweb/commit/b21b2eacc445798b2e8a2700ab32c3278cdfbb74))
