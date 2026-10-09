@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#MISE description="Build a branch preview bundle into public/preview/<ref>"
+#USAGE arg "[ref]" help="Preview ref (default: sanitized current branch name)"
+set -e
+if [ -n "${usage_ref:-}" ]; then
+  raw="$usage_ref"
+elif [ $# -ge 1 ]; then
+  raw="$1"
+else
+  raw="$(git branch --show-current)"
+fi
+flat="$(printf '%s' "$raw" | tr '/' '-' | tr -cd 'A-Za-z0-9._-' | cut -c1-64)"
+if ! printf '%s' "$flat" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'; then
+  printf "cannot derive a preview ref from '%s'\n" "$raw" >&2
+  exit 1
+fi
+if [ "$flat" = "main" ]; then
+  printf 'refusing to build a preview over main\n' >&2
+  exit 1
+fi
+out="public/preview/$flat"
+mkdir -p "$out"
+npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile="$out/bundle.js"
+npx --no-install esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile="$out/bundle.esm.js"
+npx --no-install esbuild src/loader.ts --bundle --format=iife --target=es2022 --sourcemap --outfile="$out/loader.js"
+printf 'preview built at %s/\n' "$out"

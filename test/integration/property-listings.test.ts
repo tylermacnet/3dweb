@@ -101,5 +101,5 @@ test('renders the container skeleton with filters while idle', async () => {
   assert.match(markup, /listing-page/);
   assert.match(markup, /aria-label="Property listings"/);
   assert.match(markup, /<listing-filters/);
-  assert.doesNotMatch(markup, /listing-grid/);
+  assert.match(markup, /listing-grid/);
 });

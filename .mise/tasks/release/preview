@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Preview unreleased changelog entries without writing files"
+#USAGE arg "[args]..." help="Extra arguments passed to git-cliff"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec git-cliff --unreleased "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec git-cliff --unreleased
+else
+  exec git-cliff --unreleased "$@"
+fi

@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags: [v*]
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    name: attach bundles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+      - name: Trust mise config
+        run: mise trust
+      - name: Build production bundle
+        run: mise run build
+      - name: Render release notes
+        run: mise run release:preview -- --tag "${{ github.ref_name }}" > release-notes.md
+      - name: Attach bundles to release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            public/dist/loader.js
+            public/dist/loader.js.map
+            public/dist/bundle.js
+            public/dist/bundle.esm.js
+            public/dist/bundle.js.map
+            public/dist/bundle.esm.js.map

@@ -1,14 +1,17 @@
 import './components/property-listings.js';
 import './components/listing-card.js';
 import './components/listing-filters.js';
+import './components/listing-grid.js';
 import './components/listing-details.js';
 import { BrowserDetailsModal } from './adapters/browser-details-modal.js';
 import { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
 import { XmlListingParser } from './adapters/xml-listing-parser.js';
 import { LocationResolver } from './domain/location-resolver.js';
+import { getListingStore, clearListingStore } from './application/listing-store.js';
 import type { DetailsModal } from './ports/details-modal.js';
 import type { ListingFeed } from './ports/listing-feed.js';
 import type { PropertyListings } from './components/property-listings.js';
+import type { ListingGrid } from './components/listing-grid.js';
 
 // Public config re-exports — bundle is the source of truth post-build.
 // Hosts (including `public/index.html`/`dev.html`) import from the built
@@ -50,20 +53,37 @@ export {
 export { XmlListingParser } from './adapters/xml-listing-parser.js';
 export { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
 export { LocationResolver } from './domain/location-resolver.js';
+export { getListingStore, clearListingStore } from './application/listing-store.js';
+
+// Classic (`bundle.js` IIFE) singleton bridge: `bundle.esm.js` is a separate
+// module instance with its own `WeakMap<Document,ListingStore>`. Dev hosts
+// loading both runtimes must share one store, so expose the classic accessor
+// for module scripts to prefer over an ESM import (P0.3). First writer wins
+// so load order never re-splits the singleton.
+{
+  const g = globalThis as unknown as {
+    __3DWEB__?: {
+      getListingStore: typeof getListingStore;
+      clearListingStore: typeof clearListingStore;
+    };
+  };
+  g.__3DWEB__ ??= { getListingStore, clearListingStore };
+}
 
 const locationResolver = new LocationResolver(_REGIONS);
 const modalByDocument = new WeakMap<Document, DetailsModal>();
+const defaultFeedByDocument = new WeakMap<Document, ListingFeed>();
 
 const PROPERTY_LISTINGS_TAG = 'property-listings';
+const LISTING_GRID_TAG = 'listing-grid';
 
 interface ListingDefaults {
   createFeed(): ListingFeed;
   detailsModal: DetailsModal;
 }
 
-// Immutable shared per bundle; a fresh stateless feed per element; exactly one
-// popover per document (a single shared overlay is correct sharing, not a
-// singleton smell).
+// Immutable shared per bundle; exactly one popover per document (a single
+// shared overlay is correct sharing, not a singleton smell).
 function defaultsFor(doc: Document): ListingDefaults {
   let detailsModal = modalByDocument.get(doc);
   if (!detailsModal) {
@@ -76,15 +96,64 @@ function defaultsFor(doc: Document): ListingDefaults {
   };
 }
 
-function wireElement(element: PropertyListings, defaults: ListingDefaults): void {
-  if (element.feed == null) element.feed = defaults.createFeed();
-  if (element.detailsModal == null) element.detailsModal = defaults.detailsModal;
+function getOrCreateDefaultFeed(doc: Document, defaults: ListingDefaults): ListingFeed {
+  let feed = defaultFeedByDocument.get(doc);
+  if (!feed) {
+    feed = defaults.createFeed();
+    defaultFeedByDocument.set(doc, feed);
+  }
+  return feed;
+}
+
+function ensureStoreFeed(doc: Document, defaults: ListingDefaults): void {
+  const store = getListingStore(doc);
+  if (store.loadState.kind === 'idle') {
+    try {
+      if (!store.hasFeed) store.setFeed(getOrCreateDefaultFeed(doc, defaults));
+      else void store.load();
+    } catch {
+      // ignore SSR
+    }
+  }
+}
+
+function wireElement(element: PropertyListings | ListingGrid, defaults: ListingDefaults): void {
+  const doc =
+    (element.ownerDocument as Document) ?? (typeof document !== 'undefined' ? document : undefined);
+  if (doc) ensureStoreFeed(doc, defaults);
+  const anyEl = element as unknown as { feed?: ListingFeed; detailsModal?: DetailsModal };
+  if (anyEl.feed == null) {
+    // Reuse the single default feed per document instead of creating a fresh one per element
+    const feed = doc ? getOrCreateDefaultFeed(doc, defaults) : defaults.createFeed();
+    anyEl.feed = feed;
+    try {
+      if (doc) {
+        const store = getListingStore(doc);
+        if (!store.hasFeed) store.setFeed(feed);
+      }
+    } catch {
+      // ignore
+    }
+  } else {
+    try {
+      if (doc) {
+        const store = getListingStore(doc);
+        if (store.currentFeed !== anyEl.feed) store.setFeed(anyEl.feed);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (anyEl.detailsModal == null) {
+    anyEl.detailsModal = defaults.detailsModal;
+  }
 }
 
 /**
- * Fills only the unset ports on every <property-listings> inside `root`, so a
+ * Fills only the unset ports on every relevant element inside `root`, so a
  * host-supplied feed or dialog always wins. Safe to call repeatedly; safe in
- * SSR/server environments where no `document` exists.
+ * SSR/server environments where no `document` exists. Transparent singleton
+ * means hosts can use <listing-filters> + <listing-grid> without wiring.
  */
 export function configurePropertyListings(root?: ParentNode): void {
   if (typeof document === 'undefined') return;
@@ -93,14 +162,32 @@ export function configurePropertyListings(root?: ParentNode): void {
   if (!doc) return;
 
   const defaults = defaultsFor(doc);
+  // Ensure singleton store has a feed lazily when any listing element exists
+  const hasAnyListingElement =
+    (typeof Element !== 'undefined' &&
+      target instanceof Element &&
+      (target.matches(PROPERTY_LISTINGS_TAG) || target.matches(LISTING_GRID_TAG))) ||
+    target.querySelectorAll(`${PROPERTY_LISTINGS_TAG}, ${LISTING_GRID_TAG}`).length > 0;
+  if (hasAnyListingElement) ensureStoreFeed(doc, defaults);
+
   if (
     typeof Element !== 'undefined' &&
     target instanceof Element &&
     target.matches(PROPERTY_LISTINGS_TAG)
   ) {
-    wireElement(target as PropertyListings, defaults);
+    wireElement(target as unknown as PropertyListings, defaults);
+  }
+  if (
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    target.matches(LISTING_GRID_TAG)
+  ) {
+    wireElement(target as unknown as ListingGrid, defaults);
   }
   for (const element of target.querySelectorAll<PropertyListings>(PROPERTY_LISTINGS_TAG)) {
+    wireElement(element, defaults);
+  }
+  for (const element of target.querySelectorAll<ListingGrid>(LISTING_GRID_TAG)) {
     wireElement(element, defaults);
   }
 }
@@ -109,9 +196,6 @@ function autoWire(): void {
   if (typeof document === 'undefined') return;
   configurePropertyListings();
   warmDetailsOverlay();
-  // Late-added elements (host DOM changed after load) are wired as they appear.
-  // Shadow-root rendering never retriggers this observer (subtree does not
-  // traverse into shadow roots).
   if (typeof MutationObserver === 'undefined') return;
   const observer = new MutationObserver(() => configurePropertyListings());
   observer.observe(document.documentElement, { childList: true, subtree: true });

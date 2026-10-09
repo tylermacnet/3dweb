@@ -170,10 +170,7 @@
             <span>Available rentals</span>
           </div>
         </div>
-        <div class="host-summary">
-          Staging for external embeds ·
-          <a href="./migration.html">Migration report</a>
-        </div>
+        <div class="host-summary">Staging for external embeds</div>
       </header>
       <p class="file-origin-notice" role="status">
         You opened this staging page from the file system. The bundled components are running, but
@@ -194,6 +191,25 @@
           <property-listings></property-listings>
         </section>
 
+        <section class="staging-section" aria-labelledby="staging-composable-title">
+          <p class="staging-eyebrow">Staging — composable</p>
+          <h2 id="staging-composable-title">listing-filters + listing-grid — shared singleton</h2>
+          <p class="staging-caption">
+            Composable primitives sharing the transparent browser-level lazy singleton per
+            <code>Document</code> (<code>getListingStore(document)</code>). Filters write, grids
+            read — no parent wiring. Change a filter above and all grids below update.
+          </p>
+          <listing-filters></listing-filters>
+          <div style="display: grid; gap: 16px; margin-top: 16px">
+            <h3 style="margin: 0; font-size: 0.875rem">card view</h3>
+            <listing-grid view="card"></listing-grid>
+            <h3 style="margin: 0; font-size: 0.875rem">compact view</h3>
+            <listing-grid view="compact"></listing-grid>
+            <h3 style="margin: 0; font-size: 0.875rem">list view</h3>
+            <listing-grid view="list"></listing-grid>
+          </div>
+        </section>
+
         <section class="staging-section" aria-labelledby="staging-card-title">
           <p class="staging-eyebrow">Staging</p>
           <h2 id="staging-card-title">listing-card — from live feed</h2>
@@ -210,10 +226,10 @@
 
         <section class="staging-section" aria-labelledby="staging-filters-title">
           <p class="staging-eyebrow">Staging</p>
-          <h2 id="staging-filters-title">listing-filters — from live feed</h2>
+          <h2 id="staging-filters-title">listing-filters — standalone</h2>
           <p class="staging-caption">
-            <code>&lt;listing-filters&gt;.locationGroups</code> derived from the same
-            <code>Listing</code> set. Emits <code>listing-filters-changed</code> on change.
+            <code>&lt;listing-filters&gt;</code> alone reads/writes the shared singleton. When
+            placed without a grid it still syncs with any other filters/grids on the page.
           </p>
           <listing-filters id="staging-filters"></listing-filters>
           <p id="staging-filters-note" class="staging-note" role="status">Waiting for feed…</p>
@@ -242,14 +258,21 @@
       </main>
     </div>
 
-    <script defer src="./dist/bundle.js"></script>
+    <script defer src="./dist/loader.js"></script>
     <script>
       if (window.location.protocol === 'file:') {
         document.documentElement.dataset.fileOrigin = '';
       }
     </script>
     <script type="module">
-      import { getListingLocationGroups, DETAILS_BASE_URL } from './dist/bundle.esm.js';
+      const __previewEsm =
+        typeof window !== 'undefined' && window.__3DWEB_ESM_URL__
+          ? window.__3DWEB_ESM_URL__
+          : new URL('dist/bundle.esm.js', document.baseURI).href;
+      const __ns = await import(__previewEsm).catch(
+        () => import(new URL('dist/bundle.esm.js', document.baseURI).href),
+      );
+      const { getListingLocationGroups, DETAILS_BASE_URL } = __ns;
 
       const DETAILS_BASE = DETAILS_BASE_URL;
 

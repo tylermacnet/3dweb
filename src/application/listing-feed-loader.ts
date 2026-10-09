@@ -9,6 +9,11 @@ export type ListingLoadState =
   | { readonly kind: 'empty' }
   | { readonly kind: 'error'; readonly message: string };
 
+/**
+ * @deprecated Legacy per-host controller. Live path is `ListingStore`
+ * (`src/application/listing-store.ts`) shared per `Document`. Kept for
+ * backward-compat tests; do not use in new components.
+ */
 export class ListingFeedLoader implements ReactiveController {
   private readonly host: ReactiveControllerHost;
   private feed: ListingFeed | undefined;

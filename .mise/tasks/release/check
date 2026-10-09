@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#MISE description="Fail when unmerged commits do not follow Conventional Commits"
+set -e
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?(!)?: .+'
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  range="origin/main..HEAD"
+elif last_tag="$(git describe --tags --abbrev=0 2>/dev/null)" && [ -n "$last_tag" ]; then
+  range="$last_tag..HEAD"
+else
+  range="HEAD"
+fi
+count="$(git rev-list --count --no-merges "$range")"
+if [ "$count" -eq 0 ]; then
+  printf 'nothing new to check in %s\n' "$range"
+  exit 0
+fi
+offenders=0
+while IFS= read -r subject; do
+  [ -z "$subject" ] && continue
+  if ! printf '%s' "$subject" | grep -Eq "$pattern"; then
+    printf 'non-conventional: %s\n' "$subject"
+    offenders=$((offenders + 1))
+  fi
+done <<EOF
+$(git log --format=%s --no-merges "$range")
+EOF
+if [ "$offenders" -gt 0 ]; then
+  printf '%d commit(s) in %s do not follow Conventional Commits\n' "$offenders" "$range" >&2
+  exit 1
+fi
+printf 'all %s commit(s) in %s follow Conventional Commits\n' "$count" "$range"

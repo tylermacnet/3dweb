@@ -1,7 +1,8 @@
 // ConfigurePropertyListings owns the entry wiring contract: fill only unset
-// ports, fresh stateless feed per element, one modal per document, host
-// overrides preserved. Linkedom cannot upgrade/run these custom elements, so
-// we exercise the pure DOM-wiring function on plain custom-element tags.
+// ports, shared singleton feed per document (one feed per Document via
+// ListingStore), one modal per document, host overrides preserved. Linkedom
+// cannot upgrade/run these custom elements, so we exercise the pure DOM-wiring
+// function on plain custom-element tags.
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -49,7 +50,7 @@ function freshDocument(markup: string): ReturnType<typeof parseHTML>['window'] {
   return parseHTML(`<!doctype html><html><body>${markup}</body></html>`).window;
 }
 
-test('fills unset ports on every property-listings with a fresh feed and shared modal', async () => {
+test('fills unset ports on every property-listings with a shared feed and shared modal', async () => {
   // Arrange
   const { configurePropertyListings } = await entryModule();
   const window = freshDocument(
@@ -62,9 +63,12 @@ test('fills unset ports on every property-listings with a fresh feed and shared 
   // Assert
   const elements = window.document.querySelectorAll('property-listings');
   assert.equal(elements.length, 2);
-  const [first, second] = elements as unknown as Array<{ feed?: unknown; detailsModal?: unknown }>;
+  const [first, second] = elements as unknown as Array<{
+    feed?: { getListings: () => unknown };
+    detailsModal?: unknown;
+  }>;
   assert.ok(first?.feed);
-  assert.notEqual(first?.feed, second?.feed);
+  assert.equal(first?.feed, second?.feed);
   assert.equal(typeof first?.feed?.getListings, 'function');
   assert.ok(first?.detailsModal);
   assert.equal(first?.detailsModal, second?.detailsModal);

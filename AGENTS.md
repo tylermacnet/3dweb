@@ -17,7 +17,7 @@ All mise-related configuration lives under `.mise/` (config and tasks) with `mis
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle (canonical validation gate — keep this hard-coded).
 3. `mise run tool:chat` (alias `mise run chat`) launches OpenCode with the project toolchain and TypeScript LSP.
-4. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`) with `mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
+4. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`, `git-cliff`) with `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
 
 Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
 
@@ -32,15 +32,15 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 ```
 
 - **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- **Application** (`src/application/`): `ListingFeedLoader` (Lit `ReactiveController`) owns feed loading, request cancellation, and the load-state machine; `ListingFilterStore` owns filter criteria and derived visible listings/location groups.
+- **Application** (`src/application/`): `ListingStore` (per-`Document` lazy singleton via `WeakMap`) owns feed loading, request cancellation, load-state machine, filter criteria, and derived visible listings/location groups/price bounds. `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy (per-host, kept for tests only).
 - **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsModal`).
 - **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser popover).
-- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (iframe-to-listing element accepting `listing-id` with a `src` override). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `property-listings` composes `listing-card` and `listing-filters` but does not own them.
+- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-grid>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (iframe-to-listing element accepting `listing-id` with a `src` override). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `listing-grid` with `view="card|compact|list"` is the composable primitive; `property-listings` is a thin legacy shell (`listing-filters` + `listing-grid view="card"`).
 - **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs). Shared kernel: every layer may import it; `domain` imports it type-only so runtime purity holds.
 
 ## Key constraints
 
-- No DI containers, service locators, or mutable global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled per document in the bundle entry (shared immutable location resolver, fresh feed per element, one popover modal per document). No root component.
+- No DI containers, service locators, or mutable global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled per document in the bundle entry (shared immutable location resolver, one feed and one `ListingStore` per document, one popover modal per document). No root component. The classic bundle exposes the store accessor on `window.__3DWEB__` so dev hosts loading both `bundle.js` + `bundle.esm.js` share one singleton.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
 - CSS is component-owned: imported via `componentStyles()` in the owning component's `static styles`.
   `src/styles/component-styles.ts` is the only `unsafeCSS` call site (first-party build-time CSS only).
@@ -64,41 +64,56 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 
 ## Post-change mandatory process
 
-After every migration phase or major change, complete all six steps before declaring work done:
+After every major architecture, behavior, or public-contract change, complete all steps before
+declaring work done:
 
 1. Review dependency direction against architecture layers (domain purity, port ownership, adapter boundaries).
 2. Review SOLID principles and 2026 platform practices.
 3. Assess test coverage for changed behavior; add focused tests for missing branches/edge cases.
-4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, `AGENTS.md` if contracts or naming change.
-5. Update `public/migration.html` before committing: promote completed phases, add a review-evidence section for each newly completed phase, and refresh the header summary and test counts.
-6. Run `mise run check` and report results.
+4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, `AGENTS.md` if contracts or naming change.
+5. Run `mise run check` and report results.
+
+## Branching and releases (GitHub Flow, solo)
+
+One long-lived branch (`main`, always deployable). No prefixes, no pull requests:
+cut any short kebab branch off `main`, `git rebase` onto `origin/main`, merge
+locally (squash default, fast-forward when commits stand alone), delete the branch.
+Releases are `v*` tags on `main` (no release branches); regenerate `CHANGELOG.md`
+with the tag commit. Full workflow, Pages/preview runbook, and security posture
+live in `docs/DEVELOPMENT.md`.
 
 ## Style and formatting
 
 - Prettier: `semi: true`, `singleQuote: true`, `trailingComma: all`, `printWidth: 100`.
 - EditorConfig: 2-space indent, LF line endings, UTF-8.
 - TypeScript: `strict`, `module: nodenext`, `target: esnext`, JSX `preserve`.
-- Commit messages: Conventional Commits (`type: description`, lower-case imperative).
+- Commit messages: Conventional Commits (`type[(scope)]: description`, lower-case
+  imperative, no trailing period). Types: `feat`, `fix`, `docs`, `style`,
+  `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`; `!`/`BREAKING CHANGE`
+  for breaking changes. Squash merges are the enforcement point;
+  `mise run release:check` verifies unmerged commits.
 
 ## Important files
 
 - `.mise/config.toml` — toolchain, env, and settings (source of truth for runtimes; tasks live in `.mise/tasks/`).
 - `.mise/tasks/` — file tasks (executable scripts with `#MISE` header; preferred over inline `.mise/config.toml` tasks; hierarchies use subdirectories `ns/name` → `ns:name` with `ns/_default` for the `ns` task itself).
-- `mise.lock` — pinned toolchain versions (commit updates; lives at repo root, not under `.mise/`).
+- `.mise/mise.lock` — pinned toolchain versions (commit updates; managed by mise next to `.mise/config.toml`).
 - `.opencode/opencode.json` — project TypeScript LSP (`mise run tool:lsp` via alias `mise run lsp`) and mise MCP server (`mise mcp`), committed.
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
+- `src/loader.ts` — universal loader shipped as `dist/loader.js` (production default, `?preview=` snapshots).
 - `src/config/application.ts` — shared details URL, iframe variant, modal title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
 - `src/adapters/browser-details-modal.css` — adapter-owned popover styles.
-- `public/index.html` — host page consuming `public/dist/bundle.js`.
-- `public/test.html` — frozen legacy embed, kept byte-identical for feature-parity comparison only.
-- `public/migration.html` — static demo, not part of production listings API.
+- `public/index.html` — lean host-page example consuming `./dist/loader.js`.
+- `cliff.toml` — git-cliff changelog config (emoji groups, `v*` tags); `CHANGELOG.md` is generated.
+- `release:*` task namespace — tag/changelog operations (`changelog`, `preview`, `check`).
+- `preview:*` task namespace — branch preview builds (`build`, `publish`, `prune`).
+- `.github/workflows/` — `ci.yml` (push → `check`), `pages.yml` (`main` → Pages), `release.yml` (`v*` → assets).
+- `public/.nojekyll` — Pages serves `dist/` maps and dotfiles verbatim.
 - `src/env.d.ts` — CSS module type declarations.
 
 ## Docs
 
 - `docs/DEVELOPMENT.md` — workflow, architecture, address/location/filter policies.
 - `docs/STYLE_GUIDE.md` — CSS tokens, typography, layout, accessibility rules.
-- `docs/MIGRATION_PLAN.md` — phase-by-phase migration plan and quality gates.
-- `docs/ENHANCEMENTS.md` — evaluated out-of-scope improvements.
-- `.github/copilot-instructions.md` — architecture & migration guidelines (authoritative).
+- `docs/ROADMAP.md` — deferred stories and future enhancements.

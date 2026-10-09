@@ -3,6 +3,8 @@
 set -e
 npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.js
 npx --no-install esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.esm.js
+# Universal loader (dependency-free; any site embeds dist/loader.js directly).
+npx --no-install esbuild src/loader.ts --bundle --format=iife --target=es2022 --sourcemap --outfile=public/dist/loader.js
 # Build-time inlined sample for file:// dev host (public/dev.html)
 if [ -f "public/dev.html" ] && [ -f "test-src/sample/listingFeeds.xml" ]; then
   node -e "
@@ -13,4 +15,6 @@ if [ -f "public/dev.html" ] && [ -f "test-src/sample/listingFeeds.xml" ]; then
     html = html.replace(/<script id=\"dev-sample-xml\"[^>]*>[\s\S]*?<\/script>/, '<script id=\"dev-sample-xml\" type=\"text\/xml\">' + safe + '<\/script>');
     await writeFile('public/dev.html', html);
   "
+  # Keep the injected sample prettier-stable so format checks stay green.
+  npx --no-install prettier --write public/dev.html
 fi

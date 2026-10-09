@@ -22,8 +22,8 @@ export interface ListingCardViewModel {
 /**
  * Capability query vs viewport: `pointer: fine` is preferred over `768px`
  * — a touch laptop or iPad+keyboard should navigate vs popover by input
- * capability, not width. Legacy `test.html:817` `768px` is kept as reference
- * only. See `docs/ENHANCEMENTS.md` collapsed.
+ * capability, not width. Historical `768px` breakpoint kept as reference only.
+ * See `docs/ROADMAP.md`.
  */
 export function shouldOpenDialog(): boolean {
   return globalThis.matchMedia?.('(pointer: fine)')?.matches ?? true;

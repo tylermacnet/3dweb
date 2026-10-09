@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate CHANGELOG.md from conventional commits (git-cliff, idempotent)"
+#USAGE arg "[args]..." help="Extra arguments passed to git-cliff"
+if [ -n "${usage_args:-}" ]; then
+  eval "args=($usage_args)"
+  exec git-cliff --output CHANGELOG.md "${args[@]}"
+fi
+if [ $# -eq 0 ]; then
+  exec git-cliff --output CHANGELOG.md
+else
+  exec git-cliff --output CHANGELOG.md "$@"
+fi

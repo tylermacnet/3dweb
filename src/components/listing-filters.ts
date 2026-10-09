@@ -4,6 +4,7 @@ import { componentStyles } from '../styles/component-styles.js';
 import styles from './listing-filters.css';
 import { BEDROOM_FILTER_OPTIONS, type ListingLocationGroup } from '../config/listing-filters.js';
 import type { ListingFilterOptions } from '../domain/listing-filter.js';
+import { getListingStore } from '../application/listing-store.js';
 
 const DEFAULT_MAX_RENT = 5000;
 
@@ -41,17 +42,69 @@ export class ListingFilters extends LitElement {
 
   private priceDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  private get store() {
+    const doc = this.ownerDocument ?? (typeof document !== 'undefined' ? document : undefined);
+    if (!doc) throw new Error('Document unavailable for listing store');
+    return getListingStore(doc);
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    try {
+      this.store.subscribe(this);
+      const criteria = this.store.criteria;
+      if (Object.keys(criteria).length > 0) this.options = criteria;
+      if (this.locationGroups.length === 0) {
+        const groups = this.store.locationGroups;
+        if (groups.length > 0) this.locationGroups = groups;
+        const bounds = this.store.priceBounds;
+        if (bounds) {
+          this.priceMin = bounds.min;
+          this.priceMax = bounds.max;
+        }
+      }
+    } catch {
+      // SSR guard
+    }
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.priceDebounceTimer);
+    try {
+      this.store.unsubscribe(this);
+    } catch {
+      // ignore
+    }
+  }
+
+  willUpdate(changed: Map<string, unknown>): void {
+    // Sync from singleton store before render — no side-effects in render()
+    try {
+      const store = this.store;
+      const storeCriteria = store.criteria;
+      // If store has criteria and we are out of sync, adopt it (keeps two filters in sync and handles Clear filters)
+      if (JSON.stringify(storeCriteria) !== JSON.stringify(this.options)) {
+        this.options = { ...storeCriteria };
+      }
+      const storeGroups = store.locationGroups;
+      if (storeGroups.length > 0) {
+        if (this.locationGroups.length === 0 || this.shouldSyncGroups(storeGroups)) {
+          this.locationGroups = storeGroups;
+        }
+      }
+      const bounds = store.priceBounds;
+      if (bounds) {
+        if (this.priceMin !== bounds.min) this.priceMin = bounds.min;
+        if (this.priceMax !== bounds.max) this.priceMax = bounds.max;
+      }
+    } catch {
+      // SSR guard
+    }
   }
 
   render() {
     const maxRent = this.options.maxRent ?? this.priceMax ?? DEFAULT_MAX_RENT;
-    // `aria-controls` is omitted intentionally: filters and results live in
-    // separate shadow roots and the wiring is via `listing-filters-changed`
-    // (composed/bubbles) + `ListingFilterStore` — a cross-root `idref`
-    // would be invalid and brittle. See `docs/ENHANCEMENTS.md` collapsed.
     return html`
       <section class="filters-panel" role="search" aria-label="Property filter options">
         <fieldset class="filter-fields">
@@ -110,6 +163,16 @@ export class ListingFilters extends LitElement {
     `;
   }
 
+  private shouldSyncGroups(storeGroups: readonly ListingLocationGroup[]): boolean {
+    if (storeGroups.length !== this.locationGroups.length) return true;
+    // Deep compare labels and counts to catch reorder/addition/removal
+    try {
+      return JSON.stringify(storeGroups) !== JSON.stringify(this.locationGroups);
+    } catch {
+      return true;
+    }
+  }
+
   private handleSelect(): void {
     this.dispatchOptions(this.readControlValues());
   }
@@ -138,6 +201,11 @@ export class ListingFilters extends LitElement {
 
   private dispatchOptions(options: ListingFilterOptions): void {
     this.options = options;
+    try {
+      this.store.setFilters(options);
+    } catch {
+      // fallback to event if store unavailable
+    }
     this.dispatchEvent(
       new CustomEvent<ListingFilterOptions>('listing-filters-changed', {
         bubbles: true,
@@ -152,10 +220,14 @@ export class ListingFilters extends LitElement {
       this.renderRoot.querySelector<HTMLSelectElement>('#location-filter')?.value ?? 'ALL';
     const bedroomRule =
       this.renderRoot.querySelector<HTMLSelectElement>('#bedroom-filter')?.value ?? 'all';
+    const rawMax = Number(this.priceInput?.value ?? DEFAULT_MAX_RENT);
+    const effectiveMax = this.priceMax ?? DEFAULT_MAX_RENT;
+    // Only include maxRent when user actually limited below the max (otherwise no filter)
+    const maxRentPart = Number.isFinite(rawMax) && rawMax < effectiveMax ? { maxRent: rawMax } : {};
     return {
       ...splitLocationValue(location),
       ...(bedroomRule && bedroomRule !== 'all' ? { bedroomRule } : {}),
-      maxRent: Number(this.priceInput?.value ?? DEFAULT_MAX_RENT),
+      ...maxRentPart,
     };
   }
 

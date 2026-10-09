@@ -1,5 +1,6 @@
 node_modules/
 public/dist/
+public/preview/
 .mise.local.toml
 mise.local.toml
 .mise/*.local.toml

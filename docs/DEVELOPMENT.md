@@ -6,8 +6,8 @@
 2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
 3. `mise run tool:chat` (alias `mise run chat`) launches OpenCode with the project toolchain and TypeScript LSP.
 
-Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`) with `mise.lock`
-committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
+Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`, `git-cliff`) with
+`.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
 `tool:lsp` alias `lsp`, no extra tool). JS libraries stay in
 `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them
 (`lit`, `valibot`, `esbuild`, `linkedom`); `mise` auto-installs them through `[deps.install]`
@@ -91,10 +91,132 @@ the bundled client still executes, but successful live feed requests require an 
 This diagnostic is host-page-only and has no effect when the component is embedded by an external
 site or served over HTTP(S).
 
+The demo page loads `./dist/loader.js`, the universal loader shipped from
+`src/loader.ts` — the same single script any external site embeds. It selects
+the production bundle or a `?preview=<ref>` snapshot; see
+[Previews (`?preview=`)](#previews-preview) below.
+
+## Branching, releases, Pages, and previews
+
+GitHub Flow, solo variant. One long-lived branch (`main`, always deployable).
+There are no prefixes and no pull requests: cut any short lower-case kebab
+branch name off `main`, rebase it onto `origin/main`, merge locally, delete it.
+There is no `develop`, no `release/*`, and no `support/*`.
+
+### Merging
+
+Rebase the branch before every merge; then squash (default — one conventional
+commit per change, cleanest changelog) or fast-forward (when the branch holds
+multiple independently meaningful conventional commits). Never rebase `main`.
+
+```text
+git fetch origin
+git checkout <branch> && git rebase origin/main
+git checkout main && git merge --ff-only origin/main
+git merge --squash <branch>
+git commit -m "feat: concise lower-case imperative description"
+mise run check && git push origin main
+git branch -d <branch>
+```
+
+Fast-forward alternative (each kept commit must already be conventional):
+
+```text
+git checkout <branch> && git rebase origin/main
+git checkout main && git merge --ff-only <branch>
+git push origin main && git branch -d <branch>
+```
+
+Recommended one-time config: `git config pull.rebase true` and
+`git config fetch.prune true`.
+
+### Tags and changelog
+
+Releases are `v*` tags on `main` (no release branches, ever). With the tag
+commit, regenerate `CHANGELOG.md` from Conventional Commits:
+
+```text
+mise run release:changelog
+mise run release:preview   # dry-run of unreleased entries, no files written
+mise run release:check     # fail when unmerged commits are non-conventional
+```
+
+`cliff.toml` (emoji groups, `tag_pattern = "v[0-9]*"`) is the changelog source
+of truth; `CHANGELOG.md` is committed. (`release:*` = tag/changelog operations,
+not branches.)
+
+### Pages (cross-domain embeds)
+
+GitHub Pages serves `public/` from `main` and is the cross-domain
+distribution point. External static sites embed the universal loader (classic
+script, no CORS preflight; it pulls the classic bundle, and exposes the ESM
+URL for module consumers):
+
+```html
+<script defer src="https://tylermacnet.github.io/3dweb/dist/loader.js"></script>
+<property-listings></property-listings>
+```
+
+- `public/dist/` and `public/preview/` are gitignored build artifacts; CI builds
+  them. `public/.nojekyll` is committed so Pages serves maps and dotfiles verbatim.
+- Workflows (`.github/workflows/`): `ci.yml` runs `mise run check` on push to
+  any branch; `pages.yml` builds (`mise run build`), syncs previews
+  (`mise run preview:publish` + `mise run preview:prune`), and deploys on `main`
+  pushes; `release.yml` attaches `loader.js`/`bundle.js`/`bundle.esm.js` (+ maps) and
+  git-cliff notes to each `v*` tag.
+- One-time manual step: repository Settings → Pages → Source = GitHub Actions.
+
+### Previews (`?preview=`)
+
+The client CMS HTML is effectively frozen, so demos ride on link-shareable
+preview snapshots: `?preview=<ref>` makes the universal loader pull
+`preview/<ref>/bundle.js` instead of the production bundle. Default (no param)
+is always `main`. Removing the param exits preview.
+
+- The loader (`src/loader.ts` → `dist/loader.js`) resolves bundle URLs against
+  its own script location, so it works unchanged on any domain with zero
+  page-specific logic. Refs are flat (`/` → `-`, `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`,
+  never `main`); unknown or expired refs fall back to production. It only ever
+  builds same-origin URLs — arbitrary origins are impossible by construction.
+- Local testing: `mise run preview:build -- <ref>` (defaults to the current
+  branch) writes `public/preview/<ref>/` (bundle + loader copy), then open
+  `public/index.html?preview=<ref>`. CI (`pages.yml`) rebuilds every active
+  remote branch and prunes dead ones, so the frozen client page can demo any
+  branch with zero HTML edits.
+- The frozen client snippet is the same two lines as the demo page with an
+  absolute loader URL (see [Pages](#pages-cross-domain-embeds) above) — no
+  CMS-side logic, ever.
+
+## Security posture
+
+Single-user repository (`tylermacnet` personal account; only the owner pushes).
+Accepted trade-offs, valid only while that holds:
+
+- No preview allowlist/manifest and no preview badge: the pinned same-origin
+  base plus the flat-ref pattern plus production fallback are sufficient because
+  no untrusted party can publish a preview ref. Preview state is signalled by
+  `document.documentElement.dataset.preview` + one `console.info` line only.
+- Re-harden when collaborators arrive: preview manifest gating, visible badge,
+  fork-PR build controls, branch protection with required PRs/CI (see
+  `docs/ROADMAP.md`).
+
+## Commit messages
+
+Follow Conventional Commits: `type[(scope)]: description`, description
+lower-case imperative with no trailing period. Canonical types:
+`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`,
+`chore`, `revert`. Breaking changes append `!` or add a `BREAKING CHANGE:`
+footer. Scopes are optional lower-case subsystems (`dev`, `domain`,
+`application`, `adapter`, `component`, `config`, `mise`, `ci`, `pages`,
+`preview`, `docs`, `test`). Examples: `feat: add compact grid view`,
+`fix: reset load state after last-host abort`, `docs: document preview links`.
+Squash merges are the enforcement point — one good message per merge;
+`mise run release:check` verifies unmerged commits.
+
 ## Mandatory post-change process
 
-After every migration phase or major architecture, behavior, or public-contract change, do not
-declare the work complete until this review is performed:
+After every major architecture, behavior, or public-contract change, do not declare the work
+complete until this review is performed:
 
 1. Review the changed dependency direction against the architecture layers and confirm that
    domain purity, port ownership, adapter boundaries, and component responsibilities remain
@@ -104,38 +226,37 @@ declare the work complete until this review is performed:
    type-safety issue.
 3. Assess test coverage for the changed behavior and boundaries; add focused tests for missing
    branches, edge cases, regressions, and integration contracts.
-4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/MIGRATION_PLAN.md`, and `AGENTS.md` when
+4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, and `AGENTS.md` when
    architecture, contracts, naming, workflow, or user-facing behavior changes.
-5. Update `public/migration.html` before committing: promote completed phases, add a
-   review-evidence section for each newly completed phase, and refresh the header summary and
-   test counts.
-6. Run the repository validation commands listed below and report their results in the handoff.
+5. Run the repository validation commands listed below and report their results in the handoff.
 
 Targeted validation is useful during implementation, but it does not replace this process review.
-If any review step is incomplete, the phase remains incomplete even when all commands pass.
+If any review step is incomplete, the change remains incomplete even when all commands pass.
 
 ## Architecture workflow
 
-Keep changes within the project boundaries described in the migration plan:
+Keep changes within the project architecture boundaries:
 
 - Put pure listing rules and types in `src/domain/`; domain modules must not import Lit,
   DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- Put orchestration and view state in `src/application/`. `ListingFeedLoader` owns feed
-  loading and cancellation behind an explicit `setFeed()` port; `ListingFilterStore` owns
-  filter criteria and derives visible listings and location groups from the loader's
-  loaded listings. The container composes the two.
+- Put orchestration and view state in `src/application/`. `ListingStore` (per-`Document`
+  lazy singleton via `WeakMap`) owns feed loading, request cancellation, load-state machine,
+  filter criteria, and derived visible listings/location groups/price bounds.
+  `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy (per-host, kept for tests only).
 - Define capabilities in `src/ports/` and implement them in `src/adapters/`. Application code
   depends on ports rather than concrete adapters.
 - Keep Lit custom elements in `src/components/`. Components render state and emit semantic
   events; they do not fetch feeds or implement business rules.
 - There is no root component. The single bundle entry (`src/index.tsx`) registers
-  all public elements (`property-listings`, `listing-card`, `listing-filters`,
+  all public elements (`property-listings`, `listing-grid`, `listing-card`, `listing-filters`,
   `listing-details`) so each works standalone on an external site. Assemble safe
-  port defaults in the bundle entry and let hosts override them per element via
+  port defaults in the bundle entry (one feed and one `ListingStore` per document, one
+  popover modal per document) and let hosts override them per element via
   properties/attributes; do not add a service locator, global singleton, or
-  dependency-injection framework. Future listing views (for example a map-based
-  plan) add a new component on the same layers without changing existing
-  elements.
+  dependency-injection framework. `listing-grid` with `view="card|compact|list"` is the
+  composable primitive; `property-listings` is a thin legacy shell. Future listing views
+  (for example a map-based plan) add a new component on the same layers without changing
+  existing elements.
 - Component styles belong to their owning component and are bundled through that component's
   `static styles` via `componentStyles()` from `src/styles/component-styles.ts`; the bundle
   entry must not own presentation styles. `componentStyles()` is the project's only
@@ -191,7 +312,7 @@ Unknown rent is represented by `null` in the domain and uses the configured sent
 filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
 configured produce no matches, while non-finite rent criteria are ignored. The
 listing range (`priceMin`/`priceMax`) shown in `listing-filters` is derived from
-the loaded listings inside `property-listings` (`floor(min/100)*100`,
+the loaded listings inside `ListingStore` (`floor(min/100)*100`,
 `ceil(max/100)*100`, ignoring `null`/0) — `bundle.esm.js`/`bundle.js` is the
 source of truth for that derivation, not the host page.
 

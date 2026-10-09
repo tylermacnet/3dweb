@@ -10,6 +10,11 @@ export interface ListingFilterHost {
   requestUpdate(): void;
 }
 
+/**
+ * @deprecated Legacy per-host store. Live path is `ListingStore`
+ * (`src/application/listing-store.ts`) which composes loading + filtering
+ * per `Document`. Kept for backward-compat tests; do not use in new code.
+ */
 export class ListingFilterStore {
   private readonly host: ListingFilterHost;
   private readonly config: ListingFilterConfig<Listing>;

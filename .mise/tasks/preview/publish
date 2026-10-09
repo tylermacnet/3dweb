@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#MISE description="Build preview bundles for all active remote branches"
+set -e
+mkdir -p public/preview
+git fetch origin --prune
+git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | while IFS= read -r branch; do
+  case "$branch" in
+    HEAD | main | '') continue ;;
+  esac
+  flat="$(printf '%s' "$branch" | tr '/' '-' | tr -cd 'A-Za-z0-9._-' | cut -c1-64)"
+  if ! printf '%s' "$flat" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'; then
+    printf 'skipping branch %s: no valid preview ref\n' "$branch"
+    continue
+  fi
+  wt="$(mktemp -d)/wt"
+  git worktree add --detach "$wt" "origin/$branch" >&2
+  if [ -f "$wt/src/index.tsx" ]; then
+    out="public/preview/$flat"
+    mkdir -p "$out"
+    npx --no-install esbuild "$wt/src/index.tsx" --bundle --format=iife --target=es2022 --loader:.css=text --sourcemap --outfile="$out/bundle.js"
+    npx --no-install esbuild "$wt/src/index.tsx" --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile="$out/bundle.esm.js"
+    if [ -f "$wt/src/loader.ts" ]; then
+      loader="$wt/src/loader.ts"
+    else
+      loader="src/loader.ts"
+    fi
+    npx --no-install esbuild "$loader" --bundle --format=iife --target=es2022 --sourcemap --outfile="$out/loader.js"
+    printf 'preview built: %s -> %s/\n' "$branch" "$out"
+  else
+    printf 'skipping branch %s: no src/index.tsx\n' "$branch"
+  fi
+  git worktree remove --force "$wt"
+done
+printf 'preview publish complete\n'

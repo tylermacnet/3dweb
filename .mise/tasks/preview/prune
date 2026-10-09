@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Remove preview bundles whose branch no longer exists"
+set -e
+[ -d public/preview ] || exit 0
+git fetch origin --prune 2>/dev/null || true
+alive="$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/ | tr '/' '-' | tr -cd 'A-Za-z0-9._-\n')"
+for dir in public/preview/*/; do
+  [ -d "$dir" ] || continue
+  name="$(basename "$dir")"
+  if ! printf '%s\n' "$alive" | grep -Fxq "$name"; then
+    printf 'pruning preview %s\n' "$name"
+    rm -rf "$dir"
+  fi
+done
+printf 'preview prune complete\n'

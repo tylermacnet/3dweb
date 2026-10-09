@@ -1,9 +1,8 @@
 # 3D Property Listings Style Guide
 
-This guide documents the visual language shown in the supplied production screenshot and the
-frozen legacy `public/test.html` embed (kept byte-identical for parity comparison only). It separates the host site's chrome from the property-listings
-web component so the component can be embedded in another production page without requiring the
-host navigation or hero.
+This guide documents the visual language shown in the supplied production screenshot. It
+separates the host site's chrome from the property-listings web component so the component can
+be embedded in another production page without requiring the host navigation or hero.
 
 ## Visual Direction
 
@@ -27,8 +26,7 @@ global page layout.
 
 ## Color Tokens
 
-Use these tokens as CSS custom properties at the component boundary. The values match the legacy
-embed and the visual relationships in the screenshot.
+Use these tokens as CSS custom properties at the component boundary. The values match the visual relationships in the screenshot.
 
 | Token                      | Value     | Usage                                                                                                                                                          |
 | -------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -246,17 +244,15 @@ as the public theming API.
 Production-facing custom elements are independent; there is no root component.
 Each works standalone on an external site once the single bundle is loaded:
 
-- `property-listings`: filters and listings only (composes `listing-card` and `listing-filters`)
+- `property-listings`: thin legacy shell (`listing-filters` + `listing-grid view="card"`)
+- `listing-grid`: composable primitive with `view="card|compact|list"`, usable standalone
 - `listing-filters`: filter controls and configured options, usable standalone
 - `listing-card`: one listing presentation, usable standalone
 - `listing-details`: standalone iframe-to-listing element accepting `listing-id` with a `src` override
-- `public/migration.html`: static development/demo migration report; never part of the production
-  listings API
-- `public/test.html`: frozen legacy embed for parity comparison only; never edited
 
 Application behavior belongs in `src/application/`, not in a component:
-`ListingFeedLoader` drives feed loading through the `ListingFeed` port and
-`ListingFilterStore` owns filter state, while safe defaults are assembled in
+`ListingStore` (per-`Document` singleton) drives feed loading through the `ListingFeed` port and
+owns filter state, while safe defaults are assembled in
 the bundle entry (`src/index.tsx`) and overridable per element. The browser details
 experience is an adapter-backed popover modal, not a `property-modal` custom element. Shared
 details concerns live in `src/config/application.ts`: the canonical details URL
