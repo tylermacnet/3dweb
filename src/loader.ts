@@ -20,9 +20,9 @@
  * no feed fetch, no modal mount, no preconnect. Tags present at evaluation
  * load the bundle immediately; tags added later are caught by a one-shot
  * observer that disconnects after loading. Off the critical path the shim
- * queues a low-priority `prefetch` for the bundle (skipped on Save-Data) so
- * a later listing page usually hits the HTTP cache — prefetch fetches but
- * never executes.
+ * queues low-priority `prefetch` links for the classic and ESM bundles
+ * (skipped on Save-Data) so a later listing page usually hits the HTTP
+ * cache — prefetch fetches but never executes.
  */
 (function () {
   'use strict';
@@ -101,7 +101,6 @@
     if (bundleLoaded) {
       return;
     }
-    bundleLoaded = true;
     if (observer) {
       try {
         observer.disconnect();
@@ -110,15 +109,32 @@
       }
       observer = null;
     }
-    if (ref) {
-      setEsmUrl(bundleFile('bundle.esm.js'));
-      loadClassic(bundleFile('bundle.js'), function () {
+    // Reset on failure so a later tag addition or mutation can retry instead
+    // of staying poisoned on a transient CDN error.
+    var retry = function (): void {
+      bundleLoaded = false;
+      watchForTags();
+    };
+    try {
+      if (ref) {
+        setEsmUrl(bundleFile('bundle.esm.js'));
+        loadClassic(bundleFile('bundle.js'), function () {
+          setEsmUrl(distFile('bundle.esm.js'));
+          try {
+            loadClassic(distFile('bundle.js'), retry);
+          } catch {
+            retry();
+            return;
+          }
+          bundleLoaded = true;
+        });
+      } else {
         setEsmUrl(distFile('bundle.esm.js'));
-        loadClassic(distFile('bundle.js'));
-      });
-    } else {
-      setEsmUrl(distFile('bundle.esm.js'));
-      loadClassic(distFile('bundle.js'));
+        loadClassic(distFile('bundle.js'), retry);
+      }
+      bundleLoaded = true;
+    } catch {
+      retry();
     }
   }
 
@@ -141,38 +157,52 @@
   }
 
   // Best-effort fetch-without-execute so a later listing page hits the cache.
+  // Warms both the classic bundle and the ESM bundle consumed by
+  // `type="module"` importers; each link is advisory and independent.
   function prefetchBundle(): void {
     if (bundleLoaded || prefetchQueued) {
       return;
     }
-    var href: string;
+    var hrefs: string[];
     try {
-      href = bundleFile('bundle.js');
+      hrefs = [bundleFile('bundle.js'), bundleFile('bundle.esm.js')];
     } catch {
       return;
     }
-    try {
-      var existing = document.querySelectorAll('link[rel="prefetch"]');
-      for (var i = 0; i < existing.length; i++) {
-        var candidate = existing[i] as HTMLLinkElement;
-        if (candidate.getAttribute('href') === href || candidate.href === href) {
-          prefetchQueued = true;
-          return;
+    var queued = 0;
+    for (var h = 0; h < hrefs.length; h++) {
+      var href = hrefs[h] as string;
+      var duplicate = false;
+      try {
+        var existing = document.querySelectorAll('link[rel="prefetch"]');
+        for (var i = 0; i < existing.length; i++) {
+          var candidate = existing[i] as HTMLLinkElement;
+          if (candidate.getAttribute('href') === href || candidate.href === href) {
+            duplicate = true;
+            break;
+          }
         }
+      } catch {
+        // fall through to queueing below
       }
-    } catch {
-      // fall through to queueing below
+      if (duplicate) {
+        queued += 1;
+        continue;
+      }
+      try {
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.setAttribute('as', 'script');
+        link.setAttribute('href', href);
+        link.setAttribute('data-3dweb-prefetch', 'bundle');
+        document.head.appendChild(link);
+        queued += 1;
+      } catch {
+        // prefetch is advisory; a listing page cold-loads when it fails
+      }
     }
-    try {
-      var link = document.createElement('link');
-      link.rel = 'prefetch';
-      link.setAttribute('as', 'script');
-      link.setAttribute('href', href);
-      link.setAttribute('data-3dweb-prefetch', 'bundle');
-      document.head.appendChild(link);
+    if (queued === hrefs.length) {
       prefetchQueued = true;
-    } catch {
-      // prefetch is advisory; a listing page cold-loads when it fails
     }
   }
 
@@ -185,9 +215,14 @@
     };
     try {
       if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(function () {
-          run();
-        });
+        // `timeout` bounds the wait on never-idle pages; the timer below
+        // remains for engines without `requestIdleCallback` at all.
+        requestIdleCallback(
+          function () {
+            run();
+          },
+          { timeout: 3000 },
+        );
         return;
       }
     } catch {

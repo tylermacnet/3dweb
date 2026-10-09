@@ -32,9 +32,11 @@ interface Harness {
   dataset: Record<string, string>;
   setHasTag: (value: boolean) => void;
   fireObserver: () => void;
+  fireScriptError: (index?: number) => void;
   observerCount: () => number;
   observerDisconnected: () => boolean;
   runIdle: () => void;
+  idleOptions: () => Array<unknown>;
   window: Record<string, unknown>;
   restore: () => void;
 }
@@ -67,6 +69,7 @@ function installHarness(options: {
   search?: string;
   saveData?: boolean;
   idle?: boolean;
+  existingPrefetch?: string[];
 }): Harness {
   const g = globalThis as unknown as Record<string, unknown>;
   const saved: Record<string, unknown> = {
@@ -87,7 +90,16 @@ function installHarness(options: {
   let observerInstances = 0;
   let observerDisconnected = false;
   const idleCallbacks: Array<() => void> = [];
+  const idleOptions: Array<unknown> = [];
   const timerCalls: Array<{ delay: number; run: () => void }> = [];
+  const existingPrefetch = options.existingPrefetch ?? [];
+  const LISTING_TAGS = [
+    'property-listings',
+    'listing-grid',
+    'listing-card',
+    'listing-filters',
+    'listing-details',
+  ];
 
   class FakeObserver {
     constructor(callback: () => void) {
@@ -151,12 +163,20 @@ function installHarness(options: {
       };
     },
     querySelector: (selector: string): unknown => {
-      if (selector.includes('property-listings')) {
+      if (LISTING_TAGS.some((tag) => selector.includes(tag))) {
         return hasTag ? { tagName: 'PROPERTY-LISTINGS' } : null;
       }
       return null;
     },
-    querySelectorAll: (): unknown[] => [],
+    querySelectorAll: (selector: string): unknown[] => {
+      if (selector.includes('prefetch')) {
+        return existingPrefetch.map((href) => ({
+          getAttribute: (name: string): string | null => (name === 'href' ? href : null),
+          href,
+        }));
+      }
+      return [];
+    },
   };
 
   const fakeWindow: Record<string, unknown> = {
@@ -177,8 +197,9 @@ function installHarness(options: {
       return realSetTimeout(run, delay) as unknown as NodeJS.Timeout;
     }) as unknown;
   } else {
-    g['requestIdleCallback'] = (callback: () => void): number => {
+    g['requestIdleCallback'] = (callback: () => void, opts?: unknown): number => {
       idleCallbacks.push(callback);
+      idleOptions.push(opts);
       return idleCallbacks.length;
     };
   }
@@ -200,12 +221,20 @@ function installHarness(options: {
     fireObserver: (): void => {
       for (const callback of observerCallbacks) callback();
     },
+    fireScriptError: (index = 0): void => {
+      const scripts = appended.filter(
+        (element): element is FakeScript => element.kind === 'script',
+      );
+      const target = scripts[index] as unknown as { listeners?: Record<string, () => void> };
+      target.listeners?.['error']?.();
+    },
     observerCount: (): number => observerInstances,
     observerDisconnected: (): boolean => observerDisconnected,
     runIdle: (): void => {
       for (const callback of idleCallbacks) callback();
       for (const timer of timerCalls) timer.run();
     },
+    idleOptions: (): Array<unknown> => idleOptions,
     window: fakeWindow,
     restore: (): void => {
       for (const [key, value] of Object.entries(saved)) {
@@ -276,11 +305,16 @@ test('defers execution and prefetches on idle when no tags exist', async () => {
     // Act: run the captured idle callback.
     harness.runIdle();
 
-    // Assert: fetch-without-execute only.
+    // Assert: fetch-without-execute only (classic + ESM).
     const links = prefetches(harness);
-    assert.equal(links.length, 1);
-    assert.equal(links[0].attrs['href'], DIST_BUNDLE);
+    assert.equal(links.length, 2);
+    assert.deepEqual(
+      links.map((link) => link.attrs['href']).sort(),
+      [DIST_BUNDLE, DIST_ESM].sort(),
+    );
     assert.equal(scripts(harness).length, 0);
+    // requestIdleCallback is bounded so never-idle pages still prefetch.
+    assert.match(JSON.stringify(harness.idleOptions()), /3000/);
   } finally {
     harness.restore();
   }
@@ -338,8 +372,11 @@ test('falls back to the timer when requestIdleCallback is unavailable', async ()
 
     // Assert
     const links = prefetches(harness);
-    assert.equal(links.length, 1);
-    assert.equal(links[0].attrs['href'], DIST_BUNDLE);
+    assert.equal(links.length, 2);
+    assert.deepEqual(
+      links.map((link) => link.attrs['href']).sort(),
+      [DIST_BUNDLE, DIST_ESM].sort(),
+    );
   } finally {
     harness.restore();
   }
@@ -393,17 +430,74 @@ test('duplicate loader evaluations load the bundle only once', async () => {
   }
 });
 
-test('bundle entry only warms the details overlay when modal elements exist', async () => {
+test('skips prefetch links that already exist', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: false, existingPrefetch: [DIST_BUNDLE, DIST_ESM] });
+
+  try {
+    // Act
+    await evaluateLoader();
+    harness.runIdle();
+
+    // Assert: dedupe loop finds both hrefs, nothing new queued.
+    assert.equal(prefetches(harness).length, 0);
+    assert.equal(scripts(harness).length, 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+test('bundle load failure resets so a later mutation retries', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: true });
+
+  try {
+    await evaluateLoader();
+    assert.equal(scripts(harness).length, 1);
+
+    // Act: transient CDN failure on the classic bundle.
+    harness.fireScriptError(0);
+    assert.equal(harness.observerCount(), 1);
+    harness.setHasTag(true);
+    harness.fireObserver();
+
+    // Assert: retried exactly once.
+    assert.equal(scripts(harness).length, 2);
+    assert.equal((scripts(harness)[1] as unknown as Record<string, unknown>)['src'], DIST_BUNDLE);
+  } finally {
+    harness.restore();
+  }
+});
+
+test('non-preview bundle load wires an error handler for retry', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: true });
+
+  try {
+    // Act
+    await evaluateLoader();
+
+    // Assert
+    const loaded = scripts(harness);
+    assert.equal(loaded.length, 1);
+    const listeners = (loaded[0] as unknown as { listeners?: Record<string, unknown> }).listeners;
+    assert.ok(listeners?.['error']);
+  } finally {
+    harness.restore();
+  }
+});
+
+test('bundle entry only warms the details overlay for grid/listings elements', async () => {
   // Arrange
   const entry = await readFile('src/index.tsx', 'utf8');
 
-  // Act / Assert: warm is gated, and standalone cards count as modal-capable.
+  // Act / Assert: warm is gated and re-checked for SPA-injected grids;
+  // standalone cards dispatch events only, so they stay out of the gate.
   assert.match(entry, /if \(hasModalCapableElement\(document\)\) warmDetailsOverlay\(\);/);
-  assert.match(entry, /LISTING_CARD_TAG/);
-  assert.match(
-    entry,
-    /PROPERTY_LISTINGS_TAG\},\s*\$\{LISTING_GRID_TAG\},\s*\$\{LISTING_CARD_TAG\}/,
-  );
+  assert.match(entry, /querySelector\(`\$\{PROPERTY_LISTINGS_TAG\}, \$\{LISTING_GRID_TAG\}`\)/);
+  assert.doesNotMatch(entry, /LISTING_CARD_TAG/);
+  assert.match(entry, /detailsWarmed/);
+  assert.match(entry, /timeout: 3000/);
 });
 
 test('loader source keeps its shim and safety markers', async () => {
@@ -418,7 +512,10 @@ test('loader source keeps its shim and safety markers', async () => {
   );
   assert.match(loader, /__3DWEB_LOADER__/);
   assert.match(loader, /rel.*prefetch|prefetch.*rel/);
+  assert.match(loader, /bundle\.esm\.js/);
   assert.match(loader, /saveData/);
   assert.match(loader, /observer\.disconnect\(\)/);
+  assert.match(loader, /watchForTags\(\)/);
   assert.match(loader, /requestIdleCallback/);
+  assert.match(loader, /timeout: 3000/);
 });
