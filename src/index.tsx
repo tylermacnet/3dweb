@@ -76,6 +76,7 @@ const defaultFeedByDocument = new WeakMap<Document, ListingFeed>();
 
 const PROPERTY_LISTINGS_TAG = 'property-listings';
 const LISTING_GRID_TAG = 'listing-grid';
+const LISTING_CARD_TAG = 'listing-card';
 
 interface ListingDefaults {
   createFeed(): ListingFeed;
@@ -195,10 +196,20 @@ export function configurePropertyListings(root?: ParentNode): void {
 function autoWire(): void {
   if (typeof document === 'undefined') return;
   configurePropertyListings();
-  warmDetailsOverlay();
+  // The details overlay (mount + styles + preconnect) is only warmed when a
+  // modal-capable element is present, so universal-head embeds on off-listing
+  // pages stay idle. open() mounts on demand, so it works without warm.
+  if (hasModalCapableElement(document)) warmDetailsOverlay();
   if (typeof MutationObserver === 'undefined') return;
   const observer = new MutationObserver(() => configurePropertyListings());
   observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+function hasModalCapableElement(doc: Document): boolean {
+  return (
+    doc.querySelectorAll(`${PROPERTY_LISTINGS_TAG}, ${LISTING_GRID_TAG}, ${LISTING_CARD_TAG}`)
+      .length > 0
+  );
 }
 
 // Mounts the shared overlay, adopts its styles, and warms the details

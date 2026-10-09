@@ -157,6 +157,19 @@ URL for module consumers):
 <property-listings></property-listings>
 ```
 
+The loader is a dependency-free shim that is safe in the universal `<head>`:
+tags present at evaluation load the bundle immediately, tags added later are
+caught by a one-shot observer that disconnects after loading, and duplicate
+loader tags never double-load (first writer wins). With no listing elements
+on the page nothing else runs — no bundle execution, no feed fetch, no modal
+mount, no preconnect — and the bundle entry only warms the details overlay
+when a modal-capable element (`property-listings`, `listing-grid`,
+`listing-card`) exists. Off the critical path the shim queues a low-priority
+`prefetch` for the bundle (skipped on Save-Data) so a later listing page
+usually hits the HTTP cache; prefetch fetches but never executes. Stable
+unversioned `dist/` URLs are kept intentionally so the CMS snippet never
+changes; the `?preview=<ref>` snapshot selection is unchanged.
+
 - `public/dist/` and `public/preview/` are gitignored build artifacts; CI builds
   them. `public/.nojekyll` is committed so Pages serves maps and dotfiles verbatim.
 - Workflows (`.github/workflows/`): `ci.yml` runs `mise run check` on push to

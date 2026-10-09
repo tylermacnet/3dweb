@@ -11,6 +11,11 @@ Embed on any site with the universal loader (production bundle served from GitHu
 <property-listings></property-listings>
 ```
 
+Put the script tag in the site-wide `<head>` — it is a dependency-free shim
+that stays idle on pages without listing elements (no bundle execution, no
+feed fetch, no modal) and only queues a low-priority bundle `prefetch` off
+the critical path, so listing pages usually hit the HTTP cache.
+
 Composable primitives (same bundle, shared per-document store):
 
 ```html
