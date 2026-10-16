@@ -1,3 +1,11 @@
 #!/usr/bin/env bash
 #MISE description="Run all checks and create a production bundle"
-#MISE depends=["check:format", "check:lint", "check:type", "test", "build"]
+# Sequential on purpose: `depends` runs tasks in parallel, and `build` rewrites
+# the tracked `public/dev.html` while `check:format` scans the repo, which
+# flakes the format gate. Keep the documented format → lint → type → test → build order.
+set -e
+mise run check:format
+mise run check:lint
+mise run check:type
+mise run test
+mise run build
