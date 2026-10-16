@@ -49,6 +49,10 @@ export class XmlListingParser implements ListingParser {
   }
 
   private parseProperty(property: Element): Listing {
+    // TODO: feed titles use the format "address - OW" where OW is the owner's
+    // initials, not a unit number. Keep parsing `PropertyID > Address` (never
+    // `MarketingName` / `Floorplan > Name`) and strip the initials from the
+    // display so they are not surfaced as a unit.
     const addressNode = property.querySelector('PropertyID > Address');
     const street = this.text(addressNode, 'Address');
     const unit = this.text(addressNode, 'Unit, UnitNumber');
