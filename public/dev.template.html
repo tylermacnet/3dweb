@@ -1,0 +1,578 @@
+<!doctype html>
+<!-- INTERNAL ONLY: dev host with inlined static sample, not a consumer page. See public/index.html for the canonical host example. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Property Listings — Dev (static sample)</title>
+    <style>
+      :root {
+        --page-bg: #f8fafc;
+        --page-surface: #ffffff;
+        --page-border: #e2e8f0;
+        --page-text: #0f172a;
+        --page-muted: #475569;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--page-bg);
+        color: var(--page-text);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+      }
+      .page-shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px 48px;
+      }
+      .host-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 12px 16px;
+        background: var(--page-surface);
+        border: 1px solid var(--page-border);
+        border-radius: 16px;
+      }
+      .host-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .host-logo {
+        display: inline-grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+      .host-brand h1 {
+        display: block;
+        margin: 0;
+        font-size: 1rem;
+      }
+      .host-brand span {
+        display: block;
+        color: var(--page-muted);
+        font-size: 0.75rem;
+      }
+      .host-summary {
+        color: var(--page-muted);
+        font-size: 0.9rem;
+      }
+      .host-main {
+        display: grid;
+        gap: 20px;
+      }
+      .staging-section {
+        background: var(--page-surface);
+        border: 1px solid var(--page-border);
+        border-radius: 18px;
+        padding: clamp(16px, 2vw, 28px);
+      }
+      .staging-eyebrow {
+        margin: 0 0 6px;
+        color: var(--page-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .staging-section h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+      }
+      .staging-caption {
+        margin: 0 0 14px;
+        color: var(--page-muted);
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      .staging-caption code {
+        color: var(--page-text);
+        font-size: 0.8125rem;
+      }
+      .dev-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin: 12px 0;
+      }
+      .dev-btn {
+        padding: 8px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #0f2c59;
+        color: #fff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .dev-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .dev-note {
+        color: var(--page-muted);
+        font-size: 0.8125rem;
+      }
+      details.staging-section {
+        padding: 0;
+      }
+      details.staging-section > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: clamp(16px, 2vw, 28px);
+        display: grid;
+        gap: 4px;
+      }
+      details.staging-section > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.staging-section > summary::after {
+        content: '▸';
+        justify-self: end;
+        align-self: start;
+        color: var(--page-muted);
+        font-size: 0.875rem;
+        transition: transform 0.15s ease;
+        margin-top: -20px;
+      }
+      details.staging-section[open] > summary::after {
+        transform: rotate(90deg);
+      }
+      details.staging-section > summary:focus-visible {
+        outline: 0.125rem solid #0284c7;
+        outline-offset: -0.125rem;
+        border-radius: 18px;
+      }
+      .details-body {
+        padding: 0 clamp(16px, 2vw, 28px) clamp(16px, 2vw, 28px);
+        border-top: 1px solid var(--page-border);
+        margin-top: 8px;
+        padding-top: 16px;
+      }
+      /* Only render heavy grids when details is open — content-visibility skips offscreen work */
+      details.staging-section:not([open]) .details-body {
+        content-visibility: hidden;
+        contain-intrinsic-size: 0 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="host-header" aria-label="Host page header">
+        <div class="host-brand">
+          <span class="host-logo">3D</span>
+          <div>
+            <h1>Property Listings — Dev</h1>
+            <span>Static sample · file:// supported</span>
+          </div>
+        </div>
+        <div class="host-summary">
+          Dev for local UIX · <a href="./index.html">Staging (live)</a>
+        </div>
+      </header>
+      <main class="host-main">
+        <section class="staging-section" aria-labelledby="dev-actions-title">
+          <p class="staging-eyebrow">Dev</p>
+          <h2 id="dev-actions-title">Static sample — singleton source</h2>
+          <p class="staging-caption">
+            Static <code>test-src/sample/listingFeeds.xml</code> is inlined at build time (works
+            <code>file://</code>) and loaded into the browser-level lazy singleton
+            <code>getListingStore(document)</code>. All <code>listing-grid</code> views read from
+            it. <code>Refresh</code> swaps the singleton from static to live feed.
+          </p>
+          <div class="dev-actions">
+            <button id="dev-refresh" type="button" class="dev-btn">Refresh with latest data</button>
+            <span id="dev-refresh-note" class="dev-note" role="status">Sample loaded</span>
+          </div>
+        </section>
+
+        <section class="staging-section" aria-labelledby="dev-filters-title">
+          <p class="staging-eyebrow">Filters — separated</p>
+          <h2 id="dev-filters-title">listing-filters — controls all views</h2>
+          <p class="staging-caption">
+            Separated from the view sections. Writes to the singleton store; every
+            <code>listing-grid</code> that is <em>active</em> (its
+            <code>&lt;details&gt;</code> open) re-renders with filtered results. Collapsed views
+            stay dormant via <code>content-visibility</code> and update on next open.
+          </p>
+          <listing-filters id="dev-filters"></listing-filters>
+        </section>
+
+        <details class="staging-section" aria-labelledby="dev-card-title">
+          <summary>
+            <p class="staging-eyebrow">View — card</p>
+            <h2 id="dev-card-title">listing-grid — <code>view="card"</code></h2>
+            <p class="staging-caption">
+              Rich cards with stretched-link details. Shares the singleton; responds to filter
+              changes only when this section is open (active).
+            </p>
+          </summary>
+          <div class="details-body">
+            <listing-grid view="card" data-lazy id="dev-grid-card"></listing-grid>
+          </div>
+        </details>
+
+        <details class="staging-section" aria-labelledby="dev-compact-title">
+          <summary>
+            <p class="staging-eyebrow">View — compact</p>
+            <h2 id="dev-compact-title">listing-grid — <code>view="compact"</code></h2>
+            <p class="staging-caption">
+              Dense single-line rows. Same singleton source; filtered live when active.
+            </p>
+          </summary>
+          <div class="details-body">
+            <listing-grid view="compact" data-lazy id="dev-grid-compact"></listing-grid>
+          </div>
+        </details>
+
+        <details class="staging-section" aria-labelledby="dev-list-title">
+          <summary>
+            <p class="staging-eyebrow">View — list</p>
+            <h2 id="dev-list-title">listing-grid — <code>view="list"</code></h2>
+            <p class="staging-caption">
+              Horizontal rows with large preview. Same live-filtered singleton.
+            </p>
+          </summary>
+          <div class="details-body">
+            <listing-grid view="list" data-lazy id="dev-grid-list"></listing-grid>
+          </div>
+        </details>
+      </main>
+    </div>
+    <script src="./dist/bundle.js"></script>
+    <script id="dev-sample-xml" type="text/xml"></script>
+    <script type="module">
+      // Prefer the classic bundle singleton (window.__3DWEB__) so the
+      // refresh feed shares one WeakMap with <listing-grid> instances.
+      // ESM import is fallback only (e.g. classic failed to load).
+      const _classic =
+        globalThis.__3DWEB__?.getListingStore ??
+        (await import('./dist/bundle.esm.js').then((m) => m.getListingStore));
+      const getListingStore = _classic;
+      const refreshBtn = document.getElementById('dev-refresh');
+      const refreshNote = document.getElementById('dev-refresh-note');
+      const sampleXmlEl = document.getElementById('dev-sample-xml');
+      function setSingletonFeed(feed) {
+        try {
+          getListingStore(document).setFeed(feed);
+        } catch {}
+        // Also sync legacy shell if present (backward compat)
+        const legacyEl = document.getElementById('dev-listings');
+        if (legacyEl) {
+          try {
+            legacyEl.feed = feed;
+          } catch {}
+        }
+      }
+      const DEV_REGIONS = {
+        'Greater Saint John': {
+          id: 'GSJ',
+          areas: [
+            { name: 'Uptown / South End / Central', fsas: ['E2L'] },
+            { name: 'North End / Millidgeville', fsas: ['E2K'] },
+            { name: 'West Side / Lancaster', fsas: ['E2M'] },
+            { name: 'East Side / Loch Lomond', fsas: ['E2J', 'E2N', 'E2R', 'E2S'] },
+            { name: 'Rothesay', fsas: ['E2E'] },
+            { name: 'Quispamsis', fsas: ['E2G'] },
+            { name: 'Grand Bay-Westfield', fsas: ['E5K'] },
+            { name: 'Hampton', fsas: ['E5N'] },
+            { name: 'St. Martins & Rural Southeast', fsas: ['E5R'] },
+          ],
+        },
+        'Greater Moncton': {
+          id: 'GMA',
+          areas: [
+            { name: 'Moncton Central / Downtown', fsas: ['E1C'] },
+            { name: 'Moncton North / West / Sunny Brae', fsas: ['E1E', 'E1G'] },
+            { name: 'Moncton East', fsas: ['E1A'] },
+            { name: 'Dieppe', fsas: ['E1A'] },
+            { name: 'Riverview', fsas: ['E1B'] },
+            { name: 'Shediac & Coast', fsas: ['E4P', 'E4R'] },
+            { name: 'Sackville / Port Elgin / Memramcook', fsas: ['E4L', 'E4M', 'E4N'] },
+            {
+              name: 'Bouctouche / Richibucto / Kent Region',
+              fsas: ['E4S', 'E4T', 'E4V', 'E4W', 'E4X'],
+            },
+          ],
+        },
+        'Greater Fredericton': {
+          id: 'GFA',
+          areas: [
+            { name: 'Downtown / South Side', fsas: ['E3B', 'E3E'] },
+            { name: 'North Side / Marysville', fsas: ['E3A', 'E3G'] },
+            { name: 'New Maryland / Kingsclear / Rural South', fsas: ['E3C'] },
+            { name: 'Oromocto / Burton / Geary', fsas: ['E2V'] },
+            { name: 'Minto / Chipman / Grand Lake', fsas: ['E4A', 'E4B'] },
+            { name: 'McAdam / Harvey / Southwest Rural', fsas: ['E6H', 'E6K'] },
+          ],
+        },
+        'Greater Charlotte County': {
+          id: 'GCC',
+          areas: [
+            { name: 'St. Stephen', fsas: ['E5A'] },
+            { name: 'St. Andrews', fsas: ['E5B'] },
+            { name: 'St. George', fsas: ['E5C'] },
+            { name: 'Blacks Harbour', fsas: ['E5C'] },
+            { name: 'Pennfield & Beaver Harbour', fsas: ['E5C'] },
+            { name: 'Grand Manan Island', fsas: ['E5G'] },
+            { name: 'Deer Island & Campobello Island', fsas: ['E5V'] },
+          ],
+        },
+        'Greater Miramichi & River Valley': {
+          id: 'GMR',
+          areas: [
+            { name: 'Miramichi City (Newcastle/Chatham)', fsas: ['E1N', 'E1V'] },
+            { name: 'Neguac & North Shore', fsas: ['E9G'] },
+            { name: 'Sunny Corner / Blackville / Southwest Miramichi', fsas: ['E9E', 'E9H'] },
+            { name: 'Rogersville / Rural South Miramichi', fsas: ['E4Y'] },
+          ],
+        },
+        'Greater Bathurst & Acadian Peninsula': {
+          id: 'GBP',
+          areas: [
+            { name: 'Bathurst City', fsas: ['E2A'] },
+            { name: 'Beresford / Petit-Rocher / Chaleur Rural', fsas: ['E8J', 'E8K'] },
+            { name: 'Caraquet', fsas: ['E8P'] },
+            { name: 'Shippagan', fsas: ['E8S'] },
+            { name: 'Tracadie-Sheila', fsas: ['E8R', 'E8T'] },
+            { name: 'Lamèque & Miscou Islands', fsas: ['E8M'] },
+          ],
+        },
+        'Greater Campbellton & Restigouche': {
+          id: 'GCR',
+          areas: [
+            { name: 'Campbellton', fsas: ['E3N'] },
+            { name: 'Dalhousie / Balmoral', fsas: ['E8E', 'E8G'] },
+            { name: 'Kedgwick / Saint-Quentin', fsas: ['E8B', 'E8C'] },
+          ],
+        },
+        'Greater Edmundston & Madawaska': {
+          id: 'GEM',
+          areas: [
+            { name: 'Edmundston Downtown', fsas: ['E3V'] },
+            { name: 'Saint-Jacques / Verret', fsas: ['E3V'] },
+            { name: 'Saint-Basile', fsas: ['E3V'] },
+            { name: 'Grand Falls / Grand-Sault', fsas: ['E7G'] },
+            { name: 'Saint-Léonard', fsas: ['E7E'] },
+          ],
+        },
+        'Greater Woodstock & Central Upper Valley': {
+          id: 'GWU',
+          areas: [
+            { name: 'Woodstock', fsas: ['E7M'] },
+            { name: 'Hartland', fsas: ['E7P'] },
+            { name: 'Florenceville-Bristol', fsas: ['E7L'] },
+            { name: 'Perth-Andover', fsas: ['E7H'] },
+            { name: 'Plaster Rock / Tobique Valley', fsas: ['E7G'] },
+            { name: 'Nackawic / Canterbury', fsas: ['E6G'] },
+          ],
+        },
+        'Greater Sussex & Rural South Central': {
+          id: 'GSR',
+          areas: [
+            { name: 'Sussex / Sussex Corner', fsas: ['E4E'] },
+            { name: 'Norton / Springfield / Apohaqui', fsas: ['E4G'] },
+            { name: 'Petitcodiac / Havelock / Salisbury', fsas: ['E4J', 'E4H', 'E4G'] },
+            { name: 'Albert County / Riverside-Albert / Alma', fsas: ['E4H'] },
+          ],
+        },
+      };
+      function cleanRegionName(name) {
+        return name.replace(/^Greater\s+/i, '');
+      }
+      function getFSA(postalCode) {
+        const c = String(postalCode || '')
+          .replace(/\s+/g, '')
+          .toUpperCase();
+        return /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[A-Z]\d$/.test(c) ? c.slice(0, 3) : '';
+      }
+      function buildFsaIndex() {
+        const idx = {};
+        for (const [regionName, region] of Object.entries(DEV_REGIONS)) {
+          for (const area of region.areas) {
+            for (const fsa of area.fsas) {
+              if (!idx[fsa]) idx[fsa] = [];
+              idx[fsa].push({ regionName, regionId: region.id, areaName: area.name });
+            }
+          }
+        }
+        return idx;
+      }
+      const fsaIndex = buildFsaIndex();
+      function resolveLocation(city, postalCode) {
+        const fsa = getFSA(postalCode);
+        const matches = fsaIndex[fsa];
+        if (matches && matches.length) {
+          if (matches.length === 1) return matches[0];
+          if (city) {
+            const cityLower = city.toLowerCase().trim();
+            const m = matches.find((x) => x.areaName.toLowerCase().includes(cityLower));
+            if (m) return m;
+          }
+          return { regionName: city || 'Other', regionId: 'OTHER', areaName: city || 'Other' };
+        }
+        if (city) {
+          const cityLower = city.toLowerCase().trim();
+          for (const [regionName, region] of Object.entries(DEV_REGIONS)) {
+            const hit = region.areas.find((a) => a.name.toLowerCase().includes(cityLower));
+            if (hit) return { regionName, regionId: region.id, areaName: hit.name };
+          }
+        }
+        return { regionName: city || 'Other', regionId: 'OTHER', areaName: city || 'Other' };
+      }
+      function parseSample(xmlString) {
+        const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+        if (doc.querySelector('parsererror')) throw new Error('Unable to parse sample XML');
+        const props = Array.from(doc.querySelectorAll('Property'));
+        return props
+          .map((prop) => {
+            const addrNode = prop.querySelector('PropertyID > Address');
+            const street = addrNode?.querySelector('Address')?.textContent?.trim() || '';
+            const city = addrNode?.querySelector('City')?.textContent?.trim() || '';
+            const postal = addrNode?.querySelector('PostalCode')?.textContent?.trim() || '';
+            const loc = resolveLocation(city, postal);
+            const floor = prop.querySelector('Floorplan');
+            const id = floor?.querySelector('Identification > IDValue')?.textContent?.trim() || '';
+            if (!id) return null;
+            const bed =
+              parseFloat(
+                floor?.querySelector('Room[RoomType="Bedroom"] > Count')?.textContent || '0',
+              ) || 0;
+            const bathText = floor
+              ?.querySelector('Room[RoomType="Bathroom"] > Count')
+              ?.textContent?.trim();
+            const bath = bathText ? parseFloat(bathText) : null;
+            const rentAttr = floor?.querySelector('EffectiveRent')?.getAttribute('Max');
+            const rent = rentAttr ? Math.round(parseFloat(rentAttr)) : null;
+            const file = Array.from(floor?.querySelectorAll('File') || []).find(
+              (f) => f.querySelector('Rank')?.textContent?.trim() === '1',
+            );
+            const img = file?.querySelector('Src')?.textContent?.trim() || '';
+            const desc = prop.querySelector('Information > LongDescription')?.textContent || '';
+            const hook =
+              desc
+                .split('\n')
+                .map((l) => l.trim())
+                .find((l) => l) || '';
+            return {
+              id,
+              address: {
+                line1: street,
+                line2: '',
+                city,
+                postalCode: postal,
+                fsa: getFSA(postal),
+                regionId: loc.regionId,
+                regionName: loc.regionName,
+                areaName: loc.areaName,
+              },
+              bedroomCount: bed,
+              bathroomCount: bath,
+              rent,
+              primaryImage: img,
+              hook,
+            };
+          })
+          .filter(Boolean);
+      }
+      try {
+        const sampleXml = sampleXmlEl?.textContent || '';
+        if (!sampleXml.trim()) throw new Error('Sample not inlined — run mise run build');
+        const sampleListings = parseSample(sampleXml);
+        const sampleFeed = {
+          async getListings() {
+            return sampleListings;
+          },
+        };
+        setSingletonFeed(sampleFeed);
+        refreshNote.textContent = `Sample loaded (${sampleListings.length} listings) — file:// ready · singleton shared with all grid views`;
+      } catch (e) {
+        refreshNote.textContent = 'Sample load failed: ' + (e && e.message ? e.message : String(e));
+      }
+      // Lazy: only render grids when their <details> is open
+      document.querySelectorAll('details.staging-section').forEach((d) => {
+        d.addEventListener('toggle', () => {
+          if (d.open) {
+            // Trigger Lit update for grids that were hidden via content-visibility
+            d.querySelectorAll('listing-grid').forEach((g) => {
+              try {
+                g.requestUpdate();
+              } catch {}
+            });
+          }
+        });
+      });
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+          if (window.location.protocol === 'file:') {
+            refreshNote.textContent = 'Live refresh requires http(s) — run mise run dev';
+            return;
+          }
+          refreshBtn.disabled = true;
+          refreshNote.textContent = 'Fetching latest data…';
+          const FEED_URL =
+            'https://3dmanagement.managebuilding.com/resident/api/public/listingFeeds';
+          const urls = [
+            FEED_URL,
+            `https://corsproxy.io/?${encodeURIComponent(FEED_URL)}`,
+            `https://api.allorigins.win/get?url=${encodeURIComponent(FEED_URL)}`,
+          ];
+          let lastErr = null;
+          for (const url of urls) {
+            try {
+              const controller = new AbortController();
+              const t = setTimeout(() => controller.abort(), 5000);
+              const res = await fetch(url, { signal: controller.signal });
+              clearTimeout(t);
+              if (!res.ok) continue;
+              let payload = await res.text();
+              if (payload.trim().startsWith('{') && payload.includes('"contents"')) {
+                try {
+                  payload = JSON.parse(payload).contents;
+                } catch {}
+              }
+              if (!payload.includes('<Property')) continue;
+              const liveListings = parseSample(payload);
+              const liveFeed = {
+                async getListings() {
+                  return liveListings;
+                },
+              };
+              setSingletonFeed(liveFeed);
+              refreshNote.textContent = `Refreshed: ${liveListings.length} live listings (singleton updated)`;
+              refreshBtn.disabled = false;
+              return;
+            } catch (err) {
+              lastErr = err;
+              continue;
+            }
+          }
+          refreshNote.textContent =
+            'Refresh failed: ' +
+            (lastErr && lastErr.message ? lastErr.message : 'Unable to retrieve feed');
+          refreshBtn.disabled = false;
+        });
+      }
+    </script>
+  </body>
+</html>

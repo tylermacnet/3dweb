@@ -10,3 +10,4 @@ mise.local.lock
 .mise/locks/
 .agents/
 *.log
+public/dev.html
