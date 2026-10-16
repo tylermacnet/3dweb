@@ -3,7 +3,6 @@ min_version = "2026.9.11"
 [tools]
 node = "26.9.0"
 aube = "2.2.17"
-opencode = "1.18.31"
 git-cliff = "2.14.1"
 
 # Built-in [deps.aube] requires aube-lock.yaml to exist, which this project

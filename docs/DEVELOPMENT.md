@@ -4,9 +4,9 @@
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
-3. `mise run tool:chat` (alias `mise run chat`) launches OpenCode with the project toolchain and TypeScript LSP.
+3. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
 
-Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `opencode`, `git-cliff`) with
+Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with
 `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
 `tool:lsp` alias `lsp`, no extra tool). JS libraries stay in
 `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them
@@ -21,7 +21,7 @@ Agents and contributors MUST run every command via `mise run <task>` and MUST NE
 
 If the needed invocation has no dedicated task, you MUST expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this) or create a new file task instead of falling back to a direct call. Create new tasks with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored). Never use `mise exec` / `mise x` wrappers as a shortcut — `mise run <task>` is the only entry point (the one exception is a one-off diagnostic `mise exec -- <cmd>` for parity, which must be followed by `mise run <task>` for final validation).
 
-Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `node`/`opencode` are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides `node`/`opencode` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `node` are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides `node` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
 
 Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
 
@@ -39,20 +39,21 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
 - Before migrating tooling, prune regenerables (`node_modules/`, `public/dist/`) and
   orphaned stores (`aube store prune`, `mise prune --yes`); keep `package.json` and
   `package-lock.json` as the JS pinning source.
-- Project TypeScript LSP lives in `.opencode/opencode.json` and launches the workspace
-  compiler's native server via `mise run tool:lsp` (alias `mise run lsp`, `tsc --lsp -stdio`). Only the `typescript`
+- The TypeScript language server is the workspace compiler's native server, launched
+  via `mise run tool:lsp` (alias `mise run lsp`, `tsc --lsp -stdio`); point any
+  agent's LSP client at that command. Only the `typescript`
   server is enabled; lint/type diagnostics come from `mise run check:lint` / `mise run check:type`.
   (`typescript-language-server` cannot be used: it wraps the classic `tsserver.js`,
   which TypeScript 7 no longer ships. Verified live: pull diagnostics report TS2322
   and hover resolves symbols; push `publishDiagnostics` was not observed, so the agent
   loop still prefers the `lint`/`type` tasks for diagnostics.)
-- The same file enables the `mise` MCP server (`mise mcp`, `type: local`,
-  `enabled: true`), so OpenCode chat can list tools/tasks/env/config and run tasks.
+- Any agent can also use the `mise` MCP server (`mise mcp`, `type: local`) by adding
+  it to its own global/user configuration — the repo ships no agent-specific config,
+  so there is no project-level agent file to maintain.
   No `.mise/config.toml` change was needed: the server is built into the pinned mise binary
   and `[settings] experimental = true` already enables it (verified: `mise mcp`
-  answers `initialize` without `MISE_EXPERIMENTAL`, and `opencode mcp list` reports
-  `mise` connected).
-- Verify with `mise ls --current` and `opencode debug config`.
+  answers `initialize` without `MISE_EXPERIMENTAL`).
+- Verify with `mise ls --current` (toolchain) plus your agent's own MCP/LSP status.
 - Pins are reproducible, not self-updating. To bump to latest releases: `mise self-update --yes`,
   edit `.mise/config.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
   for JS deps, then `mise run check` to prove the bumps are safe before committing
