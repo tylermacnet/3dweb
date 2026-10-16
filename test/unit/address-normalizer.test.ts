@@ -84,6 +84,20 @@ test('parses spaced dash units and inline units', () => {
   });
 });
 
+test(
+  'strips owner initials from address - OW titles instead of parsing them as unit numbers',
+  { todo: true },
+  () => {
+    // TODO: feed titles use the format "address - OW" where OW is the owner's
+    // initials, not a unit number. The initials should be stripped from the
+    // display (line2 stays empty) rather than surfaced as `Unit OW`.
+    assert.deepEqual(AddressNormalizer.normalize('12 Main Street - OW'), {
+      line1: '12 Main Street',
+      line2: '',
+    });
+  },
+);
+
 test('leaves ordinary street addresses on line one', () => {
   assert.deepEqual(AddressNormalizer.normalize('12 Main Street'), {
     line1: '12 Main Street',

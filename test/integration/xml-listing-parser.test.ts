@@ -140,6 +140,43 @@ test('preserves required listing fields and handles optional fields when absent'
   });
 });
 
+test(
+  'prefers the property address over address - OW titles carrying owner initials',
+  { todo: true },
+  async () => {
+    // TODO: feed titles use the format "address - OW" where OW is the owner's
+    // initials, not a unit number. Parse the `PropertyID > Address` (not
+    // `MarketingName` / `Floorplan > Name`) and strip the initials so they
+    // are not displayed as a unit.
+    await withParser((parser) => {
+      const [listing] = parser.parse(`
+        <PhysicalProperty>
+          <Property>
+            <PropertyID>
+              <Identification><IDValue>owner-initials-id</IDValue></Identification>
+              <MarketingName>12 Main Street - OW</MarketingName>
+              <Address>
+                <Address>12 Main Street - OW</Address>
+                <City>Saint John</City>
+                <PostalCode>E2L 1A1</PostalCode>
+              </Address>
+            </PropertyID>
+            <Information><LongDescription /></Information>
+            <Floorplan>
+              <Identification><IDValue>owner-initials-id</IDValue></Identification>
+              <Name>12 Main Street - OW</Name>
+              <Room RoomType="Bedroom"><Count>1</Count></Room>
+            </Floorplan>
+          </Property>
+        </PhysicalProperty>
+      `);
+
+      assert.equal(listing?.address.line1, '12 Main Street');
+      assert.equal(listing?.address.line2, '');
+    });
+  },
+);
+
 test('fails fast with a typed record error instead of dropping malformed records', async () => {
   await withParser((parser) => {
     const feed = `
