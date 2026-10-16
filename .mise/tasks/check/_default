@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-#MISE description="Run all checks and create a production bundle"
-# Sequential on purpose: `depends` runs tasks in parallel, and `build` rewrites
-# the tracked `public/dev.html` while `check:format` scans the repo, which
-# flakes the format gate. Keep the documented format → lint → type → test → build order.
-set -e
-mise run check:format
-mise run check:lint
-mise run check:type
-mise run test
-mise run build
+#MISE description="Run lint, type-check, tests, and build in parallel"
+#MISE depends=["check:lint", "check:type", "test", "build"]
+# Formatting is a commit precondition enforced by the `pre-commit` hook, not a
+# `check` dependency: generated outputs (e.g. `public/dev.html`) are
+# prettier-ignored, so nothing here races the formatter.

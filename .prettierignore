@@ -1,2 +1,4 @@
 # Generated files keep their generator's formatting.
 CHANGELOG.md
+public/dev.html
+public/dist

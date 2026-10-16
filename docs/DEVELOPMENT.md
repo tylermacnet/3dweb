@@ -3,8 +3,9 @@
 ## Onboarding — only `mise` is required
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
-2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle.
-3. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
+2. Install the pre-commit hook (one-time per checkout): `mise generate git-pre-commit --write --task=pre-commit`. Formatting is a commit precondition enforced by the hook.
+3. `mise run check` validates linting, type-checking, tests, and the bundle in parallel.
+4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
 
 Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with
 `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
@@ -25,7 +26,7 @@ Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `nod
 
 Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
 
-All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (format → lint → type → test → build); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
+All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (lint, type, test, and build in parallel — formatting is a commit precondition enforced by the `pre-commit` hook, not a `check` dependency); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
 
 Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
 
@@ -96,6 +97,12 @@ The demo page loads `./dist/loader.js`, the universal loader shipped from
 `src/loader.ts` — the same single script any external site embeds. It selects
 the production bundle or a `?preview=<ref>` snapshot; see
 [Previews (`?preview=`)](#previews-preview) below.
+
+`public/dev.html` is the internal dev host with the static sample inlined for
+`file://` use. It is always generated, never committed: committed source is
+`public/dev.template.html` (empty sample block) and `build` injects the current
+`test-src/sample/listingFeeds.xml` atomically. Run `mise run build` (or `check`)
+to regenerate it after cloning.
 
 ## Branching, releases, Pages, and previews
 
@@ -301,6 +308,28 @@ When adding a layer or component, preserve lowercase kebab-case filenames and cu
 names, PascalCase classes/types, camelCase members, narrow capability interfaces, and explicit
 typed boundaries. Add a focused unit or integration test with the change and update the
 architecture documentation when a public contract or dependency direction changes.
+
+## Failure and reproducibility policy
+
+Build time fails fast; runtime degrades gracefully. These are different phases
+with opposite duties.
+
+At build/commit/CI time, never move forward past a preventable problem: tasks
+use `set -e`, missing inputs are hard errors naming the file (never silent
+skips), multi-step writes publish atomically (temp + rename) so a failed run
+leaves no partial output, the `pre-commit` hook blocks unformatted commits, and
+red CI blocks merges. Generated outputs derive deterministically from committed
+inputs and are never committed: `public/dev.html` is rebuilt from
+`public/dev.template.html` plus `test-src/sample/listingFeeds.xml` on every
+`build`.
+
+At runtime, the embed must never break its host: degrade to working fallbacks
+instead of throwing. Cards keep default navigation when no modal is wired or
+the pointer is coarse, `DetailsModal` implementations return `false` when
+unsupported, and host pages render notices (`Feed unavailable in this origin`,
+`file://` limitations) instead of crashing. See
+[Card, popover, and details-iframe policy](#card-popover-and-details-iframe-policy)
+for the reference implementation.
 
 ## Address and location policy
 

@@ -15,9 +15,10 @@ All mise-related configuration lives under `.mise/` (config and tasks) with `mis
 ## Onboarding — only `mise` is required
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
-2. `mise run check` validates formatting, linting, type-checking, tests, and the bundle (canonical validation gate — keep this hard-coded).
-3. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
-4. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
+2. Install the pre-commit hook (one-time per checkout): `mise generate git-pre-commit --write --task=pre-commit`. Formatting is a commit precondition enforced by the hook — `mise run check` assumes a formatted tree.
+3. `mise run check` validates linting, type-checking, tests, and the bundle in parallel (canonical validation gate — keep this hard-coded). Without the hook, run `mise run check:format` first and fix with `mise run format`.
+4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
+5. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
 
 Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
 
@@ -39,6 +40,9 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 - **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs). Shared kernel: every layer may import it; `domain` imports it type-only so runtime purity holds.
 
 ## Key constraints
+
+- Fail fast at build/commit time, degrade gracefully at runtime. Multi-step tasks use `set -e` (or explicit status capture), missing inputs are hard errors (never silent skips), multi-step writes publish atomically so failed runs leave no partial outputs, the `pre-commit` hook blocks unformatted commits, and red CI must block merging. Runtime embeds must never break their host: fall through to working fallbacks (navigation over modal, notices over crashes) instead of throwing.
+- Generated outputs are reproducible from committed inputs and never committed: `public/dev.html` is rebuilt from `public/dev.template.html` plus the sample feed on every `build`.
 
 - No DI containers, service locators, or mutable global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled per document in the bundle entry (shared immutable location resolver, one feed and one `ListingStore` per document, one popover modal per document). No root component. The classic bundle exposes the store accessor on `window.__3DWEB__` so dev hosts loading both `bundle.js` + `bundle.esm.js` share one singleton.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.

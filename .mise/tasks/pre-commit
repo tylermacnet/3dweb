@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Verify formatting (pre-commit gate; run mise run format to fix)"
+#MISE depends=["check:format"]
+# Formatting is a commit precondition: this task verifies only and fails loudly.
+# Installed as the git pre-commit hook via:
+#   mise generate git-pre-commit --write --task=pre-commit
+# Bypass only with `git commit --no-verify`.

@@ -27,7 +27,7 @@ Composable primitives (same bundle, shared per-document store):
 
 Branch previews: append `?preview=<branch>` (branch snapshots under `preview/<ref>/`; default is production `main`).
 
-The demo host page `public/index.html` is the canonical embed example. `public/dev.html` (static sample), `public/test.html` (frozen baseline), and `public/migration.html` (historical report) are internal-only.
+The demo host page `public/index.html` is the canonical embed example. `public/dev.html` (static sample, always generated from `dev.template.html` plus the sample feed — never commit the output), `public/test.html` (frozen baseline), and `public/migration.html` (historical report) are internal-only.
 
 ## Contributing
 
@@ -36,8 +36,9 @@ Solo GitHub Flow, no pull requests. Full workflow lives in `docs/DEVELOPMENT.md`
 ```text
 mise trust            # one-time per checkout
 mise install          # toolchain + deps
+mise generate git-pre-commit --write --task=pre-commit  # one-time per checkout
 mise run dev          # local dev host
-mise run check        # format → lint → type → test → build (required gate)
+mise run check        # lint + type + test + build in parallel (required gate; tree must already be formatted)
 ```
 
 Branching: cut any short kebab branch off `main`, `git rebase` onto `origin/main`, merge locally (squash default), delete the branch. Releases are `v*` tags on `main`; regenerate `CHANGELOG.md` with the tag commit.

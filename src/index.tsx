@@ -48,7 +48,7 @@ export {
   _hideNavVariantOf as hideNavVariantOf,
   _resolveDetailsIframeUrl as resolveDetailsIframeUrl,
 };
-// Dev-only re-exports for `public/dev.html` static-sample preview (UIX).
+// Dev-only re-exports for the generated `public/dev.html` static-sample preview (UIX).
 // Not part of external `bundle.js` classic embed; used only by dev host.
 export { XmlListingParser } from './adapters/xml-listing-parser.js';
 export { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
