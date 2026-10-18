@@ -81,6 +81,9 @@
   var bundleLoaded = false;
   var prefetchQueued = false;
   var observer: MutationObserver | null = null;
+  var retries = 0;
+  var previewFailed = false;
+  var MAX_RETRIES = 3;
 
   function setEsmUrl(href: string): void {
     w.__3DWEB_ESM_URL__ = href;
@@ -110,23 +113,25 @@
       observer = null;
     }
     // Reset on failure so a later tag addition or mutation can retry instead
-    // of staying poisoned on a transient CDN error.
+    // of staying poisoned on a transient CDN error. A bounded backoff timer
+    // also retries static pages that never mutate again.
     var retry = function (): void {
       bundleLoaded = false;
       watchForTags();
+      scheduleRetry();
     };
     try {
-      if (ref) {
+      if (ref && !previewFailed) {
         setEsmUrl(bundleFile('bundle.esm.js'));
         loadClassic(bundleFile('bundle.js'), function () {
+          previewFailed = true;
           setEsmUrl(distFile('bundle.esm.js'));
           try {
             loadClassic(distFile('bundle.js'), retry);
+            bundleLoaded = true;
           } catch {
             retry();
-            return;
           }
-          bundleLoaded = true;
         });
       } else {
         setEsmUrl(distFile('bundle.esm.js'));
@@ -135,6 +140,25 @@
       bundleLoaded = true;
     } catch {
       retry();
+    }
+  }
+
+  function scheduleRetry(): void {
+    if (retries >= MAX_RETRIES) {
+      return;
+    }
+    retries += 1;
+    try {
+      globalThis.setTimeout(
+        function () {
+          if (!bundleLoaded && hasListingTag()) {
+            ensureBundle();
+          }
+        },
+        1000 * Math.pow(2, retries - 1),
+      );
+    } catch {
+      // no scheduler available; a later mutation still retries
     }
   }
 
@@ -236,7 +260,7 @@
   }
 
   function watchForTags(): void {
-    if (typeof MutationObserver === 'undefined') {
+    if (typeof MutationObserver === 'undefined' || observer) {
       return;
     }
     try {
