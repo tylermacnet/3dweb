@@ -89,6 +89,7 @@ function installHarness(options: {
   let hasTag = options.hasTag;
   const observerCallbacks: Array<() => void> = [];
   let observerInstances = 0;
+  let activeObservers = 0;
   let observerDisconnected = false;
   const idleCallbacks: Array<() => void> = [];
   const idleOptions: Array<unknown> = [];
@@ -106,14 +107,30 @@ function installHarness(options: {
   class FakeObserver {
     constructor(callback: () => void) {
       observerInstances += 1;
-      observerCallbacks.push(callback);
+      let connected = false;
+      observerCallbacks.push(() => {
+        if (connected) callback();
+      });
+      this.connect = (): void => {
+        if (!connected) {
+          connected = true;
+          activeObservers += 1;
+          observerDisconnected = false;
+        }
+      };
+      this.disconnect = (): void => {
+        if (connected) {
+          connected = false;
+          activeObservers -= 1;
+          observerDisconnected = activeObservers === 0;
+        }
+      };
     }
     observe(): void {
-      // recording construction is the assertion surface
+      this.connect();
     }
-    disconnect(): void {
-      observerDisconnected = true;
-    }
+    connect: () => void;
+    disconnect: () => void;
   }
 
   const fakeDocument = {
@@ -470,7 +487,11 @@ test('bundle load failure resets so a later mutation retries', async () => {
     harness.setHasTag(true);
     harness.fireObserver();
 
-    // Assert: retried exactly once.
+    // Mutation cannot bypass the pending backoff timer.
+    assert.equal(scripts(harness).length, 1);
+    harness.runRetryTimers();
+
+    // Assert: the timed retry occurs once.
     assert.equal(scripts(harness).length, 2);
     assert.equal((scripts(harness)[1] as unknown as Record<string, unknown>)['src'], DIST_BUNDLE);
   } finally {
@@ -497,21 +518,26 @@ test('retries a failed load on a static page without any DOM mutation', async ()
   }
 });
 
-test('stops retrying after a bounded number of failures', async () => {
+test('mutations cannot bypass the retry budget or backoff', async () => {
   // Arrange
   const harness = installHarness({ hasTag: true });
 
   try {
     await evaluateLoader();
 
-    // Act: fail every attempt, flushing retry timers each time.
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // Act: interleave failures, mutations during backoff, and timed retries.
+    for (let attempt = 0; attempt <= 3; attempt++) {
       const count = scripts(harness).length;
       harness.fireScriptError(count - 1);
+      harness.fireObserver();
+      assert.equal(scripts(harness).length, count);
       harness.runRetryTimers();
     }
 
     // Assert: initial load plus at most 3 retries.
+    assert.equal(scripts(harness).length, 4);
+    assert.equal(harness.observerDisconnected(), true);
+    harness.fireObserver();
     assert.equal(scripts(harness).length, 4);
   } finally {
     harness.restore();

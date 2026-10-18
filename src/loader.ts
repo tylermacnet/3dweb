@@ -82,6 +82,7 @@
   var prefetchQueued = false;
   var observer: MutationObserver | null = null;
   var retries = 0;
+  var retryScheduled = false;
   var previewFailed = false;
   var MAX_RETRIES = 3;
 
@@ -101,7 +102,7 @@
   }
 
   function ensureBundle(): void {
-    if (bundleLoaded) {
+    if (bundleLoaded || retryScheduled) {
       return;
     }
     if (observer) {
@@ -117,8 +118,9 @@
     // also retries static pages that never mutate again.
     var retry = function (): void {
       bundleLoaded = false;
-      watchForTags();
-      scheduleRetry();
+      if (scheduleRetry()) {
+        watchForTags();
+      }
     };
     try {
       if (ref && !previewFailed) {
@@ -143,14 +145,24 @@
     }
   }
 
-  function scheduleRetry(): void {
+  function scheduleRetry(): boolean {
     if (retries >= MAX_RETRIES) {
-      return;
+      if (observer) {
+        try {
+          observer.disconnect();
+        } catch {
+          // ignore disconnect failures; the retry budget still prevents retries
+        }
+        observer = null;
+      }
+      return false;
     }
     retries += 1;
+    retryScheduled = true;
     try {
       globalThis.setTimeout(
         function () {
+          retryScheduled = false;
           if (!bundleLoaded && hasListingTag()) {
             ensureBundle();
           }
@@ -158,8 +170,9 @@
         1000 * Math.pow(2, retries - 1),
       );
     } catch {
-      // no scheduler available; a later mutation still retries
+      retryScheduled = false;
     }
+    return true;
   }
 
   function hasListingTag(): boolean {
