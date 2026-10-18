@@ -175,7 +175,9 @@ when a modal-capable element (`property-listings`, `listing-grid`) exists
 (standalone `listing-card` only dispatches events; it never calls
 `modal.open()` alone). The entry observer re-checks so SPA-injected grids
 warm on arrival. Bundle load failures reset so a later mutation retries
-instead of staying poisoned. Off the critical path the shim queues
+instead of staying poisoned, and a bounded backoff timer (1s, 2s, 4s; three
+retries) also retries static pages that never mutate again. A failed preview
+snapshot falls back to production `dist/` for all later retries. Off the critical path the shim queues
 low-priority `prefetch` links for the classic and ESM bundles (skipped on
 Save-Data; `requestIdleCallback` with `timeout: 3000`) so a later listing page
 usually hits the HTTP cache; prefetch fetches but never executes. Stable
