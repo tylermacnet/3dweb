@@ -36,6 +36,7 @@ interface Harness {
   observerCount: () => number;
   observerDisconnected: () => boolean;
   runIdle: () => void;
+  runRetryTimers: () => void;
   idleOptions: () => Array<unknown>;
   window: Record<string, unknown>;
   restore: () => void;
@@ -92,6 +93,7 @@ function installHarness(options: {
   const idleCallbacks: Array<() => void> = [];
   const idleOptions: Array<unknown> = [];
   const timerCalls: Array<{ delay: number; run: () => void }> = [];
+  const retryTimerCalls: Array<() => void> = [];
   const existingPrefetch = options.existingPrefetch ?? [];
   const LISTING_TAGS = [
     'property-listings',
@@ -186,16 +188,20 @@ function installHarness(options: {
   g['document'] = fakeDocument;
   g['window'] = fakeWindow;
   g['MutationObserver'] = FakeObserver;
+  const realSetTimeout = saved['setTimeout'] as typeof setTimeout;
+  g['setTimeout'] = ((run: () => void, delay: number) => {
+    if (options.idle === false && delay === 3000) {
+      timerCalls.push({ delay, run });
+      return 0 as unknown as NodeJS.Timeout;
+    }
+    if (typeof delay === 'number' && delay >= 100) {
+      retryTimerCalls.push(run);
+      return 0 as unknown as NodeJS.Timeout;
+    }
+    return realSetTimeout(run, delay) as unknown as NodeJS.Timeout;
+  }) as unknown;
   if (options.idle === false) {
     g['requestIdleCallback'] = undefined;
-    const realSetTimeout = saved['setTimeout'] as typeof setTimeout;
-    g['setTimeout'] = ((run: () => void, delay: number) => {
-      if (delay === 3000) {
-        timerCalls.push({ delay, run });
-        return 0 as unknown as NodeJS.Timeout;
-      }
-      return realSetTimeout(run, delay) as unknown as NodeJS.Timeout;
-    }) as unknown;
   } else {
     g['requestIdleCallback'] = (callback: () => void, opts?: unknown): number => {
       idleCallbacks.push(callback);
@@ -233,6 +239,9 @@ function installHarness(options: {
     runIdle: (): void => {
       for (const callback of idleCallbacks) callback();
       for (const timer of timerCalls) timer.run();
+    },
+    runRetryTimers: (): void => {
+      for (const run of retryTimerCalls.splice(0)) run();
     },
     idleOptions: (): Array<unknown> => idleOptions,
     window: fakeWindow,
@@ -468,6 +477,95 @@ test('bundle load failure resets so a later mutation retries', async () => {
     harness.restore();
   }
 });
+
+test('retries a failed load on a static page without any DOM mutation', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: true });
+
+  try {
+    await evaluateLoader();
+
+    // Act: CDN failure, then only time passes (tag already present).
+    harness.fireScriptError(0);
+    harness.runRetryTimers();
+
+    // Assert
+    assert.equal(scripts(harness).length, 2);
+    assert.equal((scripts(harness)[1] as unknown as Record<string, unknown>)['src'], DIST_BUNDLE);
+  } finally {
+    harness.restore();
+  }
+});
+
+test('stops retrying after a bounded number of failures', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: true });
+
+  try {
+    await evaluateLoader();
+
+    // Act: fail every attempt, flushing retry timers each time.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const count = scripts(harness).length;
+      harness.fireScriptError(count - 1);
+      harness.runRetryTimers();
+    }
+
+    // Assert: initial load plus at most 3 retries.
+    assert.equal(scripts(harness).length, 4);
+  } finally {
+    harness.restore();
+  }
+});
+
+test('preview failure falls back to dist and a dist failure retries too', async () => {
+  // Arrange
+  const harness = installHarness({ hasTag: true, search: '?preview=feature-x' });
+  const originalInfo = console.info;
+  console.info = (): void => {};
+
+  try {
+    await evaluateLoader();
+
+    // Act
+    harness.fireScriptError(0);
+    assert.equal((scripts(harness)[1] as unknown as Record<string, unknown>)['src'], DIST_BUNDLE);
+    harness.fireScriptError(1);
+    harness.runRetryTimers();
+
+    // Assert
+    assert.equal(scripts(harness).length, 3);
+    assert.equal(harness.window['__3DWEB_ESM_URL__'], DIST_ESM);
+  } finally {
+    console.info = originalInfo;
+    harness.restore();
+  }
+});
+
+for (const [search, expected] of [
+  ['?preview=main', DIST_BUNDLE],
+  ['?preview=../etc', DIST_BUNDLE],
+  ['?preview=%2F%2Fevil.test', DIST_BUNDLE],
+  ['?preview=feature/x', 'https://example.test/preview/feature-x/bundle.js'],
+] as const) {
+  test(`preview ref ${search} resolves to ${expected}`, async () => {
+    // Arrange
+    const harness = installHarness({ hasTag: true, search });
+    const originalInfo = console.info;
+    console.info = (): void => {};
+
+    try {
+      // Act
+      await evaluateLoader();
+
+      // Assert
+      assert.equal((scripts(harness)[0] as unknown as Record<string, unknown>)['src'], expected);
+    } finally {
+      console.info = originalInfo;
+      harness.restore();
+    }
+  });
+}
 
 test('non-preview bundle load wires an error handler for retry', async () => {
   // Arrange
