@@ -174,9 +174,10 @@ mount, no preconnect — and the bundle entry only warms the details overlay
 when a modal-capable element (`property-listings`, `listing-grid`) exists
 (standalone `listing-card` only dispatches events; it never calls
 `modal.open()` alone). The entry observer re-checks so SPA-injected grids
-warm on arrival. Bundle load failures reset so a later mutation retries
-instead of staying poisoned, and a bounded backoff timer (1s, 2s, 4s; three
-retries) also retries static pages that never mutate again. A failed preview
+warm on arrival. Bundle load failures reset so a later mutation can retry,
+but mutation-triggered retries share the same three-retry budget and wait for
+any pending backoff (1s, 2s, 4s) instead of triggering immediate attempts.
+Timed retries also cover static pages that never mutate again. A failed preview
 snapshot falls back to production `dist/` for all later retries. Off the critical path the shim queues
 low-priority `prefetch` links for the classic and ESM bundles (skipped on
 Save-Data; `requestIdleCallback` with `timeout: 3000`) so a later listing page
@@ -209,7 +210,8 @@ is always `main`. Removing the param exits preview.
   branch) writes `public/preview/<ref>/` (bundle + loader copy), then open
   `public/index.html?preview=<ref>`. CI (`pages.yml`) rebuilds every active
   remote branch and prunes dead ones, so the frozen client page can demo any
-  branch with zero HTML edits.
+  branch with zero HTML edits. A failed bundle build stops preview publication
+  rather than reporting an incomplete snapshot as successful.
 - The frozen client snippet is the same two lines as the demo page with an
   absolute loader URL (see [Pages](#pages-cross-domain-embeds) above) — no
   CMS-side logic, ever.
