@@ -55,6 +55,28 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries.
 - Use Lit HTML templates only — never manual `innerHTML` concatenation.
 
+## Address Parser Design: ManageBuilding Feed Quirk
+
+ManageBuilding `MarketingName` follows `"<property_name> - <unit_name>"`. The Address field is
+often already correctly formatted, so it remains the address source. When Address exactly matches
+MarketingName, the parser can use that structure to recognize a trailing initials segment in the
+property-name portion without mistaking the final unit name for initials.
+
+Initials cleanup belongs in `XmlListingParser`, not `AddressNormalizer`: it is feed-specific,
+requires the MarketingName boundary, and keeps the domain normalizer pure and feed-agnostic.
+
+The parser removes a trailing 1–3 uppercase-letter segment from the property name only. It keeps
+the final unit name when the XML `Unit` field is empty; the name may be nonnumeric (for example,
+`"Penthouse"`). An explicit XML `Unit` value takes precedence over that MarketingName unit name.
+If Address differs from MarketingName, it is treated as manually corrected and used as-is.
+
+Examples:
+
+- `"37 Victoria Street - SH - 1"` → address `"37 Victoria Street"`, unit name `"1"` (strip `"SH"`)
+- `"37 Victoria Street - SH - Penthouse"` → address `"37 Victoria Street"`, unit name `"Penthouse"`
+- `"12 Main Street - OW"` → `"OW"` is the unit name, not property initials
+- `"209 Prince Street - 2"` → keep the address and unit name; there is no initials segment
+
 ## Test structure
 
 - `test/unit/` — pure domain tests (listing, address-normalizer, location-resolver, listing-filter).

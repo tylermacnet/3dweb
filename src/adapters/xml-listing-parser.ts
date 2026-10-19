@@ -1,5 +1,5 @@
 import { AddressNormalizer } from '../domain/address-normalizer.js';
-import { createListing, type Listing } from '../domain/listing.js';
+import { createListing, normalizeCanadianPostalCode, type Listing } from '../domain/listing.js';
 import { getFSA, LocationResolver } from '../domain/location-resolver.js';
 import type { ListingParser } from '../ports/listing-parser.js';
 
@@ -49,16 +49,26 @@ export class XmlListingParser implements ListingParser {
   }
 
   private parseProperty(property: Element): Listing {
-    // TODO: feed titles use the format "address - OW" where OW is the owner's
-    // initials, not a unit number. Keep parsing `PropertyID > Address` (never
-    // `MarketingName` / `Floorplan > Name`) and strip the initials from the
-    // display so they are not surfaced as a unit.
     const addressNode = property.querySelector('PropertyID > Address');
-    const street = this.text(addressNode, 'Address');
-    const unit = this.text(addressNode, 'Unit, UnitNumber');
-    const normalizedAddress = AddressNormalizer.normalize([street, unit].filter(Boolean).join(' '));
+    const marketingName = this.text(property, 'PropertyID > MarketingName');
+    let street = this.text(addressNode, 'Address');
+    let unit = this.text(addressNode, 'Unit, UnitNumber');
+
+    // MarketingName ends with " - <unit name>". When Address matches it, use
+    // that boundary to clean the property name and preserve the unit name.
+    if (street && this.normalizeWhitespace(street) === this.normalizeWhitespace(marketingName)) {
+      const parsed = this.parseMarketingNameAddress(street);
+      if (parsed) {
+        street = parsed.propertyName;
+        if (!unit) unit = parsed.unitName;
+      }
+    }
+
+    const addressString = unit ? this.withUnit(street, unit) : street;
+    const normalizedAddress = AddressNormalizer.normalize(addressString);
     const city = this.text(addressNode, 'City');
-    const postalCode = this.text(addressNode, 'PostalCode');
+    const rawPostalCode = this.text(addressNode, 'PostalCode');
+    const postalCode = normalizeCanadianPostalCode(rawPostalCode) ?? rawPostalCode;
     const location = this.locationResolver.resolve(city, postalCode);
 
     const floorplan = property.querySelector('Floorplan');
@@ -68,7 +78,7 @@ export class XmlListingParser implements ListingParser {
     const parsedRent = this.numberValue(rentValue);
     const rent = parsedRent === null ? null : Math.round(parsedRent);
     const primaryImage = this.primaryImage(floorplan);
-    const description = this.text(property, 'Information > LongDescription');
+    const description = this.text(property, 'Information > LongDescription', true);
 
     return createListing({
       id: this.text(floorplan, 'Identification > IDValue'),
@@ -94,14 +104,75 @@ export class XmlListingParser implements ListingParser {
     });
   }
 
+  /**
+   * Detect a dash-delimited owner-initials segment (1-3 uppercase letters).
+   *
+   * @example
+   * isOwnerInitials('SH')     // true
+   * isOwnerInitials('OW')     // true
+   * isOwnerInitials('ABC')    // true
+   * isOwnerInitials('sh')     // false (lowercase)
+   * isOwnerInitials('4')      // false (numeric)
+   * isOwnerInitials('ABCD')   // false (too long)
+   */
+  private isOwnerInitials(value: string): boolean {
+    return /^[A-Z]{1,3}$/.test(value.trim());
+  }
+
+  /**
+   * Separate the final unit-name segment and strip trailing initials from the
+   * property name without treating the unit name itself as metadata.
+   */
+  private parseMarketingNameAddress(
+    address: string,
+  ): { propertyName: string; unitName: string } | null {
+    const segments = this.normalizeWhitespace(address).split(/\s+-\s+/u);
+    if (segments.length < 2) return null;
+
+    const unitName = segments.pop() ?? '';
+    let propertyName = segments.join(' - ');
+    if (segments.length > 0) {
+      const initials = segments[segments.length - 1];
+      if (initials && this.isOwnerInitials(initials)) {
+        segments.pop();
+        propertyName = segments.join(' - ');
+      }
+    }
+
+    return { propertyName: propertyName.trim(), unitName: unitName.trim() };
+  }
+
+  private withUnit(street: string, unit: string): string {
+    if (/^(?:apt(?:artment)?|unit|suite|ste)\b|^#/i.test(unit)) {
+      return `${street} ${unit}`.trim();
+    }
+    return `${street} Unit ${unit}`.trim();
+  }
+
   private primaryImage(floorplan: Element | null): string {
     const files = Array.from(floorplan?.querySelectorAll('File') ?? []);
     const rankOne = files.find((file) => this.text(file, 'Rank') === '1');
     return this.text(rankOne, 'Src');
   }
 
-  private text(parent: Element | null | undefined, selector: string): string {
-    return parent?.querySelector(selector)?.textContent?.trim() ?? '';
+  private text(
+    parent: Element | null | undefined,
+    selector: string,
+    preserveLineBreaks = false,
+  ): string {
+    const value = parent?.querySelector(selector)?.textContent ?? '';
+    if (preserveLineBreaks) {
+      return value
+        .split(/\r\n?|\n/u)
+        .map((line) => this.normalizeWhitespace(line))
+        .join('\n')
+        .trim();
+    }
+    return this.normalizeWhitespace(value);
+  }
+
+  private normalizeWhitespace(value: string): string {
+    return value.replace(/\s+/gu, ' ').trim();
   }
 
   private number(parent: Element | null, selector: string): number | null {

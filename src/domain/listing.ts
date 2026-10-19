@@ -3,12 +3,30 @@ import * as v from 'valibot';
 const requiredText = v.pipe(v.string(), v.trim(), v.minLength(1));
 const optionalText = v.pipe(v.string(), v.trim());
 const nonNegativeNumber = v.pipe(v.number(), v.finite(), v.minValue(0));
+const canadianPostalCodePattern =
+  /^([ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z])-?(\d[ABCEGHJ-NPRSTV-Z]\d)$/;
+
+export function normalizeCanadianPostalCode(value: string | null | undefined): string | null {
+  const compact = (value ?? '').trim().toUpperCase().replace(/\s+/gu, '');
+  const match = canadianPostalCodePattern.exec(compact);
+  return match ? `${match[1]} ${match[2]}` : null;
+}
+
+const postalCode = v.pipe(
+  v.string(),
+  v.trim(),
+  v.transform((value) => normalizeCanadianPostalCode(value) ?? value),
+  v.regex(
+    /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] \d[ABCEGHJ-NPRSTV-Z]\d$/,
+    'Expected a valid Canadian postal code',
+  ),
+);
 
 export const listingAddressSchema = v.object({
   line1: requiredText,
   line2: optionalText,
   city: requiredText,
-  postalCode: requiredText,
+  postalCode,
   fsa: requiredText,
   regionId: requiredText,
   regionName: requiredText,

@@ -2,8 +2,11 @@ import type { RegionMap } from '../config/regions.js';
 import type { ResolvedLocation, LocationResolution } from './listing.js';
 
 export function getFSA(postalCode: string | null | undefined): string {
-  const compactPostalCode = (postalCode ?? '').replace(/\s+/g, '').toUpperCase();
-  return /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[A-Z]\d$/.test(compactPostalCode)
+  const compactPostalCode = (postalCode ?? '')
+    .replace(/\s+/g, '')
+    .replace(/^([A-Z]\d[A-Z])-(\d[A-Z]\d)$/i, '$1$2')
+    .toUpperCase();
+  return /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d$/.test(compactPostalCode)
     ? compactPostalCode.substring(0, 3)
     : '';
 }

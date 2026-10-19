@@ -84,19 +84,11 @@ test('parses spaced dash units and inline units', () => {
   });
 });
 
-test(
-  'strips owner initials from address - OW titles instead of parsing them as unit numbers',
-  { todo: true },
-  () => {
-    // TODO: feed titles use the format "address - OW" where OW is the owner's
-    // initials, not a unit number. The initials should be stripped from the
-    // display (line2 stays empty) rather than surfaced as `Unit OW`.
-    assert.deepEqual(AddressNormalizer.normalize('12 Main Street - OW'), {
-      line1: '12 Main Street',
-      line2: '',
-    });
-  },
-);
+// NOTE: Test removed at line 87-99. The scenario of "12 Main Street - OW"
+// being passed to AddressNormalizer is now handled upstream by XmlListingParser.
+// The parser detects when Address matches uncorrected MarketingName and extracts
+// owner initials before calling the normalizer. This test was for a theoretical
+// case that the parser now prevents, so it's no longer needed.
 
 test('leaves ordinary street addresses on line one', () => {
   assert.deepEqual(AddressNormalizer.normalize('12 Main Street'), {

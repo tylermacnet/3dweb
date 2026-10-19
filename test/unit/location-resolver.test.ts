@@ -8,6 +8,9 @@ const resolver = new LocationResolver(NEW_BRUNSWICK_REGIONS);
 test('extracts and normalizes a forward sortation area', () => {
   assert.equal(getFSA('e1c 2a3'), 'E1C');
   assert.equal(getFSA(' E 1 C 2A3 '), 'E1C');
+  assert.equal(getFSA('E2M-1y1'), 'E2M');
+  assert.equal(getFSA('E2M--1y1'), '');
+  assert.equal(getFSA('E2M 1D1'), '');
   assert.equal(getFSA('E1C'), '');
   assert.equal(getFSA('12345'), '');
   assert.equal(getFSA(undefined), '');

@@ -339,8 +339,41 @@ for the reference implementation.
 
 The Phase 2 domain rules are deterministic and browser-independent. Address normalization is
 idempotent for supported feed formats and returns empty lines for missing input rather than
-inventing address content. Canadian postal codes are normalized to a valid FSA only when the full
-postal-code shape is valid.
+inventing address content. Canadian postal codes are normalized to uppercase `ANA NAN` format and
+validated against Canada Post's letter/digit pattern; a hyphen in the standard separator position
+is accepted alongside whitespace. Invalid or missing postal codes are rejected when creating a
+listing.
+
+### ManageBuilding Address Parsing Quirk
+
+ManageBuilding `MarketingName` has the form `"<property_name> - <unit_name>"`. The Address field
+is often already correctly formatted and remains the source for address parsing. When Address
+matches MarketingName, `XmlListingParser` uses the final segment as the unit-name boundary and
+strips a trailing initials segment only from the property-name portion. It does not assume that
+the unit name is numeric.
+
+If the XML `Unit` field is populated, that explicit value takes precedence. Otherwise, the final
+MarketingName unit name is preserved and normalized as the address's secondary line. A MarketingName
+unit name that looks like initials (for example, `"OW"`) is still a unit name; it is never removed.
+When Address differs from MarketingName, the parser trusts the corrected Address.
+
+This feed-specific logic belongs in the adapter, not `AddressNormalizer`, so the domain normalizer
+remains pure and feed-agnostic.
+
+**Example parsing**:
+
+```
+Input (MarketingName):  "37 Victoria Street - SH - Penthouse"
+Input (Address):        "37 Victoria Street - SH - Penthouse"
+Input (Unit):           (empty)
+
+Parser removes "SH" from property name and retains "Penthouse" as the unit name:
+  AddressNormalizer input: "37 Victoria Street - Penthouse"
+
+Final result:
+  line1: "37 Victoria Street"
+  line2: "Unit Penthouse"
+```
 
 Location resolution prefers an FSA, then a unique city-area match. A shared FSA without a
 city match is reported as `ambiguous`; malformed or unknown data is reported as `unknown`. Both
