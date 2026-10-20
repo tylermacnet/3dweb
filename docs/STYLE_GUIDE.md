@@ -134,13 +134,12 @@ property-listings
     └── listing-card
 ```
 
-Use a full-width component root with a sensible maximum width supplied by the host page. The
-listing grid uses:
+Use a full-width component root with a sensible maximum width supplied by the host page. Start with
+a layout that remains usable in a narrow container; enhance the listing grid as space permits:
 
 - `grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr))`
 - `gap: 1.25rem` on larger screens
 - `gap: 1rem` on narrow screens
-- A single column below the mobile breakpoint
 
 Do not add page-level hero, sidebar, or navigation markup to `property-listings`.
 
@@ -153,9 +152,8 @@ internal spacing:
 - Border: `1px solid var(--sc-border-light)`
 - Radius: `0.75rem`
 - Desktop padding: `1rem`
-- Desktop grid: adaptive columns with a minimum width of `11.25rem`
-- Mobile grid: two columns
-- Price range control: full row on mobile
+- Filter columns adapt to the component's available width and control minimum sizes
+- Price range may span the available row when it needs more room
 
 Each control needs a visible, uppercase label and a minimum touch target of `2.75rem`. Selects
 should remain full width and use the brand blue for focus and hover borders. The reset action is a
@@ -192,19 +190,17 @@ card; the footer call-to-action is `aria-hidden` and must never be a separate co
 
 ## Responsive Behavior
 
-Responsive behavior must follow the screenshot's compact control pattern rather than simply
-shrinking desktop controls:
+The design is explicitly progressive: begin with clear, usable content and controls, then enhance
+the layout for the available medium rather than treating a screenshot or a fixed device breakpoint
+as the specification. Components can be embedded in narrow host containers on wide screens, so
+prefer intrinsic sizing and container-aware adaptation where appropriate; use viewport media
+queries when the viewport itself is relevant. Enhance for available input capabilities (for
+example, hover only when hover is available) and respect reduced-motion preferences. Do not shrink
+controls or touch targets to force a preferred column count: preserve readable labels, full-width
+selects, and touch targets of at least `2.75rem`; slider thumbs must remain at least `24px`.
 
-- Desktop: adaptive filter columns and multi-column card grid
-- Mobile: two filter columns
-- Mobile: price range spans the full filter width
-- Mobile: reset spans the full filter width
-- Mobile: listing cards become one column
-- Labels and controls remain readable without horizontal scrolling
-- Touch targets remain at least `2.75rem` (slider thumbs at least `24px` per WCAG target-size minimum)
-
-Use CSS media queries inside the component stylesheet, nested directly inside the affected
-element's rule. Component-owned styles must be declared
+Use CSS media or container queries inside the component stylesheet, nested directly inside the
+affected element's rule. Component-owned styles must be declared
 by the owning Lit component with `componentStyles()` from `src/styles/component-styles.ts` (the
 project's single `unsafeCSS` trust boundary for first-party build-time CSS) and bundled through
 the single bundle entry; the bundle entry must not own presentation styles. See
