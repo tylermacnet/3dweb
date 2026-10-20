@@ -4,25 +4,6 @@ This document records evaluated improvements that are intentionally outside curr
 An enhancement should be adopted only when its ongoing maintenance cost is justified by a clear
 improvement to product behavior, contributor workflow, or coverage.
 
-## Selective Cucumber.js acceptance coverage
-
-The project may add Cucumber.js (`@cucumber/cucumber`) as a development-only dependency for a
-small set of business-facing acceptance scenarios. Candidate scenarios include:
-
-- address normalization examples
-- unique, ambiguous, and unknown location resolution
-- listing filtering and sorting policies
-- loading, empty, error, retry, and details flows
-
-Cucumber should complement, not replace, the native `node:test` suites. Keep direct TypeScript
-tests for precise domain branches, malformed input, stable sorting, cancellation, parser behavior,
-and component or adapter contracts where direct stack traces and type-safe fixtures are more useful.
-
-Before adoption, assess the added feature/step-definition configuration, TypeScript runtime setup,
-test discovery, reporting, execution time, dependency maintenance, and duplicate-runner workflow.
-If adopted, provide a dedicated `mise run test-bdd` task and include it in the appropriate
-quality gate without making Cucumber a runtime or production-bundle dependency.
-
 ## Composable listing views (implemented)
 
 `listing-grid` with `view="card|compact|list"` is the composable primitive.
@@ -37,23 +18,39 @@ CSS is component-owned (`listing-grid.css`, `listing-card.css`,
 
 ## Deferred: map overlay
 
-Map overlay remains roadmap. Requires property coordinates not present in
-`src/domain/listing.ts:18` and a tile/provider decision. Revisit when feed
-exposes `lat/lng` or geocoding is approved. Same composable pattern:
-`listing-grid` already isolates per-view CSS; map will add `listing-map`
-without coupling to `property-listings`.
+Map overlay remains deferred pending a concrete user need and a tile/provider decision. Use
+normalized listing addresses as the primary map input; do not require coordinates in the feed
+upfront. Verify that the selected provider can geocode the available addresses with acceptable
+coverage, cost, privacy, and rate limits. Add coordinates to the listing model only if a provider
+or a demonstrated address-quality gap requires them. Follow the composable pattern: add
+`listing-map` without coupling it to `property-listings`.
 
-## Deferred: multiton & buildium domain/propertyType
+## Deferred: multiple feeds and property-type filtering
 
-`multiton` (`Map<domain::propertyType, ListingStore>`), `custom domains`
-(open `*.managebuilding.com` vs allowlist), and `propertyType` filtering
-(`ILS_IdentificationType` `src/adapters/xml-listing-parser.ts:51` →
-`listing.propertyKind`) are roadmap. Domain stays open for now; `detailsModal`
-already per-document via `WeakMap` (`src/index.tsx:58`). On adoption:
-parameterize `ManageBuildingFeed` `FEED_URL` (`src/adapters/managebuilding-feed.ts:6`),
-extend `Listing` schema, add store registry `WeakMap<Document, Map<key,Store>>`,
-keep bundle single entry with lazy per-key fetches. Generated config, if any,
-limited to `src/config/generated/` (region/view tokens).
+Multiple feeds/domains and property-type support are independent concerns. The feed contains
+different property types (for example, single-family and multi-family), but the current `Listing`
+model and XML parser do not expose a property-kind field. Evaluate mapping and filtering those
+types independently; do not make that work depend on a multiton or custom-domain support.
+
+Multiple feeds/domains remain deferred. Domain stays open for now; `detailsModal` is already
+per-document via `WeakMap` (`src/index.tsx:58`). If multiple feeds become necessary, parameterize
+`ManageBuildingFeed` `FEED_URL` (`src/adapters/managebuilding-feed.ts:6`), then consider a
+`WeakMap<Document, Map<key, Store>>` registry and lazy per-key fetches. Keep the bundle single
+entry. Generated config, if any, remains limited to `src/config/generated/`.
+
+## Deferred: user-specific listing views
+
+Different views for different users are a product direction, not yet a defined feature. Clarify
+which users need which views and what decisions each view should help them make before selecting
+view variants or adding user/role-specific behavior. The existing `listing-grid` view variants
+remain available as composable presentation options.
+
+## Deep-link priority
+
+If URL-linked state is adopted, prioritize sharing/restoring filter state ahead of deep-linking an
+open listing's details. Filter links preserve the result context; property links add transient
+popover state. Keep property deep links deferred until hosts require share-and-reopen or
+Back-to-close behavior.
 
 ## Fragment deep-linking for listings (`#listing/<id>`)
 
@@ -77,6 +74,12 @@ requirement. Design on adoption: pure `parseListingHash`/`buildListingHash`
 helpers in `src/application/` (DOM-free, unit-tested), container-owned binding,
 hash written on open and cleared on explicit close, unknown ids cleared without
 an error state unless the not-available body is also adopted.
+
+Reasons to defer include overlap with the canonical ManageBuilding details URL,
+the document-global fragment when multiple embeds are present, synchronization
+and browser-history behavior, and stale listing IDs when availability changes.
+These are design costs to address if the host requirement justifies the feature,
+not reasons to rule it out permanently.
 
 ## Card affordance icons (FontAwesome vs inline SVG)
 
