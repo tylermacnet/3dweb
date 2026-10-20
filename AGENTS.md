@@ -81,7 +81,7 @@ Examples:
 
 - `test/unit/` — pure domain tests (listing, address-normalizer, location-resolver, listing-filter).
 - `test/integration/` — adapter, parser, DOM, network, bundle tests.
-- `test-src/sample/listingFeeds.xml` — concrete Buildium source-XML reference and integration-test fixture; inspect its nested XML with an editor's tree/format view. It is a sample, not an exhaustive field catalog; see the Buildium source XML reference in `docs/DEVELOPMENT.md` and check `XmlListingParser` separately to see which fields are mapped.
+- `test-src/sample/listingFeeds.xml` — concrete Buildium source-XML reference and integration-test fixture; inspect its nested XML with an editor's tree/format view. For Buildium's published XML/MITS guidance, documented active-listing date semantics, and the distinction between its documented endpoint and this repo's endpoint, see the Buildium source XML reference in `docs/DEVELOPMENT.md`. The fixture is not an exhaustive field catalog; check `XmlListingParser` separately to see which fields are mapped.
 - Tests use `node:test` (native Node runner). Discover test tasks with `mise tasks ls` (names under `test:`) and run `mise run test` for all or `mise run test:unit` / `mise run test:integration` for focused suites.
 - Structure tests: Arrange, Act, Assert — one observable behavior per test.
 - Integration tests importing `src/` TypeScript with runtime imports must bundle via esbuild first
