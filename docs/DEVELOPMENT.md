@@ -104,6 +104,23 @@ the production bundle or a `?preview=<ref>` snapshot; see
 `test-src/sample/listingFeeds.xml` atomically. Run `mise run build` (or `check`)
 to regenerate it after cloning.
 
+### Buildium source XML reference
+
+Use [`test-src/sample/listingFeeds.xml`](../test-src/sample/listingFeeds.xml) as the repository's
+concrete reference for the Buildium listing-feed XML structure. Open it in an editor with XML
+formatting/tree support to inspect nested elements; the fixture is largely minified, so avoid
+reformatting the committed fixture just to read it. Its root is `PhysicalProperty`, with listing
+data nested under `Property` (including `PropertyID`, `ILS_Identification`, `Information`, and
+`Floorplan`). The fixture shows real feed element and attribute names, including values such as
+`ILS_IdentificationType` and rent under `EffectiveRent`.
+
+This is a sample feed, not a guarantee that every optional Buildium field or feed variation is
+represented. When a field is needed, first confirm its location and meaning in the XML reference
+(and the authoritative Buildium feed specification, if needed), then trace whether
+`XmlListingParser` currently maps it into the domain listing. The parser intentionally extracts a
+subset; a field's absence from the UI or domain model does not imply it is absent from the feed.
+Use focused parser integration tests when adding support for another source field.
+
 ## Branching, releases, Pages, and previews
 
 GitHub Flow, solo variant. One long-lived branch (`main`, always deployable).
