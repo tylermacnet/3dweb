@@ -106,13 +106,15 @@ to regenerate it after cloning.
 
 ### Buildium source XML reference
 
-Buildium's official [Rental listings in XML](https://help.buildium.com/hc/s/article/Rental-listings-in-XML-1557493000864)
-article says the XML integration follows the MITS Property Marketing 3.0 standard and is intended
-for custom website integrations. It documents the `XMLRentals.ashx` endpoint for active listings
-and `?listings=all` for all listings. Buildium defines active status by whether the current date
-falls between the unit's configured start and end dates. The article does not enumerate XML fields
-or required/optional cardinality; use the [MITS marketing specification](https://www.mitsproject.com/)
-for schema-level detail.
+The primary published reference is Buildium's official
+[Rental listings in XML](https://help.buildium.com/hc/s/article/Rental-listings-in-XML-1557493000864)
+article. It identifies the feed as **MITS Property Marketing 3.0**, intended for custom website
+integrations, and documents `XMLRentals.ashx` for active listings and `?listings=all` for all
+listings. Buildium defines active status by whether the current date falls between the unit's
+configured start and end dates. For MITS context, see the
+[RETT Consortium's MITS data models](https://rettc.org/mits-data-models). The Buildium article
+does not enumerate XML fields or required/optional cardinality; do not infer those constraints
+from its summary.
 
 Use [`test-src/sample/listingFeeds.xml`](../test-src/sample/listingFeeds.xml) as the repository's
 concrete reference for the Buildium listing-feed XML structure. Open it in an editor with XML
@@ -123,14 +125,15 @@ data nested under `Property` (including `PropertyID`, `ILS_Identification`, `Inf
 attribute names, including values such as `ILS_IdentificationType`, rent under `EffectiveRent`,
 and per-unit `AvailabilityDate` custom records joined by property and unit IDs.
 
-The sample demonstrates this repository's feed, not every MITS field or every Buildium variation.
-The official help article describes `XMLRentals.ashx`, while this application currently fetches
+The sample demonstrates this repository's feed, not every MITS 3.0 field or every Buildium
+variation. Buildium's article documents `XMLRentals.ashx`, while this application currently fetches
 ManageBuilding's `/resident/api/public/listingFeeds` endpoint
-(`src/adapters/managebuilding-feed.ts`); do not assume the endpoints have identical payloads.
-When adding or relying on a field, verify its schema meaning in the MITS specification, inspect
-the actual configured feed/sample, and trace whether `XmlListingParser` maps it into the domain
-listing. A field's absence from the UI or domain model does not imply it is absent from the source.
-Use focused parser integration tests for newly mapped fields and custom-record associations.
+(`src/adapters/managebuilding-feed.ts`); do not assume these endpoints have identical payloads.
+When adding or relying on a field, verify its meaning and constraints against the MITS
+Property Marketing 3.0 schema, inspect the actual configured feed/sample, and trace whether
+`XmlListingParser` maps it into the domain listing. A field's absence from the UI or domain model
+does not imply it is absent from the source. Use focused parser integration tests for newly mapped
+fields and custom-record associations.
 
 ## Branching, releases, Pages, and previews
 
