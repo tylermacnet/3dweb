@@ -106,20 +106,31 @@ to regenerate it after cloning.
 
 ### Buildium source XML reference
 
+Buildium's official [Rental listings in XML](https://help.buildium.com/hc/s/article/Rental-listings-in-XML-1557493000864)
+article says the XML integration follows the MITS Property Marketing 3.0 standard and is intended
+for custom website integrations. It documents the `XMLRentals.ashx` endpoint for active listings
+and `?listings=all` for all listings. Buildium defines active status by whether the current date
+falls between the unit's configured start and end dates. The article does not enumerate XML fields
+or required/optional cardinality; use the [MITS marketing specification](https://www.mitsproject.com/)
+for schema-level detail.
+
 Use [`test-src/sample/listingFeeds.xml`](../test-src/sample/listingFeeds.xml) as the repository's
 concrete reference for the Buildium listing-feed XML structure. Open it in an editor with XML
 formatting/tree support to inspect nested elements; the fixture is largely minified, so avoid
 reformatting the committed fixture just to read it. Its root is `PhysicalProperty`, with listing
 data nested under `Property` (including `PropertyID`, `ILS_Identification`, `Information`, and
-`Floorplan`). The fixture shows real feed element and attribute names, including values such as
-`ILS_IdentificationType` and rent under `EffectiveRent`.
+`Floorplan`), followed by root-level `CustomRecords`. The fixture shows real feed element and
+attribute names, including values such as `ILS_IdentificationType`, rent under `EffectiveRent`,
+and per-unit `AvailabilityDate` custom records joined by property and unit IDs.
 
-This is a sample feed, not a guarantee that every optional Buildium field or feed variation is
-represented. When a field is needed, first confirm its location and meaning in the XML reference
-(and the authoritative Buildium feed specification, if needed), then trace whether
-`XmlListingParser` currently maps it into the domain listing. The parser intentionally extracts a
-subset; a field's absence from the UI or domain model does not imply it is absent from the feed.
-Use focused parser integration tests when adding support for another source field.
+The sample demonstrates this repository's feed, not every MITS field or every Buildium variation.
+The official help article describes `XMLRentals.ashx`, while this application currently fetches
+ManageBuilding's `/resident/api/public/listingFeeds` endpoint
+(`src/adapters/managebuilding-feed.ts`); do not assume the endpoints have identical payloads.
+When adding or relying on a field, verify its schema meaning in the MITS specification, inspect
+the actual configured feed/sample, and trace whether `XmlListingParser` maps it into the domain
+listing. A field's absence from the UI or domain model does not imply it is absent from the source.
+Use focused parser integration tests for newly mapped fields and custom-record associations.
 
 ## Branching, releases, Pages, and previews
 
