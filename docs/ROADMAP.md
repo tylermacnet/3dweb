@@ -38,12 +38,26 @@ per-document via `WeakMap` (`src/index.tsx:58`). If multiple feeds become necess
 `WeakMap<Document, Map<key, Store>>` registry and lazy per-key fetches. Keep the bundle single
 entry. Generated config, if any, remains limited to `src/config/generated/`.
 
+## Required feed data and sorting policy
+
+For the configured Buildium/MITS feed, bedroom count and rent are required data: missing or invalid
+values are feed errors, not zero bedrooms or an unknown-price listing. A real bedroom count of zero
+remains valid. `AvailabilityDate` is present in the structured `CustomRecords` and must be matched
+to its property/unit identifiers. It is distinct from Buildium's active-listing date window.
+
+The only supported sort dimensions are price and availability date (price in either direction,
+availability soonest first); filtering remains a separate operation. The current parser/domain
+still default or permit missing values, and the UI does not yet map or sort by availability. Treat
+these as implementation gaps to address when this feed work is scheduled, not as reasons to infer
+data from listing descriptions or broaden sorting to unrelated fields. The source contract and
+inspection steps are in [Development](DEVELOPMENT.md#buildium-source-xml-reference).
+
 ## Deferred: user-specific listing views
 
 Different views for different users are a product direction, not yet a defined feature. Clarify
 which users need which views and what decisions each view should help them make before selecting
 view variants or adding user/role-specific behavior. The existing `listing-grid` view variants
-remain available as composable presentation options.
+remain available as composable presentation options; keep this separate from feed/property type.
 
 ## Deep-link priority
 

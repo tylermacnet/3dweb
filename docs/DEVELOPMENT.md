@@ -135,6 +135,26 @@ Property Marketing 3.0 schema, inspect the actual configured feed/sample, and tr
 does not imply it is absent from the source. Use focused parser integration tests for newly mapped
 fields and custom-record associations.
 
+For this project's configured Buildium/MITS feed contract, bedroom count and `EffectiveRent` are
+required. The bedroom count is the `Count` in `Floorplan/Room[@RoomType="Bedroom"]`; an explicit
+zero is valid, but a missing or invalid count is not zero and must not be silently defaulted.
+`Floorplan/EffectiveRent` must be present and valid; a missing value is not an unknown-price listing.
+Reject invalid source data at the XML boundary with a useful feed error, then let the application
+show its normal recoverable error state so the embed does not throw into or break its host. The
+current parser defaults a missing bedroom count to zero, and the current domain permits null rent;
+both are implementation gaps against this feed contract, not the intended behavior. This contract
+is specific to the configured feed and is not inferred from Buildium's short help article.
+
+The sample's root-level `CustomRecords` include `AvailabilityDate` values keyed by
+`PropertyIDValue` and `UnitIDValue`. Associate them by those identifiers, not XML position, and
+use the structured date rather than description text. Buildium's active-listing rule (today between
+the unit's configured start/end dates) is distinct from the unit's `AvailabilityDate`.
+The supported sort dimensions are price and availability date only; price can be ordered either
+direction and availability is ordered soonest first. Filtering and sorting are separate operations;
+sorting should be stable, and missing/invalid availability dates must not be guessed. The current
+parser and UI do not yet map or sort by availability, so this describes product policy rather than
+an implemented control.
+
 ## Branching, releases, Pages, and previews
 
 GitHub Flow, solo variant. One long-lived branch (`main`, always deployable).
@@ -295,18 +315,21 @@ If any review step is incomplete, the change remains incomplete even when all co
 
 ## Architecture workflow
 
-Keep changes within the project architecture boundaries:
+Organize by business feature first, with each feature owning its domain, application, ports,
+adapters, components, and product configuration. Use `shared/` only for capabilities genuinely
+used by multiple features. Within a feature preserve dependency direction: components render and
+emit semantic events; application orchestrates through ports; adapters implement ports; domain
+rules stay pure. The current source tree remains layer-first under `src/domain/`,
+`src/application/`, `src/ports/`, `src/adapters/`, `src/components/`, and `src/config/`; this is
+legacy organization, not the target for new or incrementally migrated feature work.
 
-- Put pure listing rules and types in `src/domain/`; domain modules must not import Lit,
-  DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- Put orchestration and view state in `src/application/`. `ListingStore` (per-`Document`
-  lazy singleton via `WeakMap`) owns feed loading, request cancellation, load-state machine,
-  filter criteria, and derived visible listings/location groups/price bounds.
-  `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy (per-host, kept for tests only).
-- Define capabilities in `src/ports/` and implement them in `src/adapters/`. Application code
-  depends on ports rather than concrete adapters.
-- Keep Lit custom elements in `src/components/`. Components render state and emit semantic
-  events; they do not fetch feeds or implement business rules.
+- Keep domain modules free of Lit, DOM APIs, `fetch`, `DOMParser`, and browser globals.
+- `ListingStore` (currently `src/application/listing-store.ts`, per-`Document` lazy singleton via
+  `WeakMap`) owns feed loading, request cancellation, load state, filter criteria, and derived
+  visible listings/location groups/price bounds. `ListingFeedLoader`/`ListingFilterStore` are
+  deprecated legacy implementations kept for tests.
+- Application code depends on narrow capability ports rather than concrete adapters.
+- Keep Lit custom elements presentational; they do not fetch feeds or implement business rules.
 - There is no root component. The single bundle entry (`src/index.tsx`) registers
   all public elements (`property-listings`, `listing-grid`, `listing-card`, `listing-filters`,
   `listing-details`) so each works standalone on an external site. Assemble safe
@@ -315,8 +338,8 @@ Keep changes within the project architecture boundaries:
   properties/attributes; do not add a service locator, global singleton, or
   dependency-injection framework. `listing-grid` with `view="card|compact|list"` is the
   composable primitive; `property-listings` is a thin legacy shell. Future listing views
-  (for example a map-based plan) add a new component on the same layers without changing
-  existing elements.
+  (for example a map) should be independently composable and address-first; add them within the
+  listings feature without changing existing elements.
 - Component styles belong to their owning component and are bundled through that component's
   `static styles` via `componentStyles()` from `src/styles/component-styles.ts`; the bundle
   entry must not own presentation styles. `componentStyles()` is the project's only
@@ -339,7 +362,7 @@ Keep changes within the project architecture boundaries:
   to shipped runtime dependencies; development-only tools may be evaluated separately for their
   value, maintenance cost, and effect on the test workflow.
 
-When adding a layer or component, preserve lowercase kebab-case filenames and custom-element
+When adding or migrating a feature, preserve lowercase kebab-case filenames and custom-element
 names, PascalCase classes/types, camelCase members, narrow capability interfaces, and explicit
 typed boundaries. Add a focused unit or integration test with the change and update the
 architecture documentation when a public contract or dependency direction changes.
@@ -364,7 +387,9 @@ the pointer is coarse, `DetailsModal` implementations return `false` when
 unsupported, and host pages render notices (`Feed unavailable in this origin`,
 `file://` limitations) instead of crashing. See
 [Card, popover, and details-iframe policy](#card-popover-and-details-iframe-policy)
-for the reference implementation.
+for the reference implementation. Graceful runtime handling does not mean accepting malformed
+feed data: validate required external fields at the XML boundary, surface a recoverable load error,
+and do not silently invent or display invalid listing values.
 
 ## Address and location policy
 
@@ -416,24 +441,30 @@ verified by the source data and covered by domain tests.
 
 Listing filtering is side-effect free and uses typed criteria independent of control order or DOM
 values. Empty criteria preserve the source listing set, combined criteria use AND semantics, and
-maximum rent is inclusive. Sorting is intentionally not part of the current product feature set.
+maximum rent is inclusive. Filtering does not sort or mutate results. When sorting is available,
+the only supported dimensions are price and structured availability date (see
+[Buildium source XML reference](#buildium-source-xml-reference)); do not add sorting by bedrooms,
+address, or source order as a product feature. Price supports both directions; availability is
+soonest first. Preserve source order for equal keys and do not invent missing availability dates.
 Location options are populated from active listings, grouped by configured region,
 and support an "All Locations" entry, entire regions, and individual active areas.
 Region names are cleaned via `cleanRegionName()` in `src/config/listing-filters.ts`
 before being used as display labels. The `getListingLocationGroups()` function produces
 the complete location dropdown configuration including the "All Locations" option
 and per-region grouping with listing counts.
-Unknown rent is represented by `null` in the domain and uses the configured sentinel value `0` for
-filtering; a zero-rent listing is not a valid business value. Bedroom rules that are not
-configured produce no matches, while non-finite rent criteria are ignored. The
-listing range (`priceMin`/`priceMax`) shown in `listing-filters` is derived from
+The current domain permits rent to be `null` and the filter/store uses `0` as an unknown-rent
+sentinel; this legacy behavior conflicts with the configured feed contract, where rent is required,
+and must not be treated as the desired XML validation policy. Bedroom rules that are not configured
+produce no matches, while non-finite rent criteria are ignored. The listing range
+(`priceMin`/`priceMax`) shown in `listing-filters` is derived from
 the loaded listings inside `ListingStore` (`floor(min/100)*100`,
 `ceil(max/100)*100`, ignoring `null`/0) — `bundle.esm.js`/`bundle.js` is the
 source of truth for that derivation, not the host page.
 
 Filtering preserves source order and does not mutate the input. Missing bedroom and location
 values are rejected at the domain construction boundary rather than guessed by the filtering
-layer.
+layer. The XML adapter must likewise reject a missing bedroom count instead of converting it to
+zero; a real count of zero remains valid.
 
 ## Card, popover, and details-iframe policy
 
