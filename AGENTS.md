@@ -22,22 +22,45 @@ All mise-related configuration lives under `.mise/` (config and tasks) with `mis
 
 Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
 
-## Architecture layers
+## Feature-first architecture
 
 ```
-components -> application -> ports -> domain
-adapters   -> ports       -> domain
-config     -> shared kernel (immutable product policy; imported by all layers,
-               type-only from domain)
-index.tsx  -> bundle entry (registers all public elements; no root component)
+src/
+  listings/                 # feature-owned vertical slice
+    domain/
+    application/
+    ports/
+    adapters/
+    components/
+    config/
+  shared/                   # only genuinely cross-feature capabilities
+  index.tsx                  # single bundle entry; no root component
 ```
 
-- **Domain** (`src/domain/`): Pure business rules. Must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
-- **Application** (`src/application/`): `ListingStore` (per-`Document` lazy singleton via `WeakMap`) owns feed loading, request cancellation, load-state machine, filter criteria, and derived visible listings/location groups/price bounds. `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy (per-host, kept for tests only).
-- **Ports** (`src/ports/`): Narrow interfaces (`ListingFeed`, `ListingParser`, `DetailsModal`).
-- **Adapters** (`src/adapters/`): Concrete implementations (XML parsing, network fetch, browser popover).
-- **Components** (`src/components/`): Independent Lit custom elements, presentational only. Lowercase kebab-case names. Public elements: `<property-listings>`, `<listing-grid>`, `<listing-card>`, `<listing-filters>`, `<listing-details>` (iframe-to-listing element accepting `listing-id` with a `src` override). There is no root component; each public element works standalone on an external site once `public/dist/bundle.js` is loaded. `listing-grid` with `view="card|compact|list"` is the composable primitive; `property-listings` is a thin legacy shell (`listing-filters` + `listing-grid view="card"`).
-- **Config** (`src/config/`): Typed immutable product policy (regions, filter definitions, details URLs). Shared kernel: every layer may import it; `domain` imports it type-only so runtime purity holds.
+- Organize source by business feature first, co-locating each feature's domain, application,
+  ports, adapters, components, and product configuration. Keep technical dependency direction
+  within the feature: components depend on application/ports, adapters implement ports, and
+  domain rules remain independent. Put code in `shared/` only when it is genuinely reused across
+  features; do not create global layer directories as the primary organization.
+- This is the target organization. The existing implementation is still physically layer-first
+  under `src/domain/`, `src/application/`, `src/ports/`, `src/adapters/`, `src/components/`, and
+  `src/config/`; migrate incrementally by feature rather than performing unrelated bulk moves.
+- **Domain**: Pure business rules; must NOT import Lit, DOM APIs, `fetch`, `DOMParser`, or browser
+  globals.
+- **Application**: The current `ListingStore` (per-`Document` lazy singleton via `WeakMap`) owns
+  feed loading, request cancellation, load state, filter criteria, and derived visible listings,
+  location groups, and price bounds. `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy
+  implementations kept for tests.
+- **Ports and adapters**: Keep capability interfaces narrow (`ListingFeed`, `ListingParser`,
+  `DetailsModal`); concrete XML, network, and browser implementations stay behind the ports.
+- **Components**: Independent Lit custom elements, presentational only, with lowercase kebab-case
+  names. Public elements: `<property-listings>`, `<listing-grid>`, `<listing-card>`,
+  `<listing-filters>`, and `<listing-details>` (iframe-to-listing element accepting `listing-id`
+  with a `src` override). There is no root component; each public element works standalone once
+  the bundle is loaded. `listing-grid` with `view="card|compact|list"` is composable;
+  `property-listings` is a thin legacy shell (`listing-filters` + `listing-grid view="card"`).
+- **Configuration**: Typed immutable feature policy. Share policy only when multiple features
+  genuinely use it; keep vendor-specific XML details in the feed adapter.
 
 ## Key constraints
 
@@ -53,6 +76,16 @@ index.tsx  -> bundle entry (registers all public elements; no root component)
   `:host` tokens do not resolve outside shadow roots.
 - Use `AbortSignal.timeout(5000)` for network resilience, not manual timer clearing.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries.
+- For the configured Buildium/MITS 3.0 feed, bedroom count and `EffectiveRent` are required
+  source data. Reject a record/feed with either missing or invalid; never default a missing
+  bedroom count to zero (zero means a real bachelor/studio) or translate missing rent into a
+  valid “Call for Price” listing. The current parser/domain mapping does not yet fully enforce
+  this contract; treat it as a known implementation gap.
+- The feed's structured `CustomRecords` include `AvailabilityDate` values associated with
+  `PropertyIDValue` and `UnitIDValue`. Availability sorting must use that structured date and
+  stable identifiers, not prose in `LongDescription`. Keep the supported sort keys to price and
+  availability; availability dates are not the same thing as Buildium's active-listing date
+  window. The current app does not yet map or sort by these records.
 - Use Lit HTML templates only — never manual `innerHTML` concatenation.
 
 ## Address Parser Design: ManageBuilding Feed Quirk
