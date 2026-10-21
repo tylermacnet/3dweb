@@ -1,5 +1,11 @@
 # Property Listing Web Component Migration Plan
 
+> **Historical plan:** This records the migration's earlier layer-first layout and product
+> assumptions. They are not current guidance: source organization is now feature-first, the
+> configured feed requires bedroom count and rent, and price/availability are the supported sort
+> dimensions. See [current development policy](../DEVELOPMENT.md#architecture-workflow) and its
+> [Buildium/MITS feed contract](../DEVELOPMENT.md#buildium-source-xml-reference).
+
 ## Purpose
 
 Migrate the legacy `public/test.html` property-listing embed into a maintainable Lit
@@ -21,7 +27,7 @@ The target follows 2026 web engineering practices:
   point; do not add a server runtime, global service locator, or dependency-injection
   container.
 
-## Target Architecture
+## Historical Target Architecture (superseded)
 
 ```text
 components -> application -> ports -> domain
@@ -40,7 +46,7 @@ standalone once the bundle is loaded. Public elements: `<property-listings>`,
 reuse the same `domain`/`application`/`ports`/`adapters`/`config` layers with a
 new component, without changing existing elements.
 
-### Layers and responsibilities
+### Original layer responsibilities
 
 - **Domain (`src/domain/`)**: Listing entities/value objects and pure business rules.
   Domain code must not import Lit, DOM APIs, `fetch`, `DOMParser`, or browser globals.
@@ -151,13 +157,14 @@ documentation, and coverage reviews are required process steps.
 3. **Phase 3: Implement listing filtering**
    - Create `src/domain/listing-filter.ts`.
    - Keep filter criteria typed, composable, and side-effect free; do not couple
-     filtering to UI control order or DOM values. Sorting is intentionally excluded
-     from the current product scope.
+     filtering to UI control order or DOM values. Sorting was excluded from the
+     original migration scope; current policy supports price and availability.
    - Define explicit handling for missing price, room, and location values.
    - Add table-driven unit tests covering empty criteria, combined criteria,
      boundaries, source-order preservation, and no-match results. The domain policy
-     uses `null` for unknown rent and a configured `0` sentinel; zero is not a
-     valid business rent.
+     used `null` for unknown rent and a configured `0` sentinel. This interim
+     implementation is superseded for the configured Buildium feed: missing rent
+     is invalid, while a real rent value of zero must not be confused with absence.
    - Add `cleanRegionName()` and `getListingLocationGroups()` in `src/config/listing-filters.ts`
      to produce location dropdown configuration with "All Locations" as the leading entry
      and cleaned region display names grouped by configured region with listing counts.
@@ -278,8 +285,9 @@ feed.` preserving the `ListingParseError` cause).
      listings API. The Phase 5 debug harness (`phase-five-harness`) has been
      removed; the bundle asserts only the four public elements register.
    - Record intentional parity differences and their user-facing rationale:
-     sorting stays out of scope; ambiguous/unknown locations resolve to
-     explicit `OTHER` outcomes instead of the legacy first-match fallback.
+     the initial migration left sorting out of scope; current product policy now
+     requires price and availability sorting. Ambiguous/unknown locations resolve
+     to explicit `OTHER` outcomes instead of the legacy first-match fallback.
 
 ## Post-Migration Quality Gates
 
@@ -298,8 +306,9 @@ evidence for that review and are also required before merge or final migration s
 
 11. **Demo and documentation update**
     - Update the demo/host page and sample data to demonstrate loading, populated,
-      empty, error, retry, filtering, and details flows. Sorting remains a legacy
-      reference behavior and is not part of the migrated product contract.
+      empty, error, retry, filtering, and details flows. The initial migration
+      treated sorting as legacy behavior; the current contract supports price and
+      availability sorting as described in `docs/DEVELOPMENT.md`.
     - Verify the demo works at desktop and mobile widths with keyboard navigation
       and assistive-technology-friendly status updates.
     - Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, this plan, and `AGENTS.md` when

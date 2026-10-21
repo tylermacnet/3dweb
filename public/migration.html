@@ -187,11 +187,21 @@
           <code>autofocus</code>, native focus return, no manual focus or dismiss code), a
           four-element public surface with an SSR-safe auto-wiring bundle entry, origin-restricted
           <code>hidenav</code> iframe embeds, and staging parity for external embeds via the
-          source-independent <code>Listing</code> target schema; sorting is intentionally out of
-          scope. The legacy <code>public/test.html</code> embed is frozen byte-identical for parity
+          source-independent <code>Listing</code> target schema. This migration's original scope
+          excluded sorting; the current product policy supports price and availability sorting.
+          The legacy <code>public/test.html</code> embed is frozen byte-identical for parity
           comparison, and the Phase 5 debug harness has been removed.
           <code>public/index.html</code> is staging for production on external websites and consumes
           only <code>public/dist/bundle.js</code>.
+        </p>
+        <p>
+          <strong>Historical snapshot:</strong> the phase decisions below describe the migration
+          at the time it was completed; they do not override current product or architecture
+          policy. Source organization is now targeted to be feature-first, the configured
+          Buildium/MITS feed requires bedroom count and rent, and availability is read from
+          structured <code>CustomRecords</code>. See
+          <a href="../docs/DEVELOPMENT.md#architecture-workflow">current architecture guidance</a>
+          and the <a href="../docs/DEVELOPMENT.md#buildium-source-xml-reference">feed contract</a>.
         </p>
         <a href="./index.html">Back to property listings</a>
       </header>
@@ -306,9 +316,10 @@
             supplies accessors and bedroom policies without coupling to Lit controls.
           </li>
           <li>
-            <strong>SOLID and 2026 practices:</strong> criteria are typed and composable, source
-            order is preserved without mutation, sorting is excluded from product scope, and the
-            zero-rent sentinel policy is explicit.
+            <strong>Historical SOLID and 2026 review:</strong> criteria were typed and composable,
+            source order was preserved without mutation, sorting was then out of scope, and an
+            unknown-rent sentinel was used. Those sorting and rent decisions are superseded by the
+            current <a href="../docs/DEVELOPMENT.md#buildium-source-xml-reference">feed and product policy</a>.
           </li>
           <li>
             <strong>Coverage:</strong> empty criteria, combined criteria, inclusive boundaries,

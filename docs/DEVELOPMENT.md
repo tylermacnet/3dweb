@@ -298,9 +298,8 @@ Squash merges are the enforcement point — one good message per merge;
 After every major architecture, behavior, or public-contract change, do not declare the work
 complete until this review is performed:
 
-1. Review the changed dependency direction against the architecture layers and confirm that
-   domain purity, port ownership, adapter boundaries, and component responsibilities remain
-   intact.
+1. Review feature ownership and dependency direction; confirm domain purity, port ownership,
+   adapter boundaries, and component responsibilities remain intact.
 2. Review the change against SOLID principles and 2026 platform practices, recording or fixing
    any new coupling, duplicated business rule, unsafe browser behavior, accessibility gap, or
    type-safety issue.
