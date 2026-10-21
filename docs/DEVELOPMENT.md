@@ -245,8 +245,9 @@ changes; the `?preview=<ref>` snapshot selection is unchanged.
   them. `public/.nojekyll` is committed so Pages serves maps and dotfiles verbatim.
 - Workflows (`.github/workflows/`): `ci.yml` runs `mise run check` on push to
   any branch; `pages.yml` builds (`mise run build`), syncs previews
-  (`mise run preview:publish` + `mise run preview:prune`), and deploys on `main`
-  pushes; `release.yml` attaches `loader.js`/`bundle.js`/`bundle.esm.js` (+ maps) and
+  (`mise run preview:publish` + `mise run preview:prune`), and deploys on every
+  branch push (production `dist/` always builds from `main`; other branches only refresh
+  previews — the `github-pages` environment must allow all branches); `release.yml` attaches `loader.js`/`bundle.js`/`bundle.esm.js` (+ maps) and
   git-cliff notes to each `v*` tag.
 - One-time manual step: repository Settings → Pages → Source = GitHub Actions.
 
