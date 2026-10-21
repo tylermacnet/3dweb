@@ -170,6 +170,43 @@ test('falls back for unknown rent, studio layout, and missing image', async () =
   assert.equal(view.imgSrc, FALLBACK_IMAGE);
 });
 
+test('describes a listing with only its link ID without fabricating details', async () => {
+  const { describeListingCard, ListingCard } = await cardModule();
+  const listing: Listing = {
+    id: 'id-only',
+    address: {
+      line1: '',
+      line2: '',
+      city: '',
+      postalCode: '',
+      fsa: '',
+      regionId: 'OTHER',
+      regionName: 'Other',
+      areaName: 'Unknown location',
+    },
+    bedroomCount: null,
+    bathroomCount: null,
+    rent: null,
+    primaryImage: '',
+    hook: '',
+  };
+
+  const view = describeListingCard(listing);
+  const card = document.createElement('listing-card') as unknown as ListingCard;
+  card.listing = listing;
+  const markup = staticMarkup(card.render() as unknown as TemplateLike);
+
+  assert.equal(view.bedText, '');
+  assert.equal(view.formattedRent, 'Rent unavailable');
+  assert.equal(
+    view.detailsUrl,
+    'https://3dmanagement.managebuilding.com/Resident/public/rentals/id-only',
+  );
+  assert.match(markup, /href=/);
+  assert.doesNotMatch(markup, /class="badge"/);
+  assert.doesNotMatch(markup, /Call for Price/);
+});
+
 test('renders the legacy card structure with semantic elements and labels', async () => {
   // Arrange
   await cardModule();

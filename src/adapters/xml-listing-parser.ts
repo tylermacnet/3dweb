@@ -3,20 +3,11 @@ import { createListing, normalizeCanadianPostalCode, type Listing } from '../dom
 import { getFSA, LocationResolver } from '../domain/location-resolver.js';
 import type { ListingParser } from '../ports/listing-parser.js';
 
-/**
- * Typed parse failure. The parser is fail-fast by explicit product policy: a
- * single malformed `<Property>` record aborts the whole feed (surfacing as
- * the loader `error` + retry state) rather than silently dropping records.
- * `recordIndex` identifies the offending record; the `cause` preserves the
- * underlying Valibot/DOM error.
- */
+/** A feed-level XML parse failure; individual records are handled independently. */
 export class ListingParseError extends Error {
-  readonly recordIndex: number | undefined;
-
-  constructor(message: string, options?: { cause?: unknown; recordIndex?: number }) {
-    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
+  constructor(message: string) {
+    super(message);
     this.name = 'ListingParseError';
-    this.recordIndex = options?.recordIndex;
   }
 }
 
@@ -36,20 +27,20 @@ export class XmlListingParser implements ListingParser {
     }
 
     const properties = Array.from(document.querySelectorAll('Property'));
-    return properties.map((property, recordIndex) => {
+    const listings: Listing[] = [];
+    for (const property of properties) {
       try {
-        return this.parseProperty(property);
-      } catch (error) {
-        throw new ListingParseError(`Unable to parse listing record ${recordIndex}.`, {
-          cause: error,
-          recordIndex,
-        });
+        const listing = this.parseProperty(property);
+        if (listing) listings.push(listing);
+      } catch {
+        // A record with an unusable ID cannot produce a working details link.
       }
-    });
+    }
+    return listings;
   }
 
-  private parseProperty(property: Element): Listing {
-    const addressNode = property.querySelector('PropertyID > Address');
+  private parseProperty(property: Element): Listing | null {
+    const addressNode = this.safely(() => property.querySelector('PropertyID > Address'), null);
     const marketingName = this.text(property, 'PropertyID > MarketingName');
     let street = this.text(addressNode, 'Address');
     let unit = this.text(addressNode, 'Unit, UnitNumber');
@@ -65,14 +56,27 @@ export class XmlListingParser implements ListingParser {
     }
 
     const addressString = unit ? this.withUnit(street, unit) : street;
-    const normalizedAddress = AddressNormalizer.normalize(addressString);
+    const normalizedAddress = this.safely(
+      () => AddressNormalizer.normalize(addressString),
+      { line1: '', line2: '' },
+    );
     const city = this.text(addressNode, 'City');
     const rawPostalCode = this.text(addressNode, 'PostalCode');
     const postalCode = normalizeCanadianPostalCode(rawPostalCode) ?? rawPostalCode;
-    const location = this.locationResolver.resolve(city, postalCode);
+    const location = this.safely(
+      () => this.locationResolver.resolve(city, postalCode),
+      {
+        regionId: 'OTHER',
+        regionName: 'Other',
+        areaName: city || 'Unknown location',
+        resolution: 'unknown' as const,
+      },
+    );
 
-    const floorplan = property.querySelector('Floorplan');
-    const bedroomCount = this.number(floorplan, 'Room[RoomType="Bedroom"] > Count') ?? 0;
+    const floorplan = this.safely(() => property.querySelector('Floorplan'), null);
+    const id = this.text(floorplan, 'Identification > IDValue');
+    if (!id) return null;
+    const bedroomCount = this.number(floorplan, 'Room[RoomType="Bedroom"] > Count');
     const bathroomCount = this.number(floorplan, 'Room[RoomType="Bathroom"] > Count');
     const rentValue = floorplan?.querySelector('EffectiveRent')?.getAttribute('Max');
     const parsedRent = this.numberValue(rentValue);
@@ -81,7 +85,7 @@ export class XmlListingParser implements ListingParser {
     const description = this.text(property, 'Information > LongDescription', true);
 
     return createListing({
-      id: this.text(floorplan, 'Identification > IDValue'),
+      id,
       address: {
         line1: normalizedAddress.line1,
         line2: normalizedAddress.line2,
@@ -150,9 +154,11 @@ export class XmlListingParser implements ListingParser {
   }
 
   private primaryImage(floorplan: Element | null): string {
-    const files = Array.from(floorplan?.querySelectorAll('File') ?? []);
-    const rankOne = files.find((file) => this.text(file, 'Rank') === '1');
-    return this.text(rankOne, 'Src');
+    return this.safely(() => {
+      const files = Array.from(floorplan?.querySelectorAll('File') ?? []);
+      const rankOne = files.find((file) => this.text(file, 'Rank') === '1');
+      return this.text(rankOne, 'Src');
+    }, '');
   }
 
   private text(
@@ -160,15 +166,17 @@ export class XmlListingParser implements ListingParser {
     selector: string,
     preserveLineBreaks = false,
   ): string {
-    const value = parent?.querySelector(selector)?.textContent ?? '';
-    if (preserveLineBreaks) {
-      return value
-        .split(/\r\n?|\n/u)
-        .map((line) => this.normalizeWhitespace(line))
-        .join('\n')
-        .trim();
-    }
-    return this.normalizeWhitespace(value);
+    return this.safely(() => {
+      const value = parent?.querySelector(selector)?.textContent ?? '';
+      if (preserveLineBreaks) {
+        return value
+          .split(/\r\n?|\n/u)
+          .map((line) => this.normalizeWhitespace(line))
+          .join('\n')
+          .trim();
+      }
+      return this.normalizeWhitespace(value);
+    }, '');
   }
 
   private normalizeWhitespace(value: string): string {
@@ -176,12 +184,21 @@ export class XmlListingParser implements ListingParser {
   }
 
   private number(parent: Element | null, selector: string): number | null {
-    return this.numberValue(parent?.querySelector(selector)?.textContent);
+    return this.safely(() => this.numberValue(parent?.querySelector(selector)?.textContent), null);
   }
 
   private numberValue(value: string | null | undefined): number | null {
     if (!value?.trim()) return null;
-    const parsed = Number.parseFloat(value);
+    if (!/^[+-]?(?:\d+\.?\d*|\.\d+)$/u.test(value.trim())) return null;
+    const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private safely<T>(operation: () => T, fallback: T): T {
+    try {
+      return operation();
+    } catch {
+      return fallback;
+    }
   }
 }

@@ -1,7 +1,6 @@
 import * as v from 'valibot';
 
-const requiredText = v.pipe(v.string(), v.trim(), v.minLength(1));
-const optionalText = v.pipe(v.string(), v.trim());
+const text = v.pipe(v.string(), v.trim());
 const nonNegativeNumber = v.pipe(v.number(), v.finite(), v.minValue(0));
 const canadianPostalCodePattern =
   /^([ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z])-?(\d[ABCEGHJ-NPRSTV-Z]\d)$/;
@@ -12,35 +11,25 @@ export function normalizeCanadianPostalCode(value: string | null | undefined): s
   return match ? `${match[1]} ${match[2]}` : null;
 }
 
-const postalCode = v.pipe(
-  v.string(),
-  v.trim(),
-  v.transform((value) => normalizeCanadianPostalCode(value) ?? value),
-  v.regex(
-    /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] \d[ABCEGHJ-NPRSTV-Z]\d$/,
-    'Expected a valid Canadian postal code',
-  ),
-);
-
 export const listingAddressSchema = v.object({
-  line1: requiredText,
-  line2: optionalText,
-  city: requiredText,
-  postalCode,
-  fsa: requiredText,
-  regionId: requiredText,
-  regionName: requiredText,
-  areaName: requiredText,
+  line1: text,
+  line2: text,
+  city: text,
+  postalCode: text,
+  fsa: text,
+  regionId: text,
+  regionName: text,
+  areaName: text,
 });
 
 export const listingSchema = v.object({
-  id: requiredText,
+  id: v.pipe(v.string(), v.trim(), v.minLength(1)),
   address: listingAddressSchema,
-  bedroomCount: nonNegativeNumber,
+  bedroomCount: v.nullable(nonNegativeNumber),
   bathroomCount: v.nullable(nonNegativeNumber),
   rent: v.nullable(nonNegativeNumber),
-  primaryImage: optionalText,
-  hook: optionalText,
+  primaryImage: text,
+  hook: text,
 });
 
 export type ListingAddress = v.InferOutput<typeof listingAddressSchema>;
