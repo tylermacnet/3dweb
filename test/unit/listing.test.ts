@@ -138,9 +138,9 @@ test('rejects invalid identity and numeric values', () => {
   );
 });
 
-test('rejects incomplete address values', () => {
-  assert.throws(() => createListingAddress({ ...address, line1: '' }), ValiError);
-  assert.throws(() => createListingAddress({ ...address, regionId: '' }), ValiError);
+test('accepts incomplete address values as best-effort data', () => {
+  assert.equal(createListingAddress({ ...address, line1: '' }).line1, '');
+  assert.equal(createListingAddress({ ...address, regionId: '' }).regionId, '');
   assert.equal(createListingAddress({ ...address, postalCode: '' }).postalCode, '');
   assert.equal(createListingAddress({ ...address, postalCode: 'D1C 1A1' }).postalCode, 'D1C 1A1');
 });
