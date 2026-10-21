@@ -116,3 +116,10 @@ test('does not invent address lines for missing input', () => {
   assert.deepEqual(AddressNormalizer.normalize(undefined), { line1: '', line2: '' });
   assert.deepEqual(AddressNormalizer.normalize('\n\n'), { line1: '', line2: '' });
 });
+
+test('does not split street names containing a designator substring', () => {
+  assert.deepEqual(AddressNormalizer.normalize('144 Leinster Street'), {
+    line1: '144 Leinster Street',
+    line2: '',
+  });
+});
