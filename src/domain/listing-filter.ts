@@ -5,7 +5,7 @@ export interface BedroomRule {
 export interface ListingFilterConfig<T> {
   getRegionId: (listing: T) => string;
   getAreaName: (listing: T) => string;
-  getBedroomCount: (listing: T) => number;
+  getBedroomCount: (listing: T) => number | null;
   getRent: (listing: T) => number | null;
   bedroomRules: Readonly<Record<string, BedroomRule>>;
   unknownRent: {

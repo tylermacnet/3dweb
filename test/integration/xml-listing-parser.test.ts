@@ -377,7 +377,7 @@ test('uses corrected address when different from marketing name', async () => {
   });
 });
 
-test('fails fast with a typed record error instead of dropping malformed records', async () => {
+test('keeps valid records and skips records without an ID', async () => {
   await withParser((parser) => {
     const feed = `
       <PhysicalProperty>
@@ -412,15 +412,62 @@ test('fails fast with a typed record error instead of dropping malformed records
       </PhysicalProperty>
     `;
 
-    assert.throws(
-      () => parser.parse(feed),
-      (error: Record<string, any>) => {
-        assert.equal(error?.constructor?.name, 'ListingParseError');
-        assert.match(error.message, /listing record 1/);
-        assert.equal(error.recordIndex, 1);
-        assert.ok(error.cause);
-        return true;
-      },
+    assert.deepEqual(
+      parser.parse(feed).map((listing) => listing.id),
+      ['good-id'],
     );
+  });
+});
+
+test('keeps an ID-only listing and represents unavailable fields without invented values', async () => {
+  await withParser((parser) => {
+    const [listing] = parser.parse(`
+      <PhysicalProperty>
+        <Property>
+          <Floorplan><Identification><IDValue>id-only</IDValue></Identification></Floorplan>
+        </Property>
+      </PhysicalProperty>
+    `);
+
+    assert.ok(listing);
+    assert.equal(listing.id, 'id-only');
+    assert.deepEqual(listing.address, {
+      line1: '',
+      line2: '',
+      city: '',
+      postalCode: '',
+      fsa: '',
+      regionId: 'OTHER',
+      regionName: 'Other',
+      areaName: 'Unknown location',
+    });
+    assert.equal(listing.bedroomCount, null);
+    assert.equal(listing.bathroomCount, null);
+    assert.equal(listing.rent, null);
+    assert.equal(listing.primaryImage, '');
+    assert.equal(listing.hook, '');
+  });
+});
+
+test('invalid optional fields do not discard a listing with a usable ID', async () => {
+  await withParser((parser) => {
+    const [listing] = parser.parse(`
+      <PhysicalProperty>
+        <Property>
+          <PropertyID><Address><PostalCode>not a postal code</PostalCode></Address></PropertyID>
+          <Floorplan>
+            <Identification><IDValue>partial-fields</IDValue></Identification>
+            <Room RoomType="Bedroom"><Count>unknown</Count></Room>
+            <EffectiveRent Max="unknown" />
+          </Floorplan>
+        </Property>
+      </PhysicalProperty>
+    `);
+
+    assert.ok(listing);
+    assert.equal(listing.id, 'partial-fields');
+    assert.equal(listing.address.postalCode, 'not a postal code');
+    assert.equal(listing.bedroomCount, null);
+    assert.equal(listing.rent, null);
   });
 });
