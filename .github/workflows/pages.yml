@@ -2,7 +2,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Branch pushes only refresh previews; production dist always builds from main.
+          ref: main
       - name: Set up mise
         uses: jdx/mise-action@v2
       - name: Trust mise config
