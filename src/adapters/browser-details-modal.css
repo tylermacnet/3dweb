@@ -19,6 +19,8 @@
   --modal-ink: var(--sc-text-main, #0f172a);
   --modal-muted: var(--sc-text-muted, #64748b);
   --modal-accent: var(--sc-brand-primary, #0284c7);
+  inset: 0;
+  margin: auto;
   width: 90vw;
   max-width: 56.25rem;
   height: 85vh;
