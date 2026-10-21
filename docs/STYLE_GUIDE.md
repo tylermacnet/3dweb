@@ -223,7 +223,7 @@ as the public theming API.
 - Keep the filter group discoverable as a search region with an accessible label.
 - Associate every form control with a label. `listing-filters` omits `aria-controls`
   intentionally: cross-root `idref` would be invalid inside shadow DOM; wiring is
-  via `listing-filters-changed` (composed/bubbles) + `ListingFilterStore`.
+  via `listing-filters-changed` (composed/bubbles) and the shared `ListingStore`.
 - Keep card interaction to a single stretched link per card so keyboard users get one tab stop;
   never intercept modified or non-primary clicks. Modal is gated by
   `pointer:fine` (capability) not viewport width — see `listing-card.ts:22`.
