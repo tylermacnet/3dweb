@@ -136,13 +136,13 @@ does not imply it is absent from the source. Use focused parser integration test
 fields and custom-record associations.
 
 For this read-only consumer view, a property needs only a valid, non-empty Buildium listing ID to
-appear. In the sample feed, that ID is
-`PhysicalProperty/Property/Floorplan/Identification/IDValue` (the parser scopes its selector to each
-`Property`, so it reads `Floorplan > Identification > IDValue`). It matches the `listingId` query
-parameter in that record's `FloorplanAvailabilityURL`. Do not confuse it with the property ID at
-`PhysicalProperty/Property/Identification/IDValue` or
-`PhysicalProperty/Property/PropertyID/Identification/IDValue`; the sample has `25089` for the
-property and `89584` for the floorplan/listing.
+appear. The canonical source is the `listingId` query parameter of that record's
+`FloorplanAvailabilityURL`; extract and validate that URL parameter rather than inferring the
+Buildium link ID from an `Identification/IDValue`. The sample's first record has `listingId=89584`
+in its URL, while its property identifiers are `25089`. The floorplan's own `Identification/IDValue`
+also happens to be `89584` in that record, but this sample-level coincidence is not the canonical
+mapping. The configured feed sample contains a `FloorplanAvailabilityURL` with a `listingId`
+parameter for each listing record; continue treating the URL parameter as the source of truth.
 
 Parse each `<Property>` independently; skip a record only when its listing ID is missing or
 unusable. Other fields—including address, bedroom count, bathroom count, rent, image, and
