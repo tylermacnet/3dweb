@@ -135,14 +135,21 @@ Property Marketing 3.0 schema, inspect the actual configured feed/sample, and tr
 does not imply it is absent from the source. Use focused parser integration tests for newly mapped
 fields and custom-record associations.
 
-For this read-only consumer view, a property needs only a valid, non-empty listing ID
-(`Floorplan/Identification/IDValue`) to appear, because that ID creates its Buildium details link.
-Parse each `<Property>` independently; skip a record only when its ID is missing or unusable. Other
-fields—including address, bedroom count, bathroom count, rent, image, and description—are
-best-effort. Preserve unavailable numeric values as unknown (`null`) and text as empty rather than
-inventing a value. Do not reject a listing or show partial-result warnings because optional fields
-are absent or invalid. Malformed feed-level XML remains a recoverable feed error because records
-cannot be read reliably.
+For this read-only consumer view, a property needs only a valid, non-empty Buildium listing ID to
+appear. In the sample feed, that ID is
+`PhysicalProperty/Property/Floorplan/Identification/IDValue` (the parser scopes its selector to each
+`Property`, so it reads `Floorplan > Identification > IDValue`). It matches the `listingId` query
+parameter in that record's `FloorplanAvailabilityURL`. Do not confuse it with the property ID at
+`PhysicalProperty/Property/Identification/IDValue` or
+`PhysicalProperty/Property/PropertyID/Identification/IDValue`; the sample has `25089` for the
+property and `89584` for the floorplan/listing.
+
+Parse each `<Property>` independently; skip a record only when its listing ID is missing or
+unusable. Other fields—including address, bedroom count, bathroom count, rent, image, and
+description—are best-effort. Preserve unavailable numeric values as unknown (`null`) and text as
+empty rather than inventing a value. Do not reject a listing or show partial-result warnings because
+optional fields are absent or invalid. Malformed feed-level XML remains a recoverable feed error
+because records cannot be read reliably.
 
 The sample's root-level `CustomRecords` include `AvailabilityDate` values keyed by
 `PropertyIDValue` and `UnitIDValue`. Associate them by those identifiers, not XML position, and
