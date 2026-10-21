@@ -126,7 +126,7 @@ Examples:
 After every major architecture, behavior, or public-contract change, complete all steps before
 declaring work done:
 
-1. Review dependency direction against architecture layers (domain purity, port ownership, adapter boundaries).
+1. Review feature ownership and dependency direction (domain purity, port ownership, adapter boundaries).
 2. Review SOLID principles and 2026 platform practices.
 3. Assess test coverage for changed behavior; add focused tests for missing branches/edge cases.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, `AGENTS.md` if contracts or naming change.
