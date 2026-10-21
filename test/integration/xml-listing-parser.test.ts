@@ -55,8 +55,16 @@ test('parses the supplied real-world listing feed', async () => {
   const xml = await readFile(fixturePath, 'utf8');
   await withParser((parser) => {
     const listings = parser.parse(xml);
+    const sourceDocument = new DOMParser().parseFromString(xml, 'text/xml');
+    const firstProperty = sourceDocument.querySelector('PhysicalProperty > Property');
+    const floorplanId = firstProperty?.querySelector(
+      'Floorplan > Identification > IDValue',
+    )?.textContent;
+    const floorplanUrl = firstProperty?.querySelector('FloorplanAvailabilityURL')?.textContent;
 
     assert.equal(listings.length, 12);
+    assert.equal(listings[0]?.id, floorplanId);
+    assert.equal(new URL(floorplanUrl!).searchParams.get('listingId'), floorplanId);
     for (const listing of listings) {
       assert.match(
         listing.address.postalCode,
