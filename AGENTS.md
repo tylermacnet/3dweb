@@ -76,11 +76,11 @@ src/
   `:host` tokens do not resolve outside shadow roots.
 - Use `AbortSignal.timeout(5000)` for network resilience, not manual timer clearing.
 - Use Valibot for lightweight runtime validation at external-to-domain boundaries.
-- For the configured Buildium/MITS 3.0 feed, bedroom count and `EffectiveRent` are required
-  source data. Reject a record/feed with either missing or invalid; never default a missing
-  bedroom count to zero (zero means a real bachelor/studio) or translate missing rent into a
-  valid “Call for Price” listing. The current parser/domain mapping does not yet fully enforce
-  this contract; treat it as a known implementation gap.
+- For this read-only consumer view, a non-empty listing ID is the only required feed field because
+  it creates the Buildium details link. Parse records independently, skip records without a usable
+  ID, and treat all other fields as best-effort. Preserve unknown numeric values as `null` and
+  missing text as empty; do not invent values or show partial-result warnings. Malformed feed-level
+  XML remains a recoverable feed error.
 - The feed's structured `CustomRecords` include `AvailabilityDate` values associated with
   `PropertyIDValue` and `UnitIDValue`. Availability sorting must use that structured date and
   stable identifiers, not prose in `LongDescription`. Keep the supported sort keys to price and

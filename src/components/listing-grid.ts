@@ -220,7 +220,7 @@ export class ListingGrid extends LitElement {
             ${vm.line1}
           </a>
           <div class="compact-meta">
-            <span class="badge">${vm.bedText}</span>
+            ${vm.bedText ? html`<span class="badge">${vm.bedText}</span>` : ''}
             ${listing.bathroomCount ? html`<span class="badge">${listing.bathroomCount} Bath</span>` : ''}
             ${location ? html`<span>${location}</span>` : ''}
           </div>
@@ -280,7 +280,7 @@ export class ListingGrid extends LitElement {
               : ''
           }
           <div class="list-meta">
-            <span class="badge">${vm.bedText}</span>
+            ${vm.bedText ? html`<span class="badge">${vm.bedText}</span>` : ''}
             ${listing.bathroomCount ? html`<span class="badge">${listing.bathroomCount} Bath</span>` : ''}
             <span class="list-price">${vm.formattedRent}</span>
           </div>

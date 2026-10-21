@@ -47,11 +47,36 @@ test('accepts optional rent and bathroom values', () => {
     hook: '',
   });
 
+  test('accepts an ID-only listing with unknown numeric values', () => {
+    const listing = createListing({
+      id: 'id-only',
+      address: {
+        line1: '',
+        line2: '',
+        city: '',
+        postalCode: '',
+        fsa: '',
+        regionId: 'OTHER',
+        regionName: 'Other',
+        areaName: 'Unknown location',
+      },
+      bedroomCount: null,
+      bathroomCount: null,
+      rent: null,
+      primaryImage: '',
+      hook: '',
+    });
+
+    assert.equal(listing.id, 'id-only');
+    assert.equal(listing.bedroomCount, null);
+    assert.equal(listing.rent, null);
+  });
+
   assert.equal(listing.bathroomCount, 1);
   assert.equal(listing.rent, 1250);
 });
 
-test('normalizes postal codes when creating listing addresses', () => {
+test('normalizes valid postal codes and preserves unknown address values', () => {
   assert.equal(normalizeCanadianPostalCode('e2m-1y1'), 'E2M 1Y1');
   assert.equal(normalizeCanadianPostalCode(' E 2 M  1 Y 1 '), 'E2M 1Y1');
   assert.equal(normalizeCanadianPostalCode('E2M--1Y1'), null);
@@ -116,8 +141,8 @@ test('rejects invalid identity and numeric values', () => {
 test('rejects incomplete address values', () => {
   assert.throws(() => createListingAddress({ ...address, line1: '' }), ValiError);
   assert.throws(() => createListingAddress({ ...address, regionId: '' }), ValiError);
-  assert.throws(() => createListingAddress({ ...address, postalCode: '' }), ValiError);
-  assert.throws(() => createListingAddress({ ...address, postalCode: 'D1C 1A1' }), ValiError);
+  assert.equal(createListingAddress({ ...address, postalCode: '' }).postalCode, '');
+  assert.equal(createListingAddress({ ...address, postalCode: 'D1C 1A1' }).postalCode, 'D1C 1A1');
 });
 
 test('keeps the region policy immutable', () => {

@@ -141,7 +141,7 @@ test('rejects XML documents reported as malformed by the DOM parser', async () =
   }
 });
 
-test('preserves required listing fields and handles optional fields when absent', async () => {
+test('preserves available listing fields and leaves optional fields unavailable when absent', async () => {
   await withParser((parser) => {
     const [listing] = parser.parse(`
       <PhysicalProperty>

@@ -38,19 +38,20 @@ per-document via `WeakMap` (`src/index.tsx:58`). If multiple feeds become necess
 `WeakMap<Document, Map<key, Store>>` registry and lazy per-key fetches. Keep the bundle single
 entry. Generated config, if any, remains limited to `src/config/generated/`.
 
-## Required feed data and sorting policy
+## Feed parsing and sorting policy
 
-For the configured Buildium/MITS feed, bedroom count and rent are required data: missing or invalid
-values are feed errors, not zero bedrooms or an unknown-price listing. A real bedroom count of zero
-remains valid. `AvailabilityDate` is present in the structured `CustomRecords` and must be matched
+For this read-only consumer view, a non-empty listing ID is the only required field because it
+creates the Buildium details link. Parse records independently, skip records without usable IDs,
+and treat all other fields as best-effort. Represent unknown numeric values as `null` and missing
+text as empty; do not invent values or show partial-result warnings. Malformed feed-level XML remains
+a recoverable error. `AvailabilityDate` is present in structured `CustomRecords` and must be matched
 to its property/unit identifiers. It is distinct from Buildium's active-listing date window.
 
 The only supported sort dimensions are price and availability date (price in either direction,
-availability soonest first); filtering remains a separate operation. The current parser/domain
-still default or permit missing values, and the UI does not yet map or sort by availability. Treat
-these as implementation gaps to address when this feed work is scheduled, not as reasons to infer
-data from listing descriptions or broaden sorting to unrelated fields. The source contract and
-inspection steps are in [Development](DEVELOPMENT.md#buildium-source-xml-reference).
+availability soonest first); filtering remains a separate operation. Missing values must remain
+unknown and must not be inferred from listing descriptions or used to hide a record that has a
+working details link. The source contract and inspection steps are in
+[Development](DEVELOPMENT.md#buildium-source-xml-reference).
 
 ## Deferred: user-specific listing views
 
