@@ -56,10 +56,10 @@ export class XmlListingParser implements ListingParser {
     }
 
     const addressString = unit ? this.withUnit(street, unit) : street;
-    const normalizedAddress = this.safely(
-      () => AddressNormalizer.normalize(addressString),
-      { line1: '', line2: '' },
-    );
+    const normalizedAddress = this.safely(() => AddressNormalizer.normalize(addressString), {
+      line1: '',
+      line2: '',
+    });
     const city = this.text(addressNode, 'City');
     const rawPostalCode = this.text(addressNode, 'PostalCode');
     const postalCode = normalizeCanadianPostalCode(rawPostalCode) ?? rawPostalCode;
@@ -71,15 +71,12 @@ export class XmlListingParser implements ListingParser {
             areaName: 'Unknown location',
             resolution: 'unknown' as const,
           }
-        : this.safely(
-            () => this.locationResolver.resolve(city, postalCode),
-            {
-              regionId: 'OTHER',
-              regionName: 'Other',
-              areaName: city || 'Unknown location',
-              resolution: 'unknown' as const,
-            },
-          );
+        : this.safely(() => this.locationResolver.resolve(city, postalCode), {
+            regionId: 'OTHER',
+            regionName: 'Other',
+            areaName: city || 'Unknown location',
+            resolution: 'unknown' as const,
+          });
 
     const floorplan = this.safely(() => property.querySelector('Floorplan'), null);
     const id = this.text(floorplan, 'Identification > IDValue');

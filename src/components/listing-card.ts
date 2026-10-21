@@ -44,8 +44,8 @@ export function describeListingCard(listing: Listing): ListingCardViewModel {
       listing.bedroomCount === null
         ? ''
         : listing.bedroomCount === 0
-        ? 'Bachelor'
-        : `${listing.bedroomCount} Bed${listing.bedroomCount !== 1 ? 's' : ''}`,
+          ? 'Bachelor'
+          : `${listing.bedroomCount} Bed${listing.bedroomCount !== 1 ? 's' : ''}`,
     detailsUrl: getListingDetailsUrl(listing),
   };
 }

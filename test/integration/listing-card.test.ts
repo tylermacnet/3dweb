@@ -171,7 +171,7 @@ test('describes unknown rent, studio layout, and missing image without inventing
 });
 
 test('describes a listing with only its link ID without fabricating details', async () => {
-  const { describeListingCard, ListingCard } = await cardModule();
+  const { describeListingCard } = await cardModule();
   const listing: Listing = {
     id: 'id-only',
     address: {
