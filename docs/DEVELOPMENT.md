@@ -392,12 +392,12 @@ and do not silently invent or display invalid listing values.
 
 ## Address and location policy
 
-The Phase 2 domain rules are deterministic and browser-independent. Address normalization is
-idempotent for supported feed formats and returns empty lines for missing input rather than
-inventing address content. Canadian postal codes are normalized to uppercase `ANA NAN` format and
-validated against Canada Post's letter/digit pattern; a hyphen in the standard separator position
-is accepted alongside whitespace. Invalid or missing postal codes are rejected when creating a
-listing.
+The address and location domain rules are deterministic and browser-independent. Address
+normalization is idempotent for supported feed formats and returns empty lines for missing input
+rather than inventing address content. Canadian postal codes are normalized to uppercase `ANA NAN`
+format and validated against Canada Post's letter/digit pattern; a hyphen in the standard separator
+position is accepted alongside whitespace. Invalid or missing postal codes are rejected when
+creating a listing.
 
 ### ManageBuilding Address Parsing Quirk
 
@@ -451,14 +451,13 @@ Region names are cleaned via `cleanRegionName()` in `src/config/listing-filters.
 before being used as display labels. The `getListingLocationGroups()` function produces
 the complete location dropdown configuration including the "All Locations" option
 and per-region grouping with listing counts.
-The current domain permits rent to be `null` and the filter/store uses `0` as an unknown-rent
-sentinel; this legacy behavior conflicts with the configured feed contract, where rent is required,
-and must not be treated as the desired XML validation policy. Bedroom rules that are not configured
-produce no matches, while non-finite rent criteria are ignored. The listing range
-(`priceMin`/`priceMax`) shown in `listing-filters` is derived from
-the loaded listings inside `ListingStore` (`floor(min/100)*100`,
-`ceil(max/100)*100`, ignoring `null`/0) — `bundle.esm.js`/`bundle.js` is the
-source of truth for that derivation, not the host page.
+The current domain permits rent to be `null`, and the filter treats both `null` and `0` as unknown
+rent that matches a maximum-rent filter. This legacy behavior conflicts with the configured feed
+contract, where rent is required, and is not the desired XML validation policy. Bedroom rules that
+are not configured produce no matches, while non-finite rent criteria are ignored. `ListingStore`
+derives the filter's price range from loaded listings, excluding `null` and non-positive rents before
+rounding the bounds to the nearest hundred. These are current implementation details; the required
+feed contract still needs to be enforced at the XML boundary.
 
 Filtering preserves source order and does not mutate the input. Missing bedroom and location
 values are rejected at the domain construction boundary rather than guessed by the filtering
