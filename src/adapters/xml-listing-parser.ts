@@ -63,22 +63,33 @@ export class XmlListingParser implements ListingParser {
     const city = this.text(addressNode, 'City');
     const rawPostalCode = this.text(addressNode, 'PostalCode');
     const postalCode = normalizeCanadianPostalCode(rawPostalCode) ?? rawPostalCode;
-    const location = this.safely(
-      () => this.locationResolver.resolve(city, postalCode),
-      {
-        regionId: 'OTHER',
-        regionName: 'Other',
-        areaName: city || 'Unknown location',
-        resolution: 'unknown' as const,
-      },
-    );
+    const location =
+      !city && !postalCode
+        ? {
+            regionId: 'OTHER',
+            regionName: 'Other',
+            areaName: 'Unknown location',
+            resolution: 'unknown' as const,
+          }
+        : this.safely(
+            () => this.locationResolver.resolve(city, postalCode),
+            {
+              regionId: 'OTHER',
+              regionName: 'Other',
+              areaName: city || 'Unknown location',
+              resolution: 'unknown' as const,
+            },
+          );
 
     const floorplan = this.safely(() => property.querySelector('Floorplan'), null);
     const id = this.text(floorplan, 'Identification > IDValue');
     if (!id) return null;
     const bedroomCount = this.number(floorplan, 'Room[RoomType="Bedroom"] > Count');
     const bathroomCount = this.number(floorplan, 'Room[RoomType="Bathroom"] > Count');
-    const rentValue = floorplan?.querySelector('EffectiveRent')?.getAttribute('Max');
+    const rentValue = this.safely(
+      () => floorplan?.querySelector('EffectiveRent')?.getAttribute('Max'),
+      null,
+    );
     const parsedRent = this.numberValue(rentValue);
     const rent = parsedRent === null ? null : Math.round(parsedRent);
     const primaryImage = this.primaryImage(floorplan);
@@ -191,7 +202,7 @@ export class XmlListingParser implements ListingParser {
     if (!value?.trim()) return null;
     if (!/^[+-]?(?:\d+\.?\d*|\.\d+)$/u.test(value.trim())) return null;
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
 
   private safely<T>(operation: () => T, fallback: T): T {

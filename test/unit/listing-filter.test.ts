@@ -83,6 +83,20 @@ test('returns all listings for empty criteria', () => {
   );
 });
 
+test('does not match unknown bedroom counts to specific bedroom filters', () => {
+  const unknownBedroom = { ...listings[0]!, id: 'unknown-bedroom', bedroomCount: null };
+  const values = [...listings, unknownBedroom];
+
+  assert.deepEqual(
+    filterListings(values, { bedroomRule: 'studio' }, config).map((listing) => listing.id),
+    ['studio'],
+  );
+  assert.deepEqual(
+    filterListings(values, {}, config).map((listing) => listing.id),
+    ['studio', 'one-bedroom', 'unknown-rent', 'unknown-bedroom'],
+  );
+});
+
 test('applies table-driven filtering cases', () => {
   const cases = [
     {

@@ -2,6 +2,10 @@ import * as v from 'valibot';
 
 const text = v.pipe(v.string(), v.trim());
 const nonNegativeNumber = v.pipe(v.number(), v.finite(), v.minValue(0));
+const postalCode = v.pipe(
+  text,
+  v.transform((value) => normalizeCanadianPostalCode(value) ?? value),
+);
 const canadianPostalCodePattern =
   /^([ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z])-?(\d[ABCEGHJ-NPRSTV-Z]\d)$/;
 
@@ -15,7 +19,7 @@ export const listingAddressSchema = v.object({
   line1: text,
   line2: text,
   city: text,
-  postalCode: text,
+  postalCode,
   fsa: text,
   regionId: text,
   regionName: text,
