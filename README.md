@@ -27,7 +27,7 @@ Composable primitives (same bundle, shared per-document store):
 
 Branch previews: append `?preview=<branch>` (branch snapshots under `preview/<ref>/`; default is production `main`).
 
-The demo host page `public/index.html` is the canonical embed example. `public/dev.html` (static sample, always generated from `dev.template.html` plus the sample feed — never commit the output), `public/test.html` (frozen baseline), and `public/migration.html` (historical report) are internal-only.
+The demo host page `public/index.html` is the canonical embed example. `public/dev.html` is a static sample generated from `dev.template.html` and the sample feed; never commit the generated output.
 
 ## Contributing
 
@@ -43,4 +43,4 @@ mise run check        # lint + type + test + build in parallel (required gate; t
 
 Branching: cut any short kebab branch off `main`, `git rebase` onto `origin/main`, merge locally (squash default), delete the branch. Releases are `v*` tags on `main`; regenerate `CHANGELOG.md` with the tag commit.
 
-Docs: `docs/DEVELOPMENT.md` (workflow, architecture, policies), `docs/STYLE_GUIDE.md` (tokens, layout, a11y), `docs/ROADMAP.md` (deferred work). Historical migration record: `docs/archive/MIGRATION_PLAN.md`.
+Docs: `docs/DEVELOPMENT.md` (workflow, architecture, policies), `docs/STYLE_GUIDE.md` (tokens, layout, a11y), and `docs/ROADMAP.md` (deferred work).
