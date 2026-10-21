@@ -188,7 +188,10 @@ export class XmlListingParser implements ListingParser {
   }
 
   private normalizeWhitespace(value: string): string {
-    return value.replace(/\s+/gu, ' ').trim();
+    return value
+      .replace(/\p{Cf}/gu, '')
+      .replace(/\s+/gu, ' ')
+      .trim();
   }
 
   private number(parent: Element | null, selector: string): number | null {

@@ -116,7 +116,6 @@
   color: var(--card-ink);
   font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.015em;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;

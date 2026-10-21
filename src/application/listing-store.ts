@@ -70,7 +70,9 @@ export class ListingStore {
   }
 
   get visibleListings(): readonly Listing[] {
-    return filterListings(this.allListings, this._criteria, LISTING_FILTER_CONFIG);
+    return [...filterListings(this.allListings, this._criteria, LISTING_FILTER_CONFIG)].sort(
+      (a, b) => (b.rent ?? -Infinity) - (a.rent ?? -Infinity),
+    );
   }
 
   get locationGroups(): readonly ListingLocationGroup[] {
