@@ -41,7 +41,9 @@ entry. Generated config, if any, remains limited to `src/config/generated/`.
 ## Feed parsing and sorting policy
 
 For this read-only consumer view, a non-empty listing ID is the only required field because it
-creates the Buildium details link. Parse records independently, skip records without usable IDs,
+creates the Buildium details link. Read it from the `listingId` query parameter in
+`FloorplanAvailabilityURL`, rather than inferring it from a property's or floorplan's
+`Identification/IDValue`. Parse records independently, skip records without a usable URL listing ID,
 and treat all other fields as best-effort. Represent unknown numeric values as `null` and missing
 text as empty; do not invent values or show partial-result warnings. Malformed feed-level XML remains
 a recoverable error. `AvailabilityDate` is present in structured `CustomRecords` and must be matched
