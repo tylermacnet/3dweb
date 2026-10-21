@@ -55,7 +55,7 @@ const config: ListingFilterConfig<Listing> = {
     studio: { matches: (count) => count === 0 },
     one: { matches: (count) => count === 1 },
     two: { matches: (count) => count === 2 },
-    'three-plus': { matches: (count) => count >= 3 },
+    'three-plus': { matches: (count) => count !== null && count >= 3 },
   },
   unknownRent: { value: 0, matchesMaximum: true },
 };

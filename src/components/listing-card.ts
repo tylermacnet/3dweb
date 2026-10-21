@@ -38,10 +38,12 @@ export function describeListingCard(listing: Listing): ListingCardViewModel {
     fullAddress,
     imgSrc: listing.primaryImage || FALLBACK_IMAGE,
     formattedRent:
-      listing.rent === null ? 'Call for Price' : `$${listing.rent.toLocaleString()} / mo`,
+      listing.rent === null ? 'Rent unavailable' : `$${listing.rent.toLocaleString()} / mo`,
     locationText: [cleanedRegion, listing.address.areaName].filter(Boolean).join(' • '),
     bedText:
-      listing.bedroomCount === 0
+      listing.bedroomCount === null
+        ? ''
+        : listing.bedroomCount === 0
         ? 'Bachelor'
         : `${listing.bedroomCount} Bed${listing.bedroomCount !== 1 ? 's' : ''}`,
     detailsUrl: getListingDetailsUrl(listing),
@@ -110,7 +112,7 @@ export class ListingCard extends LitElement {
         </header>
         <div class="meta">
           <div class="badges">
-            <span class="badge">${view.bedText}</span>
+            ${view.bedText ? html`<span class="badge">${view.bedText}</span>` : ''}
             ${
               listing.bathroomCount
                 ? html`<span class="badge">${listing.bathroomCount} Bath</span>`

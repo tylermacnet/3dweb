@@ -1,5 +1,5 @@
 export interface BedroomRule {
-  matches: (bedroomCount: number) => boolean;
+  matches: (bedroomCount: number | null) => boolean;
 }
 
 export interface ListingFilterConfig<T> {

@@ -135,15 +135,14 @@ Property Marketing 3.0 schema, inspect the actual configured feed/sample, and tr
 does not imply it is absent from the source. Use focused parser integration tests for newly mapped
 fields and custom-record associations.
 
-For this project's configured Buildium/MITS feed contract, bedroom count and `EffectiveRent` are
-required. The bedroom count is the `Count` in `Floorplan/Room[@RoomType="Bedroom"]`; an explicit
-zero is valid, but a missing or invalid count is not zero and must not be silently defaulted.
-`Floorplan/EffectiveRent` must be present and valid; a missing value is not an unknown-price listing.
-Reject invalid source data at the XML boundary with a useful feed error, then let the application
-show its normal recoverable error state so the embed does not throw into or break its host. The
-current parser defaults a missing bedroom count to zero, and the current domain permits null rent;
-both are implementation gaps against this feed contract, not the intended behavior. This contract
-is specific to the configured feed and is not inferred from Buildium's short help article.
+For this read-only consumer view, a property needs only a valid, non-empty listing ID
+(`Floorplan/Identification/IDValue`) to appear, because that ID creates its Buildium details link.
+Parse each `<Property>` independently; skip a record only when its ID is missing or unusable. Other
+fields—including address, bedroom count, bathroom count, rent, image, and description—are
+best-effort. Preserve unavailable numeric values as unknown (`null`) and text as empty rather than
+inventing a value. Do not reject a listing or show partial-result warnings because optional fields
+are absent or invalid. Malformed feed-level XML remains a recoverable feed error because records
+cannot be read reliably.
 
 The sample's root-level `CustomRecords` include `AvailabilityDate` values keyed by
 `PropertyIDValue` and `UnitIDValue`. Associate them by those identifiers, not XML position, and
@@ -151,9 +150,8 @@ use the structured date rather than description text. Buildium's active-listing 
 the unit's configured start/end dates) is distinct from the unit's `AvailabilityDate`.
 The supported sort dimensions are price and availability date only; price can be ordered either
 direction and availability is ordered soonest first. Filtering and sorting are separate operations;
-sorting should be stable, and missing/invalid availability dates must not be guessed. The current
-parser and UI do not yet map or sort by availability, so this describes product policy rather than
-an implemented control.
+sorting should be stable, and missing/invalid availability dates must not be guessed. Any such
+controls must treat absent data as unknown rather than excluding an otherwise linkable listing.
 
 ## Branching, releases, Pages, and previews
 

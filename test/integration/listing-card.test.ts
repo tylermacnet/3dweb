@@ -151,7 +151,7 @@ test('describes rent, location, and bedroom labels for a complete listing', asyn
   );
 });
 
-test('falls back for unknown rent, studio layout, and missing image', async () => {
+test('describes unknown rent, studio layout, and missing image without inventing rent', async () => {
   // Arrange
   const { describeListingCard, FALLBACK_IMAGE } = await cardModule();
   const listing: Listing = {
@@ -165,7 +165,7 @@ test('falls back for unknown rent, studio layout, and missing image', async () =
   const view = describeListingCard(listing);
 
   // Assert
-  assert.equal(view.formattedRent, 'Call for Price');
+  assert.equal(view.formattedRent, 'Rent unavailable');
   assert.equal(view.bedText, 'Bachelor');
   assert.equal(view.imgSrc, FALLBACK_IMAGE);
 });

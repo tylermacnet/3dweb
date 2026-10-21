@@ -12,7 +12,7 @@ export const LISTING_FILTER_CONFIG: ListingFilterConfig<Listing> = {
     studio: { matches: (bedroomCount) => bedroomCount === 0 },
     one: { matches: (bedroomCount) => bedroomCount === 1 },
     two: { matches: (bedroomCount) => bedroomCount === 2 },
-    'three-plus': { matches: (bedroomCount) => bedroomCount >= 3 },
+    'three-plus': { matches: (bedroomCount) => bedroomCount !== null && bedroomCount >= 3 },
   },
   unknownRent: {
     value: 0,
