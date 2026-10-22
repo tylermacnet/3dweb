@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
 #MISE description="Run lint, type-check, tests, and build in parallel"
-#MISE depends=["check:lint", "check:type", "test", "build"]
-# Formatting is a commit precondition enforced by the `pre-commit` hook, not a
-# `check` dependency: generated outputs (e.g. `public/dev.html`) are
-# prettier-ignored, so nothing here races the formatter.
+#MISE depends=["check:format", "check:lint", "check:type", "test", "build"]
+# Formatting is now a check dependency, ensuring no failing format is committed.
