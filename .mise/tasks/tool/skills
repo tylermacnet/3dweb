@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-#MISE description="Link active tool agent skills into .agents/skills"
+#MISE description="Link active tool agent skills into .agents/tool-skills"
 #MISE alias="skills"
 exec mise skills sync

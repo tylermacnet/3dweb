@@ -21,6 +21,6 @@ experimental = true
 exec = true
 
 [settings.skills]
-dir = ".agents/skills"
+dir = ".agents/tool-skills"
 auto_sync = true
 prune = true

@@ -20,7 +20,7 @@ and the change stays incomplete while any step is unaddressed.
    regressions, and integration contracts: domain rules in `test/unit/`, adapters, parser, DOM,
    network, and bundle in `test/integration/`.
 4. **Documentation sync.** Update `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`,
-   `AGENTS.md`, and the skills under `.opencode/skills/` when a contract, naming, workflow, or
+   `AGENTS.md`, and the skills under `.agents/skills/` when a contract, naming, workflow, or
    user-facing behaviour changes.
 5. **Validation.** Run `mise run check` (lint, types, tests, build) and `mise run check:format`
    when the pre-commit hook is not installed. Report the actual result in the handoff.
