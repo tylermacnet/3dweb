@@ -8,7 +8,5 @@ mise.local.lock
 .mise.local.lock
 .mise/*.local.lock
 .mise/locks/
-.agents/*
-!.agents/skills/
 *.log
 public/dev.html

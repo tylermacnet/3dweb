@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
-#MISE description="Link active tool agent skills into .agents/tool-skills"
+#MISE description="Rebuild the committed tool agent skills in .agents/tool-skills (run with a toolchain bump)"
 #MISE alias="skills"
-exec mise skills sync
+# Tool skills ship with the pinned tool versions, so the committed copies only
+# change when mise.lock does. Build them in a temp dir and copy the files, never
+# the links: links point into the machine-local install directory.
+set -e
+dir=".agents/tool-skills"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+mise skills sync --dir "$tmp" --prune
+rm -rf "$dir"
+if [ -z "$(ls -A "$tmp")" ]; then
+  printf 'no tool skills to commit; %s stays absent\n' "$dir"
+  exit 0
+fi
+mkdir -p "$dir"
+cp -RL "$tmp/." "$dir/"
+printf '%s tool skill(s) rebuilt in %s; commit them with mise.lock\n' "$(find "$dir" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" "$dir"

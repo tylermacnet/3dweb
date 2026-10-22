@@ -6,4 +6,5 @@
       "extensions": [".ts", ".tsx"],
     },
   },
+  "skills": [".agents/tool-skills"],
 }
