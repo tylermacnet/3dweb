@@ -16,7 +16,8 @@ All mise-related configuration lives under `.mise/` (config and tasks) with `.mi
 
 Every version is declared once, in exactly one of three places:
 
-- toolchain (runtime, CLIs, language server): `.mise/config.toml` with `.mise/mise.lock` committed
+- toolchain (runtime, CLIs): `.mise/config.toml` with `.mise/mise.lock` committed (the language
+  server is the workspace compiler from `package.json`, launched by `mise run tool:lsp`)
 - libraries and CLIs resolved by the runtime's package manager: `package.json` with `package-lock.json`
 - GitHub Actions: the `uses:` references in `.github/workflows/`
 
@@ -158,7 +159,7 @@ declaring work done:
 
 ## Branching and releases (GitHub Flow, PR-gated)
 
-One long-lived branch (`main`, always deployable). Every change reaches `main` only through a pull request: cut a short lower-case kebab branch, push it, open a PR, wait for the `check` workflow, then squash-merge. Never commit, merge, force-push, or push directly to `main`, and never create tags outside the release procedure. Agents may open and update PRs but never merge them — the repository owner merges. Releases are `v*` tags on `main` (no release branches); regenerate `CHANGELOG.md` with the tag commit. Full workflow, Pages/preview runbook, and security posture live in `docs/DEVELOPMENT.md`.
+One long-lived branch (`main`, always deployable). Every change reaches `main` only through a pull request: cut a short lower-case kebab branch, push it, open a PR, wait for the `check` workflow, then squash-merge. Never commit, merge, force-push, or push directly to `main`, and never create tags outside the release procedure. Agents may open and update PRs but never merge them — the repository owner merges. Releases are `v*` tags on the merge commit of a changelog PR (no release branches). Full workflow, Pages/preview runbook, and security posture live in `docs/DEVELOPMENT.md`.
 
 ## Style and formatting
 
