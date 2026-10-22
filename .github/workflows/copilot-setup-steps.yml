@@ -21,3 +21,6 @@ jobs:
         with:
           install: true
           cache: true
+
+      - name: Trust mise config
+        run: mise trust

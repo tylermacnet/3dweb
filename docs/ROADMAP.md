@@ -120,11 +120,11 @@ font. Revisit `docs/STYLE_GUIDE.md` card hierarchy when adopted.
 
 ## Deferred: multi-user collaboration hardening
 
-Current workflow is single-user (owner-only pushes): no pull requests, no branch
-protection, no preview allowlist/manifest, no preview badge. If collaborators
-arrive, re-harden before onboarding them: require PRs with green CI on `main`,
-gate preview publishing to maintainer-approved refs (manifest allowlist, no fork
-auto-build), add a visible preview indicator, and revisit the `?preview=`
-same-origin assumptions in `docs/DEVELOPMENT.md`.
+`main` is PR-gated (required `check`, no force-push/delete) but the repository is still
+single-owner: no preview allowlist/manifest, no preview badge, no CODEOWNERS review. If
+collaborators arrive, re-harden before onboarding them: gate preview publishing to
+maintainer-approved refs (manifest allowlist, no fork auto-build), add a visible preview
+indicator, require CODEOWNERS review, and revisit the `?preview=` same-origin assumptions
+in `docs/DEVELOPMENT.md`.
 
 For the full command reference and architecture constraints, see `AGENTS.md`.

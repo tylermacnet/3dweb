@@ -5,64 +5,81 @@
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. Install the pre-commit hook (one-time per checkout): `mise generate git-pre-commit --write --task=pre-commit`. Formatting is a commit precondition enforced by the hook.
 3. `mise run check` validates linting, type-checking, tests, and the bundle in parallel.
-4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
+4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`). OpenCode reads the committed `opencode.jsonc`; other agents wire the same task into their own settings.
 
-Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with
-`.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`,
-`tool:lsp` alias `lsp`, no extra tool). JS libraries stay in
-`package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them
-(`lit`, `valibot`, `esbuild`, `linkedom`); `mise` auto-installs them through `[deps.install]`
-(backed by pinned `aube`; `package-lock.json` format is preserved) before tasks run,
-so no manual install is needed. Never mix installers in one tree: prune `node_modules/`
-when switching between `npm` and `aube`.
+Versions are declared once per domain — toolchain in `.mise/config.toml` with `.mise/mise.lock`
+committed, JS libraries in `package.json`/`package-lock.json`, workflow actions in their `uses:`
+refs — and never restated in prose. Discover current values with `mise ls --current` and
+`mise tasks ls`. `mise` auto-installs the toolchain and project dependencies through
+`[deps.install]` before tasks run, so no manual install is needed; a custom provider keeps the
+existing lockfile format and writes it in place. Never mix installers in one tree: prune
+`node_modules/` when the installer changes.
 
 ## Use mise tasks first — MUST use `mise run <task>`, NEVER call tools directly
 
-Agents and contributors MUST run every command via `mise run <task>` and MUST NEVER invoke `npm`, `node`, `npx`, `tsx`, `tsc`, `esbuild`, `prettier`, `oxlint`, or any other tool binary directly in the shell. This is a hard requirement, not a preference.
+Agents and contributors MUST run every command via `mise run <task>` and MUST NEVER invoke a package manager, runtime, compiler, bundler, linter, formatter, or any other tool binary directly in the shell. This is a hard requirement, not a preference.
 
-If the needed invocation has no dedicated task, you MUST expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this) or create a new file task instead of falling back to a direct call. Create new tasks with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored). Never use `mise exec` / `mise x` wrappers as a shortcut — `mise run <task>` is the only entry point (the one exception is a one-off diagnostic `mise exec -- <cmd>` for parity, which must be followed by `mise run <task>` for final validation).
+If the needed invocation has no dedicated task, expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this). Reserve new tasks for repeatable dev and build steps; do not create a task for a one-off command — use the single diagnostic escape hatch, `mise exec -- <cmd>` (alias `mise x`), and follow it with `mise run <task>` for final validation. Add a task with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored).
 
-Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `node` are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides `node` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+Tool binaries and the runtime are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides the runtime via `[tools]` and the project's installed CLIs resolve from the local dependency tree with no global `PATH` needed, auto-installing dependencies through `[deps.install]` while preserving the lockfile format.
 
 Task definitions are project file tasks in `.mise/tasks/<ns>/<name>` (preferred, committed, isolated to this repo — not global `~/.config/mise`; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself) — see https://mise.jdx.dev/tasks/file-tasks.html — with `.mise/config.toml` reserved for `[tools]`, `[env]`, `[deps.install]`, and `[settings]`.
 
-All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (lint, type, test, and build in parallel — formatting is a commit precondition enforced by the `pre-commit` hook, not a `check` dependency); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
+All mise-related configuration lives under `.mise/` (config and tasks) with `.mise/mise.lock` committed next to it. Do not rely on hard-coded task lists here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments. The canonical validation gate is `mise run check` (lint, type, test, and build in parallel — formatting is a commit precondition enforced by the `pre-commit` hook, not a `check` dependency); keep this hard-coded where instructions require a single gate, but do not duplicate the full inventory in docs.
 
-Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
+Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to a bare binary; expand an existing task's args, or for a one-off diagnostic use `mise exec -- <cmd>` (canonical, `mise x` is alias) and follow it with `mise run <task>` for final validation.
 
 ## Toolchain and language server
 
 - `.mise/config.toml` is the source of truth for runtimes, CLIs, env, and project
-  dependencies (custom `[deps.install]` with `auto = true` runs `aube install` over
+  dependencies (custom `[deps.install]` with `auto = true` installs from
   `package.json`/`package-lock.json` before `mise run`); tasks live as project file tasks in `.mise/tasks/<ns>/<name>` (isolated to this repo, committed — `.gitignore` allows all mise files except local). A custom provider
-  ID is used because built-in `[deps.aube]` requires an `aube-lock.yaml` this project
-  will never have; aube reads/writes `package-lock.json` in place.
+  ID is used because the built-in dependency provider expects a lockfile this project
+  will never have; the pinned installer reads and writes `package-lock.json` in place.
 - Before migrating tooling, prune regenerables (`node_modules/`, `public/dist/`) and
-  orphaned stores (`aube store prune`, `mise prune --yes`); keep `package.json` and
+  orphaned stores (`mise prune --yes` plus the installer's store prune); keep `package.json` and
   `package-lock.json` as the JS pinning source.
-- The TypeScript language server is the workspace compiler's native server, launched
-  via `mise run tool:lsp` (alias `mise run lsp`, `tsc --lsp -stdio`); point any
+- The language server is the workspace compiler's native server, launched
+  via `mise run tool:lsp` (alias `mise run lsp`); point any
   agent's LSP client at that command. Only the `typescript`
   server is enabled; lint/type diagnostics come from `mise run check:lint` / `mise run check:type`.
   (`typescript-language-server` cannot be used: it wraps the classic `tsserver.js`,
-  which TypeScript 7 no longer ships. Verified live: pull diagnostics report TS2322
+  which the pinned compiler no longer ships. Verified live: pull diagnostics report TS2322
   and hover resolves symbols; push `publishDiagnostics` was not observed, so the agent
   loop still prefers the `lint`/`type` tasks for diagnostics.)
-- Any agent can also use the `mise` MCP server (`mise mcp`, `type: local`) by adding
-  it to its own global/user configuration — the repo ships no agent-specific config,
-  so there is no project-level agent file to maintain.
+- OpenCode gets this wiring from the committed `opencode.jsonc`. Any agent can also use the
+  `mise` MCP server (`mise mcp`, `type: local`) from its own configuration; see
+  [Agent tooling](#agent-tooling) for the cloud-agent setup.
   No `.mise/config.toml` change was needed: the server is built into the pinned mise binary
   and `[settings] experimental = true` already enables it (verified: `mise mcp`
-  answers `initialize` without `MISE_EXPERIMENTAL`).
+  answers `initialize` without extra environment variables).
 - Verify with `mise ls --current` (toolchain) plus your agent's own MCP/LSP status.
-- Pins are reproducible, not self-updating. To bump to latest releases: `mise self-update --yes`,
-  edit `.mise/config.toml` pins (or `mise lock --bump`), `mise install`, `aube update --latest <pkg>`
-  for JS deps, then `mise run check` to prove the bumps are safe before committing
-  `.mise/config.toml` + `mise.lock` + `package.json`/`package-lock.json`.
+- Bumping is manual and version-agnostic: change the relevant pins (`.mise/config.toml` or
+  `package.json`), run `mise install`, then `mise run check` — `[deps.install]` re-resolves the
+  JS lockfile on the next task run. Commit the lockfiles with the pins and never restate the
+  resulting versions in prose.
 - Agent skills declared by pinned tools sync into `.agents/skills` automatically after
   installs (`[settings.skills]` with `auto_sync` and `prune` in `.mise/config.toml`). The links
   point at machine-local installs and are gitignored; run `mise run tool:skills` (alias `mise run skills`) to re-sync
   manually, for example after changing tool versions.
+
+## Agent tooling (LSP and MCP)
+
+- OpenCode: the committed `opencode.jsonc` launches `mise run tool:lsp` for `.ts`/`.tsx`; keep it as the only LSP wiring.
+- Copilot cloud agent: mise and dependencies are installed by `.github/workflows/copilot-setup-steps.yml`, which also runs `mise trust`. It has no LSP client — type feedback comes from `mise run check:type` / `mise run check`.
+- Cloud-agent MCP is configured in repository Settings → Copilot → MCP servers, never in a file. Suggested entry:
+
+```json
+{
+  "mcpServers": { "mise": { "type": "local", "command": "mise", "args": ["mcp"], "tools": ["*"] } }
+}
+```
+
+Verify the applied value:
+
+```text
+gh api repos/<owner>/<repo>/copilot/cloud-agent/configuration --jq .mcp_configuration
+```
 
 Formatting and lint tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
 
@@ -162,33 +179,31 @@ controls must treat absent data as unknown rather than excluding an otherwise li
 
 ## Branching, releases, Pages, and previews
 
-GitHub Flow, solo variant. One long-lived branch (`main`, always deployable).
-There are no prefixes and no pull requests: cut any short lower-case kebab
-branch name off `main`, rebase it onto `origin/main`, merge locally, delete it.
-There is no `develop`, no `release/*`, and no `support/*`.
+GitHub Flow. One long-lived branch (`main`, always deployable); every change reaches it
+through a pull request. Cut a short lower-case kebab branch off `main`, push it, open a PR,
+wait for the `check` workflow, then squash-merge. There is no `develop`, no `release/*`,
+and no `support/*`.
 
-### Merging
+### Pull requests and merging
 
-Rebase the branch before every merge; then squash (default — one conventional
-commit per change, cleanest changelog) or fast-forward (when the branch holds
-multiple independently meaningful conventional commits). Never rebase `main`.
+`main` is protected by a repository ruleset: a PR is required, `check` must pass, and
+force-pushes/deletions are blocked (no bypass, including for the owner). Agents may open and
+update PRs but never merge them; the repository owner merges. One-time bootstrap of the
+ruleset (already applied): `gh api -X POST repos/<owner>/<repo>/rulesets --input <ruleset.json>`
+with PR, required-status-check, deletion, and non-fast-forward rules.
+
+Rebase onto `origin/main` before merging and never rebase `main`. The ruleset allows
+squash merges only: one conventional commit per change and a clean changelog.
 
 ```text
 git fetch origin
-git checkout <branch> && git rebase origin/main
-git checkout main && git merge --ff-only origin/main
-git merge --squash <branch>
-git commit -m "feat: concise lower-case imperative description"
-mise run check && git push origin main
-git branch -d <branch>
-```
-
-Fast-forward alternative (each kept commit must already be conventional):
-
-```text
-git checkout <branch> && git rebase origin/main
-git checkout main && git merge --ff-only <branch>
-git push origin main && git branch -d <branch>
+git switch -c <branch>
+# ...commit...
+mise run check && git push -u origin <branch>
+gh pr create --fill
+gh pr checks --watch
+# the owner merges the PR (squash), then:
+git switch main && git pull --ff-only && git branch -d <branch>
 ```
 
 Recommended one-time config: `git config pull.rebase true` and
@@ -243,12 +258,13 @@ changes; the `?preview=<ref>` snapshot selection is unchanged.
 
 - `public/dist/` and `public/preview/` are gitignored build artifacts; CI builds
   them. `public/.nojekyll` is committed so Pages serves maps and dotfiles verbatim.
-- Workflows (`.github/workflows/`): `ci.yml` runs `mise run check` on push to
-  any branch; `pages.yml` builds (`mise run build`), syncs previews
+- Workflows (`.github/workflows/`): `ci.yml` runs `mise run check` on pull requests and
+  pushes to `main`; `copilot-setup-steps.yml` installs the toolchain for the Copilot cloud
+  agent; `pages.yml` builds (`mise run build`), syncs previews
   (`mise run preview:publish` + `mise run preview:prune`), and deploys on every
   branch push (production `dist/` always builds from `main`; other branches only refresh
   previews — the `github-pages` environment must allow all branches); `release.yml` attaches `loader.js`/`bundle.js`/`bundle.esm.js` (+ maps) and
-  git-cliff notes to each `v*` tag.
+  generated changelog notes to each `v*` tag.
 - One-time manual step: repository Settings → Pages → Source = GitHub Actions.
 
 ### Previews (`?preview=`)
@@ -275,7 +291,8 @@ is always `main`. Removing the param exits preview.
 
 ## Security posture
 
-Single-user repository (`tylermacnet` personal account; only the owner pushes).
+Single-user repository (`tylermacnet` personal account; only the owner merges).
+`main` is PR-gated by a ruleset (required `check`, no force-push/delete, owner merge only).
 Accepted trade-offs, valid only while that holds:
 
 - No preview allowlist/manifest and no preview badge: the pinned same-origin
@@ -283,8 +300,7 @@ Accepted trade-offs, valid only while that holds:
   no untrusted party can publish a preview ref. Preview state is signalled by
   `document.documentElement.dataset.preview` + one `console.info` line only.
 - Re-harden when collaborators arrive: preview manifest gating, visible badge,
-  fork-PR build controls, branch protection with required PRs/CI (see
-  `docs/ROADMAP.md`).
+  fork-PR build controls, and required CODEOWNERS review (see `docs/ROADMAP.md`).
 
 ## Commit messages
 
@@ -306,9 +322,10 @@ complete until this review is performed:
 
 1. Review feature ownership and dependency direction; confirm domain purity, port ownership,
    adapter boundaries, and component responsibilities remain intact.
-2. Review the change against SOLID principles and 2026 platform practices, recording or fixing
-   any new coupling, duplicated business rule, unsafe browser behavior, accessibility gap, or
-   type-safety issue.
+2. Review the change against SOLID principles and current platform practices (look them up in
+   the official documentation for the pinned toolchain rather than relying on memory), recording
+   or fixing any new coupling, duplicated business rule, unsafe browser behavior, accessibility
+   gap, or type-safety issue.
 3. Assess test coverage for the changed behavior and boundaries; add focused tests for missing
    branches, edge cases, regressions, and integration contracts.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, and `AGENTS.md` when
