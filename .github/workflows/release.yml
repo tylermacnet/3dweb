@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up mise
@@ -23,7 +23,7 @@ jobs:
       - name: Render release notes
         run: mise run release:preview -- --tag "${{ github.ref_name }}" > release-notes.md
       - name: Attach bundles to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: release-notes.md
           files: |
