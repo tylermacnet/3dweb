@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#MISE description="Bump the pinned toolchain from main: branch, upgrade mise and tools, rebuild skills, commit, push, and open the PR"
+#USAGE flag "-n --dry-run" help="Show the upgrades available and change nothing"
+set -e
+
+command -v gh >/dev/null || { printf 'the GitHub CLI (gh) is required\n' >&2; exit 1; }
+[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] ||
+  { printf 'run this from main, not %s\n' "$(git rev-parse --abbrev-ref HEAD)" >&2; exit 1; }
+[ -z "$(git status --porcelain)" ] ||
+  { printf 'working tree is dirty; commit or stash first\n' >&2; exit 1; }
+git fetch --prune origin
+git merge --ff-only origin/main
+
+if [ -n "${usage_dry_run:-}" ]; then
+  mise upgrade --bump --dry-run
+  printf 'dry run: would branch, self-update mise, upgrade tools, rebuild tool skills, commit, push, and open the PR\n'
+  exit 0
+fi
+
+# Machine-local and install-dependent (package managers own mise there); the
+# toolchain bump below must not fail because of it.
+mise self-update || printf 'mise self-update unavailable; update mise with your package manager\n' >&2
+
+branch="chore/bump-toolchain-$(date +%F)"
+git switch -c "$branch"
+mise upgrade --bump
+mise run tool:skills
+
+if [ -z "$(git status --porcelain)" ]; then
+  git switch main
+  git branch -D "$branch"
+  printf 'toolchain already current; nothing to bump\n'
+  exit 0
+fi
+
+git add -A
+git commit -m "build(deps): bump toolchain" -m "Upgrades the pinned tools to their latest releases and rebuilds the committed tool skills."
+git push -u origin "$branch"
+# A red check is fixed on the PR branch; the task does not gate on it.
+gh pr create --fill

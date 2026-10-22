@@ -45,6 +45,19 @@ git push origin v<major>.<minor>.<patch>
 `release.yml` builds the bundles and attaches them plus the generated notes to the tag. `cliff.toml`
 is the changelog source of truth; `CHANGELOG.md` is committed.
 
+## Toolchain bump
+
+Run from a clean `main`; the task branches, upgrades, commits, pushes, and opens the PR:
+
+```text
+mise run tool:bump
+mise run tool:bump -- --dry-run   # list available upgrades, change nothing
+```
+
+It self-updates mise (when its installer allows it), runs `mise upgrade --bump`, rebuilds
+`.agents/tool-skills`, and opens the PR. CI `check` is the gate: a red run is fixed on the PR
+branch, never by the bump task.
+
 ## Branch previews
 
 ```text
