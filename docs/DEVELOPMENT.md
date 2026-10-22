@@ -54,9 +54,12 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
   and `[settings] experimental = true` already enables it (verified: `mise mcp`
   answers `initialize` without extra environment variables).
 - Verify with `mise ls --current` (toolchain) plus your agent's own MCP/LSP status.
-- Bumping is manual and version-agnostic: change the relevant pins (`.mise/config.toml` or
-  `package.json`), run `mise install`, then `mise run tool:skills` and `mise run check` —
-  `[deps.install]` re-resolves the JS lockfile on the next task run. Commit the lockfiles, the
+- Bumping is one task, run from a clean and current `main`: `mise run tool:bump` self-updates
+  mise (when its installer allows it), creates a `chore/bump-toolchain-<date>` branch, runs
+  `mise upgrade --bump` (pins and `mise.lock` together), rebuilds the committed tool skills,
+  commits, pushes, and opens the PR (`-- --dry-run` shows the available upgrades and changes
+  nothing). `[deps.install]` re-resolves the JS lockfile on the next task run. The CI `check`
+  is the gate: a red run is fixed on the PR branch, not by the task. Commit the lockfiles, the
   regenerated `.agents/tool-skills`, and the pins together, and never restate the resulting
   versions in prose. Every workflow pins the same `mise-action` major, which installs with
   `--locked`: a `mise.lock` out of step with `.mise/config.toml` fails CI instead of silently
@@ -66,7 +69,7 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
   `.agents/tool-skills`; `[settings.skills]` has `auto_sync = false` so an install never writes
   links into the tree, and `opencode.jsonc` lists that directory as a skill source. Project
   skills live in `.agents/skills`. Neither directory is gitignored: the generated one only
-  changes when the toolchain does, so it is part of the upgrade PR.
+  changes when the toolchain does.
 
 ## Agent tooling (LSP and MCP)
 
