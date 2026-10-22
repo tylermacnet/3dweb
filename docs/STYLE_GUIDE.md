@@ -260,8 +260,7 @@ The host page owns surrounding branding and layout. Each component owns its inte
 ships its styles through the single bundle; the bundle entry itself owns no styles.
 
 For development workflow, command reference, and architecture constraints, see `AGENTS.md` and
-`docs/DEVELOPMENT.md`. Within `.mise/tasks/*`, call bare binaries via `npx --no-install`; `mise`
-provides them via `node_modules/.bin` on `PATH`.
+`docs/DEVELOPMENT.md`.
 
 ## Address display policy
 

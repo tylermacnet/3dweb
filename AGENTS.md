@@ -2,25 +2,47 @@
 
 ## Commands — MUST use `mise run <task>` — NEVER call tools directly
 
-Agents and contributors MUST run every command via `mise run <task>` and MUST NEVER invoke `npm`, `node`, `npx`, `tsx`, `tsc`, `esbuild`, `prettier`, `oxlint`, or any other tool binary directly in the shell. This is a hard requirement, not a preference.
+Agents and contributors MUST run every command via `mise run <task>` and MUST NEVER invoke a package manager, runtime, compiler, bundler, linter, formatter, or any other tool binary directly in the shell. This is a hard requirement, not a preference.
 
-If the needed invocation has no dedicated task, you MUST expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this) or create a new file task instead of falling back to a direct call. Create new tasks with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored). Never use `mise exec` / `mise x` wrappers as a shortcut — `mise run <task>` is the only entry point (the one exception is a one-off diagnostic `mise exec -- <cmd>` for parity, which must be followed by `mise run <task>` for final validation).
+If the needed invocation has no dedicated task, expand an existing task's args (`mise run <task> -- <args>` — tasks expose `#USAGE` for this). Reserve new tasks for repeatable dev and build steps; do not create a task for a one-off command — use the single diagnostic escape hatch, `mise exec -- <cmd>` (alias `mise x`), and follow it with `mise run <task>` for final validation. Add a task with `mise tasks add --file <ns>:<name> --description "..." -- <command>` or by adding an executable file to `.mise/tasks/<ns>/<name>` (`.gitignore` allows all mise files except local — only `mise.local.toml`/`mise.local.lock`/`.mise.local.toml`/`.mise.local.lock`/`.mise/*.local.toml`/`.mise/*.local.lock` and `.mise/locks/` remain ignored).
 
-Direct `npx --no-install` (`esbuild`, `prettier`, `oxlint`, `tsc`) and bare `node` are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides `node` via `[tools]` and JS CLIs via `node_modules/.bin` resolved by `npx` with no global `PATH` needed, auto-installing project dependencies through `[deps.install]` (backed by pinned `aube`; `package-lock.json` format is preserved).
+Tool binaries and the runtime are permitted ONLY inside `.mise/tasks/*` definitions as the task's implementation; `mise` provides the runtime via `[tools]` and the project's installed CLIs resolve from the local dependency tree with no global `PATH` needed, auto-installing dependencies through `[deps.install]` while preserving the lockfile format.
 
 Prefer project file tasks over inline `.mise/config.toml` tasks: define tasks as executable scripts in `.mise/tasks/<ns>/<name>` (or `.mise/tasks/<name>` for top-level; a directory `ns` groups tasks as `ns:name` with file `ns/_default` for the `ns` task itself — see https://mise.jdx.dev/tasks/file-tasks.html#task-grouping) with a `#MISE description="..."` header (and `#USAGE` for args, `#MISE alias="..."` where an alias is intentional). Keep `.mise/config.toml` for `[tools]`, `[env]`, `[deps.install]`, and `[settings]` only.
 
-All mise-related configuration lives under `.mise/` (config and tasks) with `mise.lock` at the repository root. Do not enumerate tasks here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments.
+All mise-related configuration lives under `.mise/` (config and tasks) with `.mise/mise.lock` committed next to it. Do not enumerate tasks here — discover the current task inventory with `mise tasks ls` (or `mise tasks ls --extended` / `mise tasks info <task>` / `mise run <task> --help`); agents may also use the `mise` MCP server (`mise mcp`). Each task's `#MISE description` and `#USAGE` is the source of truth for its purpose and arguments.
+
+## Version sources (single source of truth)
+
+Every version is declared once, in exactly one of three places:
+
+- toolchain (runtime, CLIs, language server): `.mise/config.toml` with `.mise/mise.lock` committed
+- libraries and CLIs resolved by the runtime's package manager: `package.json` with `package-lock.json`
+- GitHub Actions: the `uses:` references in `.github/workflows/`
+
+Dev shells, CI, and the Copilot cloud agent consume the same mise declarations, so nothing needs to be kept in sync. Discover current values by command, never from prose: `mise ls --current`, `mise tasks ls`, `mise run <task> --help`.
+
+Do not create another source of truth:
+
+- no `engines`, `.nvmrc`, `.node-version`, `.tool-versions`, or workflow `node-version:` inputs
+- no version numbers or tool inventories in README, docs, comments, or task headers — name the task instead
+- no hand edits to versions outside the documented bump procedure (see `docs/DEVELOPMENT.md`); a new repeatable tool step becomes a `.mise/tasks/` task, while one-off diagnostics use `mise exec -- <cmd>`
+
+## Agent tooling (LSP and MCP)
+
+- OpenCode: the committed LSP config points the language server at `mise run tool:lsp`; keep that as the only LSP wiring.
+- Copilot cloud agent: mise and dependencies come from `.github/workflows/copilot-setup-steps.yml`. It has no LSP client, so type diagnostics come from `mise run check:type` / `mise run check`.
+- MCP is per-client configuration. For the cloud agent it is set in repository Settings → Copilot → MCP servers, never a file. Agents may propose a server when built-in tools cannot do the job, but must hand over the exact JSON and wait for confirmation — never assume a server is active.
 
 ## Onboarding — only `mise` is required
 
 1. Install `mise`, then `mise trust` (one-time per checkout) and `mise install`.
 2. Install the pre-commit hook (one-time per checkout): `mise generate git-pre-commit --write --task=pre-commit`. Formatting is a commit precondition enforced by the hook — `mise run check` assumes a formatted tree.
 3. `mise run check` validates linting, type-checking, tests, and the bundle in parallel (canonical validation gate — keep this hard-coded). Without the hook, run `mise run check:format` first and fix with `mise run format`.
-4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the TypeScript language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`) — configure these in the agent's own global/user settings, since the repo ships no agent-specific config.
-5. Tool versions are pinned in `.mise/config.toml` (`node`, `aube`, `git-cliff`) with `.mise/mise.lock` committed; the TypeScript LSP is the workspace compiler's native server (`tsc --lsp -stdio`, `tool:lsp` alias `lsp`, no extra tool); JS libraries stay in `package.json`/`package-lock.json` (exact versions) because `src/` and `test/` import them (`lit`, `valibot`, `esbuild`, `linkedom`). Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
+4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`). OpenCode reads the committed LSP config; other agents wire the same task into their own settings. See **Agent tooling**.
+5. Versions follow the single-source contract in **Version sources**. Agent skills declared by pinned tools sync into `.agents/skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually.
 
-Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to `npx`, `node`, or `tsx`; instead create a task or expand an existing task's args. The ONLY permitted bare invocation is a one-off diagnostic `mise exec -- <cmd>` (canonical, `mise x` is alias) for parity, which must be followed by `mise run <task>` for final validation.
+Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to a bare binary; expand an existing task's args, or for a one-off diagnostic use `mise exec -- <cmd>` (canonical, `mise x` is alias) and follow it with `mise run <task>` for final validation.
 
 ## Feature-first architecture
 
@@ -117,9 +139,9 @@ Examples:
 - `test/unit/` — pure domain tests (listing, address-normalizer, location-resolver, listing-filter).
 - `test/integration/` — adapter, parser, DOM, network, bundle tests.
 - `test-src/sample/listingFeeds.xml` — concrete Buildium source-XML reference and integration-test fixture; inspect its nested XML with an editor's tree/format view. For Buildium's published XML/MITS guidance, documented active-listing date semantics, and the distinction between its documented endpoint and this repo's endpoint, see the Buildium source XML reference in `docs/DEVELOPMENT.md`. The fixture is not an exhaustive field catalog; check `XmlListingParser` separately to see which fields are mapped.
-- Tests use `node:test` (native Node runner). Discover test tasks with `mise tasks ls` (names under `test:`) and run `mise run test` for all or `mise run test:unit` / `mise run test:integration` for focused suites.
+- Tests use the runtime's native test runner. Discover test tasks with `mise tasks ls` (names under `test:`) and run `mise run test` for all or `mise run test:unit` / `mise run test:integration` for focused suites.
 - Structure tests: Arrange, Act, Assert — one observable behavior per test.
-- Integration tests importing `src/` TypeScript with runtime imports must bundle via esbuild first
+- Integration tests importing `src/` TypeScript with runtime imports must be bundled first by `mise run build`
   (`nodenext` `.js` specifiers do not resolve to `.ts` on disk); direct imports only work for
   type-only or dependency-free modules.
 
@@ -129,25 +151,20 @@ After every major architecture, behavior, or public-contract change, complete al
 declaring work done:
 
 1. Review feature ownership and dependency direction (domain purity, port ownership, adapter boundaries).
-2. Review SOLID principles and 2026 platform practices.
+2. Review SOLID principles and current platform practices — look them up in the official documentation for the pinned toolchain rather than relying on memory, and state what was checked.
 3. Assess test coverage for changed behavior; add focused tests for missing branches/edge cases.
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, `AGENTS.md` if contracts or naming change.
 5. Run `mise run check` and report results.
 
-## Branching and releases (GitHub Flow, solo)
+## Branching and releases (GitHub Flow, PR-gated)
 
-One long-lived branch (`main`, always deployable). No prefixes, no pull requests:
-cut any short kebab branch off `main`, `git rebase` onto `origin/main`, merge
-locally (squash default, fast-forward when commits stand alone), delete the branch.
-Releases are `v*` tags on `main` (no release branches); regenerate `CHANGELOG.md`
-with the tag commit. Full workflow, Pages/preview runbook, and security posture
-live in `docs/DEVELOPMENT.md`.
+One long-lived branch (`main`, always deployable). Every change reaches `main` only through a pull request: cut a short lower-case kebab branch, push it, open a PR, wait for the `check` workflow, then squash-merge. Never commit, merge, force-push, or push directly to `main`, and never create tags outside the release procedure. Agents may open and update PRs but never merge them — the repository owner merges. Releases are `v*` tags on `main` (no release branches); regenerate `CHANGELOG.md` with the tag commit. Full workflow, Pages/preview runbook, and security posture live in `docs/DEVELOPMENT.md`.
 
 ## Style and formatting
 
-- Prettier: `semi: true`, `singleQuote: true`, `trailingComma: all`, `printWidth: 100`.
+- Formatting (`semi`, `singleQuote`, `trailingComma`, `printWidth`) follows the committed config file.
 - EditorConfig: 2-space indent, LF line endings, UTF-8.
-- TypeScript: `strict`, `module: nodenext`, `target: esnext`, JSX `preserve`.
+- Compiler: `strict`, `module: nodenext`, `target: esnext`, JSX `preserve`.
 - Commit messages: Conventional Commits (`type[(scope)]: description`, lower-case
   imperative, no trailing period). Types: `feat`, `fix`, `docs`, `style`,
   `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`; `!`/`BREAKING CHANGE`
@@ -159,17 +176,17 @@ live in `docs/DEVELOPMENT.md`.
 - `.mise/config.toml` — toolchain, env, and settings (source of truth for runtimes; tasks live in `.mise/tasks/`).
 - `.mise/tasks/` — file tasks (executable scripts with `#MISE` header; preferred over inline `.mise/config.toml` tasks; hierarchies use subdirectories `ns/name` → `ns:name` with `ns/_default` for the `ns` task itself).
 - `.mise/mise.lock` — pinned toolchain versions (commit updates; managed by mise next to `.mise/config.toml`).
-- Agent integration — the repo ships no agent-specific config: any AI agent can use `mise run tool:lsp` (alias `lsp`) for the workspace TypeScript language server and `mise mcp` as an MCP server, configured in the agent's own global settings.
+- `opencode.jsonc` — OpenCode LSP wiring (`mise run tool:lsp`); other agents consume the same task from their own settings.
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
 - `src/loader.ts` — universal loader shipped as `dist/loader.js` (production default, `?preview=` snapshots).
 - `src/config/application.ts` — shared details URL, iframe variant, modal title policy.
 - `src/styles/component-styles.ts` — sole `unsafeCSS` trust boundary for component styles.
 - `src/adapters/browser-details-modal.css` — adapter-owned popover styles.
 - `public/index.html` — lean host-page example consuming `./dist/loader.js`.
-- `cliff.toml` — git-cliff changelog config (emoji groups, `v*` tags); `CHANGELOG.md` is generated.
+- `cliff.toml` — changelog config consumed by `mise run release:changelog`; `CHANGELOG.md` is generated.
 - `release:*` task namespace — tag/changelog operations (`changelog`, `preview`, `check`).
 - `preview:*` task namespace — branch preview builds (`build`, `publish`, `prune`).
-- `.github/workflows/` — `ci.yml` (push → `check`), `pages.yml` (`main` → Pages), `release.yml` (`v*` → assets).
+- `.github/workflows/` — `ci.yml` (`check` on pull requests and `main`), `copilot-setup-steps.yml` (cloud-agent toolchain), `pages.yml` (`main` → Pages), `release.yml` (`v*` → assets).
 - `public/.nojekyll` — Pages serves `dist/` maps and dotfiles verbatim.
 - `src/env.d.ts` — CSS module type declarations.
 
