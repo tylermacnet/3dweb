@@ -41,7 +41,7 @@ Do not create another source of truth:
 2. Install the pre-commit hook (one-time per checkout): `mise generate git-pre-commit --write --task=pre-commit`. Formatting is a commit precondition enforced by the hook — `mise run check` assumes a formatted tree.
 3. `mise run check` validates linting, type-checking, tests, and the bundle in parallel (canonical validation gate — keep this hard-coded). Without the hook, run `mise run check:format` first and fix with `mise run format`.
 4. Point any AI agent at this checkout: the project toolchain comes from `mise`, the language server from `mise run tool:lsp` (alias `mise run lsp`), and task/env introspection from the `mise` MCP server (`mise mcp`). OpenCode reads the committed LSP config; other agents wire the same task into their own settings. See **Agent tooling**.
-5. Versions follow the single-source contract in **Version sources**. Tool-declared agent skills sync into `.agents/tool-skills` (gitignored machine-local links) automatically after installs; `mise run tool:skills` (alias `mise run skills`) re-syncs manually. Project skills live in `.agents/skills` and are committed.
+5. Versions follow the single-source contract in **Version sources**. Skills shipped by pinned tools are committed under `.agents/tool-skills` and rebuilt with `mise run tool:skills` (alias `mise run skills`) during a toolchain bump; project skills live in `.agents/skills`. Both directories are committed, never gitignored.
 
 Direct commands are never run bare — even when no `mise` task exists, this rule still applies: do NOT fall back to a bare binary; expand an existing task's args, or for a one-off diagnostic use `mise exec -- <cmd>` (canonical, `mise x` is alias) and follow it with `mise run <task>` for final validation.
 
@@ -182,6 +182,7 @@ One long-lived branch (`main`, always deployable). Every change reaches `main` o
 - `.mise/mise.lock` — pinned toolchain versions (commit updates; managed by mise next to `.mise/config.toml`).
 - `opencode.jsonc` — OpenCode LSP wiring (`mise run tool:lsp`); other agents consume the same task from their own settings.
 - `.agents/skills/` — committed project skills: `repo-admin` (one-time repository and client setup), `git-workflow` (branch/PR/release/preview commands), `post-change` (expanded review checklist).
+- `.agents/tool-skills/` — generated from the pinned toolchain by `mise run tool:skills`; commit the rebuild with a version bump.
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
 - `src/loader.ts` — universal loader shipped as `dist/loader.js` (production default, `?preview=` snapshots).
 - `src/config/application.ts` — shared details URL, iframe variant, modal title policy.

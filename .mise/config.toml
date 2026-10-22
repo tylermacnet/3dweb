@@ -21,6 +21,9 @@ experimental = true
 exec = true
 
 [settings.skills]
+# Skills shipped by pinned tools are committed under .agents/tool-skills and
+# rebuilt by `mise run tool:skills` when the toolchain changes; nothing is
+# synced automatically, so an install never leaves machine-local links in the tree.
 dir = ".agents/tool-skills"
-auto_sync = true
+auto_sync = false
 prune = true

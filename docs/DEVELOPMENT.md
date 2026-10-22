@@ -55,16 +55,18 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
   answers `initialize` without extra environment variables).
 - Verify with `mise ls --current` (toolchain) plus your agent's own MCP/LSP status.
 - Bumping is manual and version-agnostic: change the relevant pins (`.mise/config.toml` or
-  `package.json`), run `mise install`, then `mise run check` — `[deps.install]` re-resolves the
-  JS lockfile on the next task run. Commit the lockfiles with the pins and never restate the
-  resulting versions in prose. Every workflow pins the same `mise-action` major, which installs
-  with `--locked`: a `mise.lock` out of step with `.mise/config.toml` fails CI instead of
-  silently resolving a different version.
-- Tool-declared agent skills sync into `.agents/tool-skills` automatically after
-  installs (`[settings.skills]` with `auto_sync` and `prune` in `.mise/config.toml`). The links
-  point at machine-local installs and are gitignored; run `mise run tool:skills` (alias `mise run skills`) to re-sync
-  manually, for example after changing tool versions. Project skills live in the committed
-  `.agents/skills` directory.
+  `package.json`), run `mise install`, then `mise run tool:skills` and `mise run check` —
+  `[deps.install]` re-resolves the JS lockfile on the next task run. Commit the lockfiles, the
+  regenerated `.agents/tool-skills`, and the pins together, and never restate the resulting
+  versions in prose. Every workflow pins the same `mise-action` major, which installs with
+  `--locked`: a `mise.lock` out of step with `.mise/config.toml` fails CI instead of silently
+  resolving a different version.
+- Agent skills are committed, never machine-local links. `mise run tool:skills` (alias
+  `mise run skills`) materializes the skills shipped by the pinned tools into
+  `.agents/tool-skills`; `[settings.skills]` has `auto_sync = false` so an install never writes
+  links into the tree, and `opencode.jsonc` lists that directory as a skill source. Project
+  skills live in `.agents/skills`. Neither directory is gitignored: the generated one only
+  changes when the toolchain does, so it is part of the upgrade PR.
 
 ## Agent tooling (LSP and MCP)
 
