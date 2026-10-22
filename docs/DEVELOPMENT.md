@@ -60,10 +60,11 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
   resulting versions in prose. Every workflow pins the same `mise-action` major, which installs
   with `--locked`: a `mise.lock` out of step with `.mise/config.toml` fails CI instead of
   silently resolving a different version.
-- Agent skills declared by pinned tools sync into `.agents/skills` automatically after
+- Tool-declared agent skills sync into `.agents/tool-skills` automatically after
   installs (`[settings.skills]` with `auto_sync` and `prune` in `.mise/config.toml`). The links
   point at machine-local installs and are gitignored; run `mise run tool:skills` (alias `mise run skills`) to re-sync
-  manually, for example after changing tool versions.
+  manually, for example after changing tool versions. Project skills live in the committed
+  `.agents/skills` directory.
 
 ## Agent tooling (LSP and MCP)
 

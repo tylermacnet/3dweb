@@ -56,8 +56,9 @@ gh api repos/<owner>/<repo>/copilot/cloud-agent/configuration --jq .mcp_configur
   the `mise` MCP server for task and env introspection.
 - Any other client wires the same two commands into its own user or global settings; the
   repository only ships the OpenCode config.
-- Skill sources: project skills live in `.opencode/skills/` (committed). Tool-declared skills sync
-  into `.agents/skills/` (gitignored, machine-local links) and re-sync with `mise run tool:skills`.
+- Skill sources: project skills live in `.agents/skills/` (committed, discovered by OpenCode and
+  other Agent Skills clients). Tool-declared skills sync into `.agents/tool-skills/` (gitignored,
+  machine-local links) and re-sync with `mise run tool:skills`.
 
 ## Local git
 
