@@ -29,9 +29,7 @@ jobs:
           # Branch pushes only refresh previews; production dist always builds from main.
           ref: main
       - name: Set up mise
-        uses: jdx/mise-action@v2
-      - name: Trust mise config
-        run: mise trust
+        uses: jdx/mise-action@v5
       - name: Build production bundle
         run: mise run build
       - name: Build branch previews

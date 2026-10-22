@@ -31,7 +31,7 @@ The demo host page `public/index.html` is the canonical embed example. `public/d
 
 ## Contributing
 
-GitHub Flow, PR-gated: branch, push, open a pull request, wait for the `check` workflow, then squash-merge. Full workflow lives in `docs/DEVELOPMENT.md`; agent rules in `AGENTS.md`.
+GitHub Flow, PR-gated: branch, push, open a pull request, wait for the `check` workflow, then squash-merge — never push to `main`. Full workflow lives in `docs/DEVELOPMENT.md`; agent rules in `AGENTS.md`.
 
 ```text
 mise trust            # one-time per checkout
@@ -41,6 +41,4 @@ mise run dev          # local dev host
 mise run check        # lint + type + test + build in parallel (required gate; tree must already be formatted)
 ```
 
-Branching: cut any short kebab branch off `main`, push it, open a pull request, wait for `check`, then squash-merge — never push to `main`. Releases are `v*` tags on `main`; regenerate `CHANGELOG.md` with the tag commit.
-
-Docs: `docs/DEVELOPMENT.md` (workflow, architecture, policies), `docs/STYLE_GUIDE.md` (tokens, layout, a11y), and `docs/ROADMAP.md` (deferred work).
+Docs: `docs/DEVELOPMENT.md` (workflow, architecture, releases, policies), `docs/STYLE_GUIDE.md` (tokens, layout, a11y), and `docs/ROADMAP.md` (deferred work).

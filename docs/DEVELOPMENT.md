@@ -57,7 +57,9 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
 - Bumping is manual and version-agnostic: change the relevant pins (`.mise/config.toml` or
   `package.json`), run `mise install`, then `mise run check` — `[deps.install]` re-resolves the
   JS lockfile on the next task run. Commit the lockfiles with the pins and never restate the
-  resulting versions in prose.
+  resulting versions in prose. Every workflow pins the same `mise-action` major, which installs
+  with `--locked`: a `mise.lock` out of step with `.mise/config.toml` fails CI instead of
+  silently resolving a different version.
 - Agent skills declared by pinned tools sync into `.agents/skills` automatically after
   installs (`[settings.skills]` with `auto_sync` and `prune` in `.mise/config.toml`). The links
   point at machine-local installs and are gitignored; run `mise run tool:skills` (alias `mise run skills`) to re-sync
@@ -186,11 +188,19 @@ and no `support/*`.
 
 ### Pull requests and merging
 
-`main` is protected by a repository ruleset: a PR is required, `check` must pass, and
-force-pushes/deletions are blocked (no bypass, including for the owner). Agents may open and
-update PRs but never merge them; the repository owner merges. One-time bootstrap of the
-ruleset (already applied): `gh api -X POST repos/<owner>/<repo>/rulesets --input <ruleset.json>`
-with PR, required-status-check, deletion, and non-fast-forward rules.
+`main` is protected by the checked-in ruleset `.github/rulesets/main-pr-only.json`: a PR is
+required, `check` must pass, and force-pushes/deletions are blocked (no bypass, including for
+the owner). Agents may open and update PRs but never merge them; the repository owner merges.
+The required status check is the job name `check` in `.github/workflows/ci.yml` — renaming that
+job or breaking the workflow leaves every PR unmergeable, because no bypass can force the merge
+through. Change the name only together with the ruleset.
+
+```text
+# first time
+gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main-pr-only.json
+# restore the existing ruleset (id 25660072)
+gh api -X PUT repos/<owner>/<repo>/rulesets/25660072 --input .github/rulesets/main-pr-only.json
+```
 
 Rebase onto `origin/main` before merging and never rebase `main`. The ruleset allows
 squash merges only: one conventional commit per change and a clean changelog.
@@ -211,8 +221,9 @@ Recommended one-time config: `git config pull.rebase true` and
 
 ### Tags and changelog
 
-Releases are `v*` tags on `main` (no release branches, ever). With the tag
-commit, regenerate `CHANGELOG.md` from Conventional Commits:
+Releases are `v*` tags on `main` (no release branches, ever). `main` takes changes only through a
+PR, so the changelog commit is a normal PR as well — regenerate `CHANGELOG.md` from Conventional
+Commits, merge the PR, then tag that merge commit:
 
 ```text
 mise run release:changelog

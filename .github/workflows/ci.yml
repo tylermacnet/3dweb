@@ -18,8 +18,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up mise
-        uses: jdx/mise-action@v2
-      - name: Trust mise config
-        run: mise trust
+        uses: jdx/mise-action@v5
       - name: Run checks and build
         run: mise run check
