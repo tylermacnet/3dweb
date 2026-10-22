@@ -41,7 +41,7 @@ export class AddressNormalizer {
       .map((line) => line.trim().replace(/\s+/g, ' '))
       .join('\n')
       .replace(/\b1\/2\b/g, '½')
-      .replace(/([a-z0-9])(Apt|Unit|Ste|Suite)(?=\s*\d)/gi, '$1 $2')
+      .replace(/([a-z0-9])(Apt|Unit|Ste|Suite)(?=\b|\s*\d)/gi, '$1 $2')
       .replace(/([a-z0-9])#/gi, '$1 #')
       .replace(/\b(Apt|Unit|Ste|Suite|#)\.?\s*(?=\d)/gi, '$1 ')
       .replace(/\bSt\.?(?=\s|$)/gi, 'Street')

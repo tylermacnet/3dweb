@@ -84,6 +84,20 @@ test('parses spaced dash units and inline units', () => {
   });
 });
 
+test('splits attached dotted designators before numeric units', () => {
+  assert.deepEqual(AddressNormalizer.normalize('93 Saint James StreetApt. 2'), {
+    line1: '93 Saint James Street',
+    line2: 'Apt 2',
+  });
+});
+
+test('splits attached designators before alphabetic units', () => {
+  assert.deepEqual(AddressNormalizer.normalize('12 Main StreetUnit A'), {
+    line1: '12 Main Street',
+    line2: 'Unit A',
+  });
+});
+
 // NOTE: Test removed at line 87-99. The scenario of "12 Main Street - OW"
 // being passed to AddressNormalizer is now handled upstream by XmlListingParser.
 // The parser detects when Address matches uncorrected MarketingName and extracts
