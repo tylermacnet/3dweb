@@ -118,13 +118,18 @@ add inline SVG only (no FontAwesome dep), `aria-hidden="true"`, `0.8em` /
 existing pin. Keep `listing-card.css` as owner; do not load a global icon
 font. Revisit `docs/STYLE_GUIDE.md` card hierarchy when adopted.
 
-## Deferred: multi-user collaboration hardening
+## Hardening before granting write access
 
-`main` is PR-gated (required `check`, no force-push/delete) but the repository is still
-single-owner: no preview allowlist/manifest, no preview badge, no CODEOWNERS review. If
-collaborators arrive, re-harden before onboarding them: gate preview publishing to
-maintainer-approved refs (manifest allowlist, no fork auto-build), add a visible preview
-indicator, require CODEOWNERS review, and revisit the `?preview=` same-origin assumptions
-in `docs/DEVELOPMENT.md`.
+`main` is PR-gated (required `check`, no force-push/delete) but the repository is not yet hardened
+for untrusted contributors:
+
+- No preview allowlist/manifest and no visible preview badge; preview publishing trusts every branch
+  push in this repository.
+- Fork PRs run workflow code after maintainer approval; add fork-PR build controls before accepting
+  drive-by patches.
+- The ruleset requires zero approvals, so review is policy rather than enforcement. Add CODEOWNERS
+  and a required reviewer once a second maintainer exists.
+- Revisit the `?preview=` same-origin assumptions in `docs/DEVELOPMENT.md` when preview gating
+  changes.
 
 For the full command reference and architecture constraints, see `AGENTS.md`.

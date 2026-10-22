@@ -33,7 +33,7 @@ Do not create another source of truth:
 
 - OpenCode: the committed LSP config points the language server at `mise run tool:lsp`; keep that as the only LSP wiring.
 - Copilot cloud agent: mise and dependencies come from `.github/workflows/copilot-setup-steps.yml`. It has no LSP client, so type diagnostics come from `mise run check:type` / `mise run check`.
-- MCP is per-client configuration. For the cloud agent it is set in repository Settings → Copilot → MCP servers, never a file. Agents may propose a server when built-in tools cannot do the job, but must hand over the exact JSON and wait for confirmation — never assume a server is active.
+- MCP is per-client configuration. For the cloud agent it is set in repository Settings → Copilot → MCP servers, never a file. Agents may propose a server when built-in tools cannot do the job, but must hand over the exact JSON and wait for confirmation — never assume a server is active. One-time repository and client setup, including that exact JSON, is the `repo-admin` skill.
 
 ## Onboarding — only `mise` is required
 
@@ -157,9 +157,12 @@ declaring work done:
 4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, `AGENTS.md` if contracts or naming change.
 5. Run `mise run check` and report results.
 
+Load the `post-change` skill for the expanded checklist when the client supports skills; the steps
+above stay authoritative for clients that cannot.
+
 ## Branching and releases (GitHub Flow, PR-gated)
 
-One long-lived branch (`main`, always deployable). Every change reaches `main` only through a pull request: cut a short lower-case kebab branch, push it, open a PR, wait for the `check` workflow, then squash-merge. Never commit, merge, force-push, or push directly to `main`, and never create tags outside the release procedure. Agents may open and update PRs but never merge them — the repository owner merges. Releases are `v*` tags on the merge commit of a changelog PR (no release branches). Full workflow, Pages/preview runbook, and security posture live in `docs/DEVELOPMENT.md`.
+One long-lived branch (`main`, always deployable). Every change reaches `main` only through a pull request: cut a short lower-case kebab branch, push it, open a PR, wait for the `check` workflow, then squash-merge. Never commit, merge, force-push, or push directly to `main`, and never create tags outside the release procedure. Agents may open and update PRs but never merge them — a maintainer who is not the author merges. Releases are `v*` tags on the merge commit of a changelog PR (no release branches). Full workflow, Pages/preview runbook, and security posture live in `docs/DEVELOPMENT.md`; the branch/PR/release commands are the `git-workflow` skill.
 
 ## Style and formatting
 
@@ -178,6 +181,7 @@ One long-lived branch (`main`, always deployable). Every change reaches `main` o
 - `.mise/tasks/` — file tasks (executable scripts with `#MISE` header; preferred over inline `.mise/config.toml` tasks; hierarchies use subdirectories `ns/name` → `ns:name` with `ns/_default` for the `ns` task itself).
 - `.mise/mise.lock` — pinned toolchain versions (commit updates; managed by mise next to `.mise/config.toml`).
 - `opencode.jsonc` — OpenCode LSP wiring (`mise run tool:lsp`); other agents consume the same task from their own settings.
+- `.opencode/skills/` — committed project skills: `repo-admin` (one-time repository and client setup), `git-workflow` (branch/PR/release/preview commands), `post-change` (expanded review checklist).
 - `src/index.tsx` — bundle entry, single entrypoint registering all public elements.
 - `src/loader.ts` — universal loader shipped as `dist/loader.js` (production default, `?preview=` snapshots).
 - `src/config/application.ts` — shared details URL, iframe variant, modal title policy.

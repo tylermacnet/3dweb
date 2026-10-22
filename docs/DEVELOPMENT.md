@@ -41,15 +41,15 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
   `package-lock.json` as the JS pinning source.
 - The language server is the workspace compiler's native server, launched
   via `mise run tool:lsp` (alias `mise run lsp`); point any
-  agent's LSP client at that command. Only the `typescript`
-  server is enabled; lint/type diagnostics come from `mise run check:lint` / `mise run check:type`.
+  agent's LSP client at that command. The `typescript` entry is the only
+  server `opencode.jsonc` configures; lint/type diagnostics come from `mise run check:lint` / `mise run check:type`.
   (`typescript-language-server` cannot be used: it wraps the classic `tsserver.js`,
   which the pinned compiler no longer ships. Verified live: pull diagnostics report TS2322
   and hover resolves symbols; push `publishDiagnostics` was not observed, so the agent
   loop still prefers the `lint`/`type` tasks for diagnostics.)
 - OpenCode gets this wiring from the committed `opencode.jsonc`. Any agent can also use the
-  `mise` MCP server (`mise mcp`, `type: local`) from its own configuration; see
-  [Agent tooling](#agent-tooling) for the cloud-agent setup.
+  `mise` MCP server (`mise mcp`, `type: local`) from its own configuration; the one-time
+  cloud-agent and client setup lives in the `repo-admin` skill.
   No `.mise/config.toml` change was needed: the server is built into the pinned mise binary
   and `[settings] experimental = true` already enables it (verified: `mise mcp`
   answers `initialize` without extra environment variables).
@@ -68,20 +68,9 @@ Direct commands are never run bare — even when no `mise` task exists, this rul
 ## Agent tooling (LSP and MCP)
 
 - OpenCode: the committed `opencode.jsonc` launches `mise run tool:lsp` for `.ts`/`.tsx`; keep it as the only LSP wiring.
-- Copilot cloud agent: mise and dependencies are installed by `.github/workflows/copilot-setup-steps.yml`, which also runs `mise trust`. It has no LSP client — type feedback comes from `mise run check:type` / `mise run check`.
-- Cloud-agent MCP is configured in repository Settings → Copilot → MCP servers, never in a file. Suggested entry:
-
-```json
-{
-  "mcpServers": { "mise": { "type": "local", "command": "mise", "args": ["mcp"], "tools": ["*"] } }
-}
-```
-
-Verify the applied value:
-
-```text
-gh api repos/<owner>/<repo>/copilot/cloud-agent/configuration --jq .mcp_configuration
-```
+- Copilot cloud agent: mise and dependencies come from `.github/workflows/copilot-setup-steps.yml`. It has no LSP client — type feedback comes from `mise run check:type` / `mise run check`.
+- MCP is per-client configuration, never a repository file. The one-time cloud-agent entry, its
+  verification command, and the rest of the repository setup live in the `repo-admin` skill.
 
 Formatting and lint tasks default to the whole repository when no paths are provided. Prefer targeted paths during iterative development, for example:
 
@@ -189,51 +178,24 @@ and no `support/*`.
 ### Pull requests and merging
 
 `main` is protected by the checked-in ruleset `.github/rulesets/main-pr-only.json`: a PR is
-required, `check` must pass, and force-pushes/deletions are blocked (no bypass, including for
-the owner). Agents may open and update PRs but never merge them; the repository owner merges.
-The required status check is the job name `check` in `.github/workflows/ci.yml` — renaming that
-job or breaking the workflow leaves every PR unmergeable, because no bypass can force the merge
-through. Change the name only together with the ruleset.
+required, `check` must pass, and force-pushes/deletions are blocked (no bypass). Agents may open
+and update PRs but never merge them; a maintainer who is not the author merges. The required
+status check is the job name `check` in `.github/workflows/ci.yml` — renaming that job or breaking
+the workflow leaves every PR unmergeable, because no bypass can force the merge through. Change
+the name only together with the ruleset.
 
-```text
-# first time
-gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main-pr-only.json
-# restore the existing ruleset (id 25660072)
-gh api -X PUT repos/<owner>/<repo>/rulesets/25660072 --input .github/rulesets/main-pr-only.json
-```
-
-Rebase onto `origin/main` before merging and never rebase `main`. The ruleset allows
-squash merges only: one conventional commit per change and a clean changelog.
-
-```text
-git fetch origin
-git switch -c <branch>
-# ...commit...
-mise run check && git push -u origin <branch>
-gh pr create --fill
-gh pr checks --watch
-# the owner merges the PR (squash), then:
-git switch main && git pull --ff-only && git branch -d <branch>
-```
-
-Recommended one-time config: `git config pull.rebase true` and
-`git config fetch.prune true`.
+Rebase onto `origin/main` before merging and never rebase `main`. The ruleset allows squash merges
+only: one conventional commit per change and a clean changelog. The branch, PR, merge, release, and
+preview commands live in the `git-workflow` skill; the rules above are the contract.
 
 ### Tags and changelog
 
 Releases are `v*` tags on `main` (no release branches, ever). `main` takes changes only through a
-PR, so the changelog commit is a normal PR as well — regenerate `CHANGELOG.md` from Conventional
-Commits, merge the PR, then tag that merge commit:
-
-```text
-mise run release:changelog
-mise run release:preview   # dry-run of unreleased entries, no files written
-mise run release:check     # fail when unmerged commits are non-conventional
-```
-
-`cliff.toml` (emoji groups, `tag_pattern = "v[0-9]*"`) is the changelog source
-of truth; `CHANGELOG.md` is committed. (`release:*` = tag/changelog operations,
-not branches.)
+PR, so the changelog commit is a normal PR as well: regenerate `CHANGELOG.md` from Conventional
+Commits, merge the PR, then tag that merge commit. `cliff.toml` (emoji groups,
+`tag_pattern = "v[0-9]*"`) is the changelog source of truth and `CHANGELOG.md` is committed; the
+commands are in the `git-workflow` skill and discoverable with `mise tasks ls` (`release:*` = tag
+and changelog operations, not branches).
 
 ### Pages (cross-domain embeds)
 
@@ -302,16 +264,26 @@ is always `main`. Removing the param exits preview.
 
 ## Security posture
 
-Single-user repository (`tylermacnet` personal account; only the owner merges).
-`main` is PR-gated by a ruleset (required `check`, no force-push/delete, owner merge only).
-Accepted trade-offs, valid only while that holds:
+Trust model: only maintainers have write access, and the PR gate means every ref `pages.yml`
+publishes comes from a reviewed push. Outside contributors arrive through fork PRs, which cannot
+publish Pages previews (preview publishing only builds branches in this repository) and do not run
+workflow code until a maintainer approves the run.
 
-- No preview allowlist/manifest and no preview badge: the pinned same-origin
-  base plus the flat-ref pattern plus production fallback are sufficient because
-  no untrusted party can publish a preview ref. Preview state is signalled by
+Controls in place:
+
+- `main` is PR-gated by the checked-in ruleset: required `check`, squash-only, no force-push or
+  deletion, no bypass. Review by a person other than the author is policy rather than enforcement —
+  the ruleset requires zero approvals so a lone maintainer is not blocked.
+- Preview refs are same-origin by construction: the flat-ref pattern (`/` becomes `-`), the
+  same-origin base, and the production fallback. Preview state is signalled by
   `document.documentElement.dataset.preview` + one `console.info` line only.
-- Re-harden when collaborators arrive: preview manifest gating, visible badge,
-  fork-PR build controls, and required CODEOWNERS review (see `docs/ROADMAP.md`).
+- Agent configuration is reviewed like code: `opencode.jsonc` and the project skills are committed,
+  and per-client MCP entries live in settings rather than the tree.
+
+Open gaps before granting write access to someone you do not fully trust: no preview
+allowlist/manifest and no visible preview badge, no fork-PR build controls beyond GitHub's
+first-time-contributor approval, and no CODEOWNERS or required-reviewer rule. Tracked in
+`docs/ROADMAP.md`.
 
 ## Commit messages
 
@@ -328,23 +300,13 @@ Squash merges are the enforcement point — one good message per merge;
 
 ## Mandatory post-change process
 
-After every major architecture, behavior, or public-contract change, do not declare the work
-complete until this review is performed:
-
-1. Review feature ownership and dependency direction; confirm domain purity, port ownership,
-   adapter boundaries, and component responsibilities remain intact.
-2. Review the change against SOLID principles and current platform practices (look them up in
-   the official documentation for the pinned toolchain rather than relying on memory), recording
-   or fixing any new coupling, duplicated business rule, unsafe browser behavior, accessibility
-   gap, or type-safety issue.
-3. Assess test coverage for the changed behavior and boundaries; add focused tests for missing
-   branches, edge cases, regressions, and integration contracts.
-4. Synchronize `docs/DEVELOPMENT.md`, `docs/STYLE_GUIDE.md`, `docs/ROADMAP.md`, and `AGENTS.md` when
-   architecture, contracts, naming, workflow, or user-facing behavior changes.
-5. Run the repository validation commands listed below and report their results in the handoff.
-
-Targeted validation is useful during implementation, but it does not replace this process review.
-If any review step is incomplete, the change remains incomplete even when all commands pass.
+After every major architecture, behavior, or public-contract change, do not declare the work done
+until the change has been reviewed for ownership and dependency direction, checked against current
+platform documentation, covered by tests for new branches and edge cases, synchronized across the
+docs and skills, and validated with `mise run check`. The expanded checklist is the `post-change`
+skill; `AGENTS.md` carries the same rule for agents that cannot load skills. A passing build does
+not replace the review, and targeted validation during implementation does not replace the full
+gate.
 
 ## Architecture workflow
 
