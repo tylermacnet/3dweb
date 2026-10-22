@@ -35,7 +35,7 @@ GitHub Flow, PR-gated: branch, push, open a pull request, wait for the `check` w
 
 ```text
 mise trust            # one-time per checkout
-mise install          # toolchain + deps
+mise install          # toolchain (deps install automatically before tasks)
 mise generate git-pre-commit --write --task=pre-commit  # one-time per checkout
 mise run dev          # local dev host
 mise run check        # lint + type + test + build in parallel (required gate; tree must already be formatted)
