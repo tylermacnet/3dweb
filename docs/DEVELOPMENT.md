@@ -112,11 +112,8 @@ The demo page loads `./dist/loader.js`, the universal loader shipped from
 the production bundle or a `?preview=<ref>` snapshot; see
 [Previews (`?preview=`)](#previews-preview) below.
 
-`public/dev.html` is the internal dev host with the static sample inlined for
-`file://` use. It is always generated, never committed: committed source is
-`public/dev.template.html` (empty sample block) and `build` injects the current
-`test-src/sample/listingFeeds.xml` atomically. Run `mise run build` (or `check`)
-to regenerate it after cloning.
+`public/dist/` bundles are the generated artifacts for the dev host, rebuilt
+from `src/` on every `build`. They are never committed.
 
 ### Buildium source XML reference
 
@@ -130,32 +127,31 @@ configured start and end dates. For MITS context, see the
 does not enumerate XML fields or required/optional cardinality; do not infer those constraints
 from its summary.
 
-Use [`test-src/sample/listingFeeds.xml`](../test-src/sample/listingFeeds.xml) as the repository's
-concrete reference for the Buildium listing-feed XML structure. Open it in an editor with XML
-formatting/tree support to inspect nested elements; the fixture is largely minified, so avoid
-reformatting the committed fixture just to read it. Its root is `PhysicalProperty`, with listing
-data nested under `Property` (including `PropertyID`, `ILS_Identification`, `Information`, and
-`Floorplan`), followed by root-level `CustomRecords`. The fixture shows real feed element and
-attribute names, including values such as `ILS_IdentificationType`, rent under `EffectiveRent`,
-and per-unit `AvailabilityDate` custom records joined by property and unit IDs.
+Use [`sample/mits-3.0.xsd`](../sample/mits-3.0.xsd) as the repository's
+structural reference for the Buildium listing-feed XML. The schema documents
+the elements and attributes `XmlListingParser` reads. Its root is
+`PhysicalProperty`, with listing data nested under `Property` (including
+`PropertyID`, `ILS_Identification`, `Information`, and `Floorplan`), followed
+by root-level `CustomRecords`.
 
-The sample demonstrates this repository's feed, not every MITS 3.0 field or every Buildium
-variation. Buildium's article documents `XMLRentals.ashx`, while this application currently fetches
-ManageBuilding's `/resident/api/public/listingFeeds` endpoint
-(`src/adapters/managebuilding-feed.ts`); do not assume these endpoints have identical payloads.
-When adding or relying on a field, verify its meaning and constraints against the MITS
-Property Marketing 3.0 schema, inspect the actual configured feed/sample, and trace whether
-`XmlListingParser` maps it into the domain listing. A field's absence from the UI or domain model
-does not imply it is absent from the source. Use focused parser integration tests for newly mapped
+The schema documents the vendor feed structure, not every MITS 3.0 field or
+every Buildium variation. Buildium's article documents `XMLRentals.ashx`,
+while this application currently fetches ManageBuilding's
+`/resident/api/public/listingFeeds` endpoint
+(`src/adapters/managebuilding-feed.ts`); do not assume these endpoints have
+identical payloads. When adding or relying on a field, verify its meaning and
+constraints against the MITS Property Marketing 3.0 schema, inspect the actual
+configured feed, and trace whether `XmlListingParser` maps it into the domain
+listing. A field's absence from the UI or domain model does not imply it is
+absent from the source. Use focused parser integration tests for newly mapped
 fields and custom-record associations.
 
 For this read-only consumer view, a property needs only a valid, non-empty Buildium listing ID to
 appear. The canonical source is the `listingId` query parameter of that record's
 `FloorplanAvailabilityURL`; extract and validate that URL parameter rather than inferring the
-Buildium link ID from an `Identification/IDValue`. The sample's first record has `listingId=89584`
-in its URL, while its property identifiers are `25089`. The floorplan's own `Identification/IDValue`
-also happens to be `89584` in that record, but this sample-level coincidence is not the canonical
-mapping. The configured feed sample contains a `FloorplanAvailabilityURL` with a `listingId`
+Buildium link ID from an `Identification/IDValue`. The floorplan's `Identification/IDValue`
+may coincide with the URL `listingId` in some records, but this coincidence is not the canonical
+mapping. The configured feed contains a `FloorplanAvailabilityURL` with a `listingId`
 parameter for each listing record; continue treating the URL parameter as the source of truth.
 
 Parse each `<Property>` independently; skip a record only when its listing ID is missing or
@@ -165,9 +161,9 @@ empty rather than inventing a value. Do not reject a listing or show partial-res
 optional fields are absent or invalid. Malformed feed-level XML remains a recoverable feed error
 because records cannot be read reliably.
 
-The sample's root-level `CustomRecords` include `AvailabilityDate` values keyed by
-`PropertyIDValue` and `UnitIDValue`. Associate them by those identifiers, not XML position, and
-use the structured date rather than description text. Buildium's active-listing rule (today between
+Root-level `CustomRecords` include `AvailabilityDate` values keyed by
+`PropertyIDValue` and `UnitIDValue`. Associate them by those identifiers, not
+XML position, and use the structured date rather than description text. Buildium's active-listing rule (today between
 the unit's configured start/end dates) is distinct from the unit's `AvailabilityDate`.
 The supported sort dimensions are price and availability date only; price can be ordered either
 direction and availability is ordered soonest first. Filtering and sorting are separate operations;
@@ -377,10 +373,8 @@ At build/commit/CI time, never move forward past a preventable problem: tasks
 use `set -e`, missing inputs are hard errors naming the file (never silent
 skips), multi-step writes publish atomically (temp + rename) so a failed run
 leaves no partial output, the `pre-commit` hook blocks unformatted commits, and
-red CI blocks merges. Generated outputs derive deterministically from committed
-inputs and are never committed: `public/dev.html` is rebuilt from
-`public/dev.template.html` plus `test-src/sample/listingFeeds.xml` on every
-`build`.
+red CI blocks merges. Generated outputs derive deterministically from committed inputs and are never
+committed: `public/dist/` bundles are rebuilt from `src/` on every `build`.
 
 At runtime, the embed must never break its host: degrade to working fallbacks
 instead of throwing. Cards keep default navigation when no modal is wired or

@@ -7,4 +7,8 @@
     },
   },
   "skills": [".agents/tool-skills"],
+  "promptPayload": {
+    "indexIgnores": ["sample/"],
+    "description": "Directories for OpenCode to reduce/prioritize-index on load; keeps TPM low for Google AI Studio free tier",
+  },
 }

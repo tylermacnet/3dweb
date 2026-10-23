@@ -5,33 +5,3 @@ npx --no-install esbuild src/index.tsx --bundle --format=iife --target=es2022 --
 npx --no-install esbuild src/index.tsx --bundle --format=esm --target=es2022 --loader:.css=text --sourcemap --outfile=public/dist/bundle.esm.js
 # Universal loader (dependency-free; any site embeds dist/loader.js directly).
 npx --no-install esbuild src/loader.ts --bundle --format=iife --target=es2022 --sourcemap --outfile=public/dist/loader.js
-# Build-time inlined sample for file:// dev host (public/dev.html).
-# The dev host is always generated from the committed `public/dev.template.html`
-# plus the current sample feed — never commit the output. Fail fast on missing
-# inputs and publish atomically so a failed run leaves no partial file behind.
-template="public/dev.template.html"
-sample="test-src/sample/listingFeeds.xml"
-out="public/dev.html"
-tmp="$out.tmp"
-trap 'rm -f "$tmp"' EXIT
-if [ ! -f "$template" ]; then
-  printf 'missing dev host template: %s\n' "$template" >&2
-  exit 1
-fi
-if [ ! -f "$sample" ]; then
-  printf 'missing dev sample feed: %s\n' "$sample" >&2
-  exit 1
-fi
-node -e "
-  import {readFile, writeFile, rename} from 'node:fs/promises';
-  const xml = await readFile('$sample','utf8');
-  const safe = xml.replace(/<\/script>/gi, '<\\/script>');
-  const html = await readFile('$template','utf8');
-  const count = (html.match(/<script id=\"dev-sample-xml\"[^>]*>/g) || []).length;
-  if (count !== 1) throw new Error('dev template must contain exactly one dev-sample-xml block');
-  const out = html.replace(/<script id=\"dev-sample-xml\"[^>]*>[\s\S]*?<\/script>/, '<script id=\"dev-sample-xml\" type=\"text\/xml\">' + safe + '<\/script>');
-  await writeFile('$tmp', out);
-  await rename('$tmp', '$out');
-"
-# Keep the generated output prettier-stable for local serving.
-npx --no-install prettier --write "$out"
