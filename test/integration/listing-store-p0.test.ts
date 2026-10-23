@@ -166,3 +166,201 @@ test('P0.2: last-host abort resets loading to idle and remount recovers', async 
   assert.equal((store.loadState as { kind: string }).kind, 'ready');
   clearListingStore(doc);
 });
+
+test('P0.3: allListings returns cached reference on repeated calls', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const first = store.allListings;
+  const second = store.allListings;
+  const third = store.allListings;
+  assert.equal(first, second);
+  assert.equal(second, third);
+
+  clearListingStore(doc);
+});
+
+test('P0.4: allListings cache invalidated when feed changes', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const before = store.allListings;
+
+  const sample2: Listing[] = [
+    {
+      ...sample[0],
+      id: '2',
+      rent: 2000,
+    },
+  ];
+  store.setFeed({ getListings: async () => sample2 } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const after = store.allListings;
+  assert.notEqual(before, after);
+  assert.equal(after.length, 1);
+  assert.equal(after[0]?.id, '2');
+
+  clearListingStore(doc);
+});
+
+test('P0.5: visibleListings returns cached reference on repeated calls', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  store.setFilters({});
+  const first = store.visibleListings;
+  const second = store.visibleListings;
+  assert.equal(first, second);
+
+  clearListingStore(doc);
+});
+
+test('P0.6: visibleListings cache invalidated when criteria change', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const all = store.allListings;
+  store.setFilters({ regionId: 'OTHER' });
+  const filtered = store.visibleListings;
+  assert.notEqual(all, filtered);
+  assert.equal(filtered.length, 0);
+
+  store.setFilters({});
+  const again = store.visibleListings;
+  assert.equal(again.length, 1);
+
+  clearListingStore(doc);
+});
+
+test('P0.7: locationGroups returns cached reference on repeated calls', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const first = store.locationGroups;
+  const second = store.locationGroups;
+  assert.equal(first, second);
+
+  clearListingStore(doc);
+});
+
+test('P0.8: priceBounds returns computed bounds on first call (not null)', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const bounds = store.priceBounds;
+  assert.notEqual(bounds, null);
+  assert.equal(bounds?.min, 1000);
+  assert.equal(bounds?.max, 1000);
+
+  clearListingStore(doc);
+});
+
+test('P0.9: priceBounds returns null when no listings have positive rent', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  const noRent: Listing[] = [
+    {
+      ...sample[0],
+      id: 'free',
+      rent: null,
+    },
+  ];
+  store.setFeed({ getListings: async () => noRent } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const bounds = store.priceBounds;
+  assert.equal(bounds, null);
+
+  clearListingStore(doc);
+});
+
+test('P0.10: priceBounds cache invalidated after listings change', async () => {
+  installGlobals();
+  const { getListingStore, clearListingStore } = await bundleStore();
+  const doc = globalThis.document;
+  clearListingStore(doc);
+
+  const store = getListingStore(doc);
+  store.setFeed({ getListings: async () => sample } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const before = store.priceBounds;
+  assert.equal(before?.min, 1000);
+
+  const expensive: Listing[] = [
+    {
+      ...sample[0],
+      id: 'pricey',
+      rent: 5000,
+    },
+  ];
+  store.setFeed({ getListings: async () => expensive } as never);
+  for (let i = 0; i < 50 && (store.loadState as { kind: string }).kind !== 'ready'; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  const after = store.priceBounds;
+  assert.equal(after?.min, 5000);
+  assert.equal(after?.max, 5000);
+
+  clearListingStore(doc);
+});
