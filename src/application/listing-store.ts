@@ -56,7 +56,7 @@ export class ListingStore {
   private _cachedCriteria: ListingFilterOptions | null = null;
   private _cachedVisibleListings: Listing[] | null = null;
   private _cachedLocationGroups: ListingLocationGroup[] | null = null;
-  private _cachedPriceBounds: { min: number; max: number } | null = null;
+  private _cachedPriceBounds: { min: number; max: number } | null | undefined = undefined;
 
   private notify(): void {
     for (const host of this.hosts) host.requestUpdate();
@@ -67,7 +67,7 @@ export class ListingStore {
     this._cachedCriteria = null;
     this._cachedVisibleListings = null;
     this._cachedLocationGroups = null;
-    this._cachedPriceBounds = null;
+    this._cachedPriceBounds = undefined;
   }
 
   subscribe(host: ReactiveControllerHost): void {
