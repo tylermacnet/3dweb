@@ -323,8 +323,7 @@ legacy organization, not the target for new or incrementally migrated feature wo
 - Keep domain modules free of Lit, DOM APIs, `fetch`, `DOMParser`, and browser globals.
 - `ListingStore` (currently `src/application/listing-store.ts`, per-`Document` lazy singleton via
   `WeakMap`) owns feed loading, request cancellation, load state, filter criteria, and derived
-  visible listings/location groups/price bounds. `ListingFeedLoader`/`ListingFilterStore` are
-  deprecated legacy implementations kept for tests.
+  visible listings/location groups/price bounds.
 - Application code depends on narrow capability ports rather than concrete adapters.
 - Keep Lit custom elements presentational; they do not fetch feeds or implement business rules.
 - There is no root component. The single bundle entry (`src/index.tsx`) registers

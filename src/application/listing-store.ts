@@ -28,6 +28,16 @@ function priceBounds(listings: readonly Listing[]): { min: number; max: number }
   return { min: Math.floor(rawMin / 100) * 100, max: Math.ceil(rawMax / 100) * 100 };
 }
 
+function shallowEqual(a: ListingFilterOptions, b: ListingFilterOptions): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key as keyof ListingFilterOptions] !== b[key as keyof ListingFilterOptions]) return false;
+  }
+  return true;
+}
+
 /**
  * Browser-level lazy singleton per Document.
  * Holds fetched/parsed listings, filter criteria, and derived visible sets.
@@ -41,8 +51,23 @@ export class ListingStore {
   private _loadState: ListingLoadState = { kind: 'idle' };
   private _criteria: ListingFilterOptions = {};
 
+  // Memoized derived values, invalidated when listings or criteria change.
+  private _cachedListings: readonly Listing[] | null = null;
+  private _cachedCriteria: ListingFilterOptions | null = null;
+  private _cachedVisibleListings: Listing[] | null = null;
+  private _cachedLocationGroups: ListingLocationGroup[] | null = null;
+  private _cachedPriceBounds: { min: number; max: number } | null = null;
+
   private notify(): void {
     for (const host of this.hosts) host.requestUpdate();
+  }
+
+  private invalidateCache(): void {
+    this._cachedListings = null;
+    this._cachedCriteria = null;
+    this._cachedVisibleListings = null;
+    this._cachedLocationGroups = null;
+    this._cachedPriceBounds = null;
   }
 
   subscribe(host: ReactiveControllerHost): void {
@@ -66,21 +91,45 @@ export class ListingStore {
   }
 
   get allListings(): readonly Listing[] {
-    return this._loadState.kind === 'ready' ? this._loadState.listings : [];
+    if (this._cachedListings) return this._cachedListings;
+    const listings = this._loadState.kind === 'ready' ? this._loadState.listings : [];
+    this._cachedListings = listings;
+    return listings;
   }
 
   get visibleListings(): readonly Listing[] {
-    return [...filterListings(this.allListings, this._criteria, LISTING_FILTER_CONFIG)].sort(
-      (a, b) => (b.rent ?? -Infinity) - (a.rent ?? -Infinity),
-    );
+    if (
+      this._cachedVisibleListings &&
+      this._cachedCriteria &&
+      shallowEqual(this._cachedCriteria, this._criteria) &&
+      this._cachedListings === this.allListings
+    ) {
+      return this._cachedVisibleListings;
+    }
+    const visible = [
+      ...filterListings(this.allListings, this._criteria, LISTING_FILTER_CONFIG),
+    ].sort((a, b) => (b.rent ?? -Infinity) - (a.rent ?? -Infinity));
+    this._cachedVisibleListings = visible;
+    this._cachedCriteria = { ...this._criteria };
+    return visible;
   }
 
   get locationGroups(): readonly ListingLocationGroup[] {
-    return getListingLocationGroups(this.allListings);
+    if (this._cachedLocationGroups && this._cachedListings === this.allListings) {
+      return this._cachedLocationGroups;
+    }
+    const groups = getListingLocationGroups(this.allListings);
+    this._cachedLocationGroups = groups;
+    return groups;
   }
 
   get priceBounds(): { min: number; max: number } | null {
-    return priceBounds(this.allListings);
+    if (this._cachedPriceBounds !== undefined && this._cachedListings === this.allListings) {
+      return this._cachedPriceBounds;
+    }
+    const bounds = priceBounds(this.allListings);
+    this._cachedPriceBounds = bounds;
+    return bounds;
   }
 
   get visibleCount(): number {
@@ -101,17 +150,20 @@ export class ListingStore {
     this.requestController = undefined;
     this._loadState = { kind: 'idle' };
     this.feed = feed;
+    this.invalidateCache();
     this.notify();
     if (feed) void this.load();
   }
 
   setFilters(options: ListingFilterOptions): void {
     this._criteria = { ...options };
+    this.invalidateCache();
     this.notify();
   }
 
   clearFilters(): void {
     this._criteria = {};
+    this.invalidateCache();
     this.notify();
   }
 
@@ -126,12 +178,14 @@ export class ListingStore {
       const listings = await this.feed.getListings(requestController.signal);
       if (requestController.signal.aborted || this.requestController !== requestController) return;
       this._loadState = listings.length > 0 ? { kind: 'ready', listings } : { kind: 'empty' };
+      this.invalidateCache();
     } catch (error) {
       if (requestController.signal.aborted || this.requestController !== requestController) return;
       this._loadState = {
         kind: 'error',
         message: error instanceof Error ? error.message : 'Unable to load listings.',
       };
+      this.invalidateCache();
     }
     this.notify();
   }
