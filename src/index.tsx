@@ -14,7 +14,7 @@ import type { PropertyListings } from './components/property-listings.js';
 import type { ListingGrid } from './components/listing-grid.js';
 
 // Public config re-exports — bundle is the source of truth post-build.
-// Hosts (including `public/index.html`/`dev.html`) import from the built
+// Hosts (including `public/index.html`) import from the built
 // artifact, not from `src/`; external sites load `bundle.js` classic
 // (no CORS) or `bundle.esm.js` via `type="module"` + CORS.
 import { NEW_BRUNSWICK_REGIONS as _REGIONS } from './config/regions.js';
@@ -48,8 +48,8 @@ export {
   _hideNavVariantOf as hideNavVariantOf,
   _resolveDetailsIframeUrl as resolveDetailsIframeUrl,
 };
-// Dev-only re-exports for the generated `public/dev.html` static-sample preview (UIX).
-// Not part of external `bundle.js` classic embed; used only by dev host.
+// Dev-only re-exports available via ESM for debugging/inspection.
+// Not part of the external `bundle.js` classic embed contract.
 export { XmlListingParser } from './adapters/xml-listing-parser.js';
 export { ManageBuildingFeed } from './adapters/managebuilding-feed.js';
 export { LocationResolver } from './domain/location-resolver.js';

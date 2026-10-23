@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  XML Schema for Buildium MITS Property Marketing 3.0 listing feeds.
+
+  This schema documents the structure of the XML feed supplied by
+  Buildium's MITS 3.0 endpoint. It defines the elements and attributes
+  that XmlListingParser reads, plus the surrounding feed envelope.
+
+  See docs/DEVELOPMENT.md for the Buildium source XML reference and the
+  distinction between MITS 3.0 element names and this repo's domain model.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ================= Root ================= -->
+
+  <xs:element name="PhysicalProperty">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Property" maxOccurs="unbounded"/>
+        <xs:element ref="CustomRecords" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Property ================= -->
+
+  <xs:element name="Property">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identification"/>
+        <xs:element ref="PropertyID"/>
+        <xs:element ref="General_ID" minOccurs="0"/>
+        <xs:element ref="ILS_Identification" minOccurs="0"/>
+        <xs:element ref="Information" minOccurs="0"/>
+        <xs:element ref="Amenity" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="Policy" minOccurs="0"/>
+        <xs:element ref="Floorplan" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Identification ================= -->
+
+  <xs:element name="Identification">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="IDValue" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= PropertyID ================= -->
+
+  <xs:element name="PropertyID">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identification" minOccurs="0"/>
+        <xs:element name="MarketingName" type="xs:string" minOccurs="0"/>
+        <xs:element ref="Address" minOccurs="0"/>
+        <xs:element ref="Phone" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Address ================= -->
+
+  <xs:element name="Address">
+    <xs:complexType>
+      <xs:attribute name="AddressType" type="xs:string" use="optional"/>
+      <xs:sequence>
+        <xs:element name="Address" type="xs:string" minOccurs="0"/>
+        <xs:element name="Unit" type="xs:string" minOccurs="0"/>
+        <xs:element name="UnitNumber" type="xs:string" minOccurs="0"/>
+        <xs:element name="City" type="xs:string" minOccurs="0"/>
+        <xs:element name="State" type="xs:string" minOccurs="0"/>
+        <xs:element name="PostalCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="Email" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Phone ================= -->
+
+  <xs:element name="Phone">
+    <xs:complexType>
+      <xs:attribute name="PhoneType" type="xs:string" use="optional"/>
+      <xs:sequence>
+        <xs:element name="PhoneDescription" type="xs:string" minOccurs="0"/>
+        <xs:element name="PhoneNumber" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= General_ID ================= -->
+
+  <xs:element name="General_ID">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identification" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= ILS_Identification ================= -->
+
+  <xs:element name="ILS_Identification">
+    <xs:complexType>
+      <xs:attribute name="ILS_IdentificationType" type="xs:string" use="optional"/>
+      <xs:attribute name="RentalType" type="xs:string" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Information ================= -->
+
+  <xs:element name="Information">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="StructureType" type="xs:string" minOccurs="0"/>
+        <xs:element name="UnitCount" type="xs:string" minOccurs="0"/>
+        <xs:element name="YearBuilt" type="xs:string" minOccurs="0"/>
+        <xs:element name="LongDescription" type="xs:string" minOccurs="0"/>
+        <xs:element name="LeaseLength" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Amenity ================= -->
+
+  <xs:element name="Amenity">
+    <xs:complexType>
+      <xs:attribute name="AmenityType" type="xs:string" use="optional"/>
+      <xs:sequence>
+        <xs:element name="Description" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Policy ================= -->
+
+  <xs:element name="Policy">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Pet" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:attribute name="Allowed" type="xs:boolean" use="optional"/>
+            <xs:sequence>
+              <xs:element name="Pets" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="PetType" type="xs:string" use="optional"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Floorplan ================= -->
+
+  <xs:element name="Floorplan">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identification"/>
+        <xs:element name="Name" type="xs:string" minOccurs="0"/>
+        <xs:element name="UnitCount" type="xs:string" minOccurs="0"/>
+        <xs:element name="FloorplanAvailabilityURL" type="xs:anyURI" minOccurs="0"/>
+        <xs:element ref="Room" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="SquareFeet" minOccurs="0">
+          <xs:complexType>
+            <xs:attribute name="Min" type="xs:string" use="optional"/>
+            <xs:attribute name="Max" type="xs:string" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="MarketRent" minOccurs="0">
+          <xs:complexType>
+            <xs:attribute name="Min" type="xs:string" use="optional"/>
+            <xs:attribute name="Max" type="xs:string" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="EffectiveRent" minOccurs="0">
+          <xs:complexType>
+            <xs:attribute name="Min" type="xs:string" use="optional"/>
+            <xs:attribute name="Max" type="xs:string" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Deposit" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Amount" minOccurs="0">
+                <xs:complexType>
+                  <xs:attribute name="AmountType" type="xs:string" use="optional"/>
+                  <xs:sequence>
+                    <xs:element name="ValueRange" minOccurs="0">
+                      <xs:complexType>
+                        <xs:attribute name="Exact" type="xs:string" use="optional"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element ref="Amenity" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="File" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= Room ================= -->
+
+  <xs:element name="Room">
+    <xs:complexType>
+      <xs:attribute name="RoomType" type="xs:string" use="optional"/>
+      <xs:sequence>
+        <xs:element name="Count" type="xs:string" minOccurs="0"/>
+        <xs:element name="Comment" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= File ================= -->
+
+  <xs:element name="File">
+    <xs:complexType>
+      <xs:attribute name="FileID" type="xs:string" use="optional"/>
+      <xs:attribute name="Active" type="xs:string" use="optional"/>
+      <xs:sequence>
+        <xs:element name="FileType" type="xs:string" minOccurs="0"/>
+        <xs:element name="Name" type="xs:string" minOccurs="0"/>
+        <xs:element name="Caption" type="xs:string" minOccurs="0"/>
+        <xs:element name="Format" type="xs:string" minOccurs="0"/>
+        <xs:element name="Src" type="xs:anyURI" minOccurs="0"/>
+        <xs:element name="Rank" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ================= CustomRecords ================= -->
+
+  <xs:element name="CustomRecords">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Record" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Record">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Name" type="xs:string"/>
+        <xs:element name="Value">
+          <xs:complexType>
+            <xs:attribute name="dataType" type="xs:string" use="optional"/>
+            <xs:simpleContent>
+              <xs:extension base="xs:string"/>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

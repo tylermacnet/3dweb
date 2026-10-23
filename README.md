@@ -27,7 +27,7 @@ Composable primitives (same bundle, shared per-document store):
 
 Branch previews: append `?preview=<branch>` (branch snapshots under `preview/<ref>/`; default is production `main`).
 
-The demo host page `public/index.html` is the canonical embed example. `public/dev.html` is a static sample generated from `dev.template.html` and the sample feed; never commit the generated output.
+The demo host page `public/index.html` is the canonical embed example.
 
 ## Contributing
 

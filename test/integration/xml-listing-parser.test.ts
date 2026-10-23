@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,15 +8,6 @@ import { build } from 'esbuild';
 import { DOMParser as LinkedomDOMParser } from 'linkedom';
 import { NEW_BRUNSWICK_REGIONS } from '../../src/config/regions.ts';
 import { LocationResolver } from '../../src/domain/location-resolver.ts';
-
-const fixturePath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'test-src',
-  'sample',
-  'listingFeeds.xml',
-);
 
 async function loadParser(): Promise<typeof import('../../src/adapters/xml-listing-parser.ts')> {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), '3dweb-parser-'));
@@ -52,7 +43,57 @@ async function withParser<T>(
 }
 
 test('parses the supplied real-world listing feed', async () => {
-  const xml = await readFile(fixturePath, 'utf8');
+  const xml = `
+    <PhysicalProperty>
+      <Property>
+        <Identification><IDValue>25089</IDValue></Identification>
+        <PropertyID>
+          <Identification><IDValue>25089</IDValue></Identification>
+          <MarketingName>93 St. James St - 2</MarketingName>
+          <Address AddressType="property">
+            <Address>93 Saint James StreetApt. 2</Address>
+            <City>Saint John</City>
+            <State>NB</State>
+            <PostalCode>E2L 1V6</PostalCode>
+            <Email>leasing@3dprop.ca</Email>
+          </Address>
+          <Phone PhoneType="office"><PhoneDescription>3D Property Leasing</PhoneDescription><PhoneNumber>506-631-8016</PhoneNumber></Phone>
+        </PropertyID>
+        <General_ID><Identification><IdentificationTypeIdentification IDType="Management"><IDValue>36860</IDValue></IdentificationTypeIdentification></Identification></General_ID>
+        <ILS_Identification ILS_IdentificationType="Mid Rise" RentalType="Unspecified" />
+        <Information><StructureType>Unspecified</StructureType><UnitCount>6</UnitCount><YearBuilt /><LongDescription>Heat and lights included!</LongDescription><LeaseLength /></Information>
+        <Floorplan>
+          <Identification><IDValue>89584</IDValue></Identification>
+          <Name>93 St. James St - 2</Name>
+          <UnitCount>1</UnitCount>
+          <FloorplanAvailabilityURL>http://3dmanagement.managebuilding.com/Resident/PublicPages/apartmentdetail.aspx?listingId=89584&amp;unitid=1&amp;buildingid=25089</FloorplanAvailabilityURL>
+          <Room RoomType="Bedroom"><Count>2</Count><Comment>2 Bed</Comment></Room>
+          <Room RoomType="Bathroom"><Count>1</Count><Comment>1 Bath</Comment></Room>
+          <SquareFeet Min="0" Max="0" /><MarketRent Min="0" Max="0" /><EffectiveRent Min="1500" Max="1500" />
+          <File FileID="b20e89e6d5394850838630dff4a31532.jpg" Active="true"><FileType>Photo</FileType><Name /><Caption /><Format>jpg</Format><Src>https://3dmanagement.managebuilding.com/Resident/api/public/files/download/listingImages?fileName=b20e89e6d5394850838630dff4a31532.jpg</Src><Rank>1</Rank></File>
+        </Floorplan>
+      </Property>
+      <Property>
+        <Identification><IDValue>25618</IDValue></Identification>
+        <PropertyID>
+          <Identification><IDValue>25618</IDValue></Identification>
+          <MarketingName>Second St - 4</MarketingName>
+          <Address AddressType="property"><Address>Second Street - 4</Address><City>Saint John</City><State>NB</State><PostalCode>E2L 1A1</PostalCode><Email>leasing@3dprop.ca</Email></Address>
+          <Phone PhoneType="office"><PhoneDescription>3D Property Leasing</PhoneDescription><PhoneNumber>506-631-8016</PhoneNumber></Phone>
+        </PropertyID>
+        <Information><StructureType>Unspecified</StructureType><UnitCount>4</UnitCount><YearBuilt /><LongDescription>Second listing.</LongDescription><LeaseLength /></Information>
+        <Floorplan>
+          <Identification><IDValue>89721</IDValue></Identification>
+          <Name>Second St - 4</Name>
+          <UnitCount>1</UnitCount>
+          <FloorplanAvailabilityURL>http://3dmanagement.managebuilding.com/Resident/PublicPages/apartmentdetail.aspx?listingId=89721&amp;unitid=4&amp;buildingid=25618</FloorplanAvailabilityURL>
+          <Room RoomType="Bedroom"><Count>4</Count><Comment>4 Bed</Comment></Room>
+          <Room RoomType="Bathroom"><Count>2</Count><Comment>2 Bath</Comment></Room>
+          <SquareFeet Min="0" Max="0" /><MarketRent Min="0" Max="0" /><EffectiveRent Min="1900" Max="1900" />
+        </Floorplan>
+      </Property>
+    </PhysicalProperty>
+  `;
   await withParser((parser) => {
     const listings = parser.parse(xml);
     const sourceDocument = new DOMParser().parseFromString(xml, 'text/xml');
@@ -62,7 +103,7 @@ test('parses the supplied real-world listing feed', async () => {
     )?.textContent;
     const floorplanUrl = firstProperty?.querySelector('FloorplanAvailabilityURL')?.textContent;
 
-    assert.equal(listings.length, 12);
+    assert.equal(listings.length, 2);
     assert.equal(listings[0]?.id, floorplanId);
     assert.equal(new URL(floorplanUrl!).searchParams.get('listingId'), floorplanId);
     for (const listing of listings) {

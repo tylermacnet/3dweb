@@ -88,7 +88,7 @@ src/
 ## Key constraints
 
 - Fail fast at build/commit time, degrade gracefully at runtime. Multi-step tasks use `set -e` (or explicit status capture), missing inputs are hard errors (never silent skips), multi-step writes publish atomically so failed runs leave no partial outputs, the `pre-commit` hook blocks unformatted commits, and red CI must block merging. Runtime embeds must never break their host: fall through to working fallbacks (navigation over modal, notices over crashes) instead of throwing.
-- Generated outputs are reproducible from committed inputs and never committed: `public/dev.html` is rebuilt from `public/dev.template.html` plus the sample feed on every `build`.
+- Generated outputs are reproducible from committed inputs and never committed: `public/dist/` bundles are rebuilt from `src/` on every `build`.
 
 - No DI containers, service locators, or mutable global singletons. The single bundle registers all elements; each element accepts its ports via properties/attributes with safe defaults assembled per document in the bundle entry (shared immutable location resolver, one feed and one `ListingStore` per document, one popover modal per document). No root component. The classic bundle exposes the store accessor on `window.__3DWEB__` so dev hosts loading both `bundle.js` + `bundle.esm.js` share one singleton.
 - Domain purity: no Lit/DOM/browser globals in `src/domain/`.
@@ -139,7 +139,7 @@ Examples:
 
 - `test/unit/` — pure domain tests (listing, address-normalizer, location-resolver, listing-filter).
 - `test/integration/` — adapter, parser, DOM, network, bundle tests.
-- `test-src/sample/listingFeeds.xml` — concrete Buildium source-XML reference and integration-test fixture; inspect its nested XML with an editor's tree/format view. For Buildium's published XML/MITS guidance, documented active-listing date semantics, and the distinction between its documented endpoint and this repo's endpoint, see the Buildium source XML reference in `docs/DEVELOPMENT.md`. The fixture is not an exhaustive field catalog; check `XmlListingParser` separately to see which fields are mapped.
+- `sample/mits-3.0.xsd` — XML Schema for Buildium's MITS Property Marketing 3.0 listing feed. Defines the elements and attributes `XmlListingParser` reads; the authoritative structural reference for the vendor feed.
 - Tests use the runtime's native test runner. Discover test tasks with `mise tasks ls` (names under `test:`) and run `mise run test` for all or `mise run test:unit` / `mise run test:integration` for focused suites.
 - Structure tests: Arrange, Act, Assert — one observable behavior per test.
 - Integration tests importing `src/` TypeScript with runtime imports must be bundled first by `mise run build`
