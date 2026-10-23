@@ -44,8 +44,6 @@ export class ListingGrid extends LitElement {
   feed: ListingFeed | undefined;
   detailsModal: DetailsModal | undefined;
 
-  private readonly prefetched = new Set<string>();
-
   connectedCallback(): void {
     super.connectedCallback();
     this.subscribeStore();
@@ -129,14 +127,13 @@ export class ListingGrid extends LitElement {
       seen = new Set<string>();
       prefetchedByDocument.set(doc, seen);
     }
-    if (seen.has(variant) || this.prefetched.has(variant)) return;
+    if (seen.has(variant)) return;
     const saveData =
       typeof navigator !== 'undefined' &&
       (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData ===
         true;
     if (saveData) return;
     seen.add(variant);
-    this.prefetched.add(variant);
     const link = doc.createElement('link');
     link.rel = 'prefetch';
     link.href = variant;

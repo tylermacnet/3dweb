@@ -90,11 +90,14 @@
     w.__3DWEB_ESM_URL__ = href;
   }
 
-  function loadClassic(src: string, onError?: () => void): void {
+  function loadClassic(src: string, onLoad?: () => void, onError?: () => void): void {
     var el = document.createElement('script');
     el.async = false;
     el.defer = true;
     el.src = src;
+    if (onLoad) {
+      el.addEventListener('load', onLoad, { once: true });
+    }
     if (onError) {
       el.addEventListener('error', onError, { once: true });
     }
@@ -122,24 +125,25 @@
         watchForTags();
       }
     };
+    var markLoaded = function (): void {
+      bundleLoaded = true;
+    };
     try {
       if (ref && !previewFailed) {
         setEsmUrl(bundleFile('bundle.esm.js'));
-        loadClassic(bundleFile('bundle.js'), function () {
+        loadClassic(bundleFile('bundle.js'), undefined, function () {
           previewFailed = true;
           setEsmUrl(distFile('bundle.esm.js'));
           try {
-            loadClassic(distFile('bundle.js'), retry);
-            bundleLoaded = true;
+            loadClassic(distFile('bundle.js'), markLoaded, retry);
           } catch {
             retry();
           }
         });
       } else {
         setEsmUrl(distFile('bundle.esm.js'));
-        loadClassic(distFile('bundle.js'), retry);
+        loadClassic(distFile('bundle.js'), markLoaded, retry);
       }
-      bundleLoaded = true;
     } catch {
       retry();
     }

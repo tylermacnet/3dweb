@@ -72,8 +72,7 @@ src/
   globals.
 - **Application**: The current `ListingStore` (per-`Document` lazy singleton via `WeakMap`) owns
   feed loading, request cancellation, load state, filter criteria, and derived visible listings,
-  location groups, and price bounds. `ListingFeedLoader`/`ListingFilterStore` are deprecated legacy
-  implementations kept for tests.
+  location groups, and price bounds.
 - **Ports and adapters**: Keep capability interfaces narrow (`ListingFeed`, `ListingParser`,
   `DetailsModal`); concrete XML, network, and browser implementations stay behind the ports.
 - **Components**: Independent Lit custom elements, presentational only, with lowercase kebab-case

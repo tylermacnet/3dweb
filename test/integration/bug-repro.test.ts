@@ -192,8 +192,8 @@ test('Bug2: multiple grids should not create multiple feeds / abort fetches', as
   const entryMod = await bundleEntry('src/index.tsx', 'entry.js');
   const doc = window.document;
   // Count feed creations by spying on ManageBuildingFeed
-  let createCount = 0;
-  const origCreate = entryMod as unknown as { ManageBuildingFeed?: unknown };
+  let _createCount = 0;
+  const _origCreate = entryMod as unknown as { ManageBuildingFeed?: unknown };
   // We cannot easily spy without modifying, so we check store feed identity
   // After fix, store should have one feed instance.
   // Call configurePropertyListings twice - should be idempotent
@@ -260,10 +260,10 @@ test('Bug3: compact click without modal should not swallow navigation', async ()
   document.body.appendChild(grid as unknown as Node);
 
   // Add external listener that prevents default on listing-details-requested
-  let listenerPrevented = false;
+  let _listenerPrevented = false;
   grid.addEventListener('listing-details-requested', (e: Event) => {
     e.preventDefault();
-    listenerPrevented = true;
+    _listenerPrevented = true;
   });
 
   // Ensure no modal is set

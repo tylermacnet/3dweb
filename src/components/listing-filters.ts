@@ -78,44 +78,30 @@ export class ListingFilters extends LitElement {
     }
   }
 
-  willUpdate(changed: Map<string, unknown>): void {
-    // Sync from singleton store before render — no side-effects in render()
-    try {
-      const store = this.store;
-      const storeCriteria = store.criteria;
-      // If store has criteria and we are out of sync, adopt it (keeps two filters in sync and handles Clear filters)
-      if (JSON.stringify(storeCriteria) !== JSON.stringify(this.options)) {
-        this.options = { ...storeCriteria };
-      }
-      const storeGroups = store.locationGroups;
-      if (storeGroups.length > 0) {
-        if (this.locationGroups.length === 0 || this.shouldSyncGroups(storeGroups)) {
-          this.locationGroups = storeGroups;
-        }
-      }
-      const bounds = store.priceBounds;
-      if (bounds) {
-        if (this.priceMin !== bounds.min) this.priceMin = bounds.min;
-        if (this.priceMax !== bounds.max) this.priceMax = bounds.max;
-      }
-    } catch {
-      // SSR guard
-    }
+  willUpdate(_changed: Map<string, unknown>): void {
+    // no-op: derived state is read directly from the store in render()
   }
 
   render() {
-    const maxRent = this.options.maxRent ?? this.priceMax ?? DEFAULT_MAX_RENT;
+    const store = this.store;
+    const criteria = store.criteria;
+    const bounds = store.priceBounds;
+    const maxRent = criteria.maxRent ?? bounds?.max ?? DEFAULT_MAX_RENT;
     return html`
       <section class="filters-panel" role="search" aria-label="Property filter options">
         <fieldset class="filter-fields">
           <legend class="filter-legend">Filter available property listings</legend>
           <div class="field">
             <label for="location-filter">Location</label>
-            <select id="location-filter" .value=${this.locationValue} @change=${this.handleSelect}>
-              ${this.allLocationsOptions.map(
+            <select
+              id="location-filter"
+              .value=${this.resolveLocationValue(criteria)}
+              @change=${this.handleSelect}
+            >
+              ${this.allLocationsOptions(store.locationGroups).map(
                 (option) => html`<option value=${option.value}>${option.label}</option>`,
               )}
-              ${this.regionGroups.map(
+              ${this.regionGroups(store.locationGroups).map(
                 (group) => html`
                   <optgroup label=${group.regionName}>
                     ${group.options.map(
@@ -130,7 +116,7 @@ export class ListingFilters extends LitElement {
             <label for="bedroom-filter">Bedrooms</label>
             <select
               id="bedroom-filter"
-              .value=${this.options.bedroomRule ?? 'all'}
+              .value=${criteria.bedroomRule ?? 'all'}
               @change=${this.handleSelect}
             >
               ${BEDROOM_FILTER_OPTIONS.map(
@@ -146,8 +132,8 @@ export class ListingFilters extends LitElement {
             <input
               id="max-rent"
               type="range"
-              min=${String(this.priceMin)}
-              max=${String(this.priceMax ?? DEFAULT_MAX_RENT)}
+              min=${String(bounds?.min ?? 0)}
+              max=${String(bounds?.max ?? DEFAULT_MAX_RENT)}
               step="100"
               .value=${String(maxRent)}
               aria-describedby="max-rent-value"
@@ -163,14 +149,26 @@ export class ListingFilters extends LitElement {
     `;
   }
 
-  private shouldSyncGroups(storeGroups: readonly ListingLocationGroup[]): boolean {
-    if (storeGroups.length !== this.locationGroups.length) return true;
-    // Deep compare labels and counts to catch reorder/addition/removal
-    try {
-      return JSON.stringify(storeGroups) !== JSON.stringify(this.locationGroups);
-    } catch {
-      return true;
+  get locationValue(): string {
+    return this.resolveLocationValue(this.options);
+  }
+
+  private resolveLocationValue(criteria: ListingFilterOptions): string {
+    if (criteria.regionId && criteria.areaName) {
+      return `${criteria.regionId}||${criteria.areaName}`;
     }
+    if (criteria.regionId) return `${criteria.regionId}||ALL`;
+    return 'ALL';
+  }
+
+  private allLocationsOptions(
+    groups: readonly ListingLocationGroup[],
+  ): readonly { value: string; label: string }[] {
+    return groups.find((group) => group.regionId === 'ALL')?.options ?? [];
+  }
+
+  private regionGroups(groups: readonly ListingLocationGroup[]): readonly ListingLocationGroup[] {
+    return groups.filter((group) => group.regionId !== 'ALL');
   }
 
   private handleSelect(): void {
@@ -221,7 +219,8 @@ export class ListingFilters extends LitElement {
     const bedroomRule =
       this.renderRoot.querySelector<HTMLSelectElement>('#bedroom-filter')?.value ?? 'all';
     const rawMax = Number(this.priceInput?.value ?? DEFAULT_MAX_RENT);
-    const effectiveMax = this.priceMax ?? DEFAULT_MAX_RENT;
+    const bounds = this.store.priceBounds;
+    const effectiveMax = bounds?.max ?? DEFAULT_MAX_RENT;
     // Only include maxRent when user actually limited below the max (otherwise no filter)
     const maxRentPart = Number.isFinite(rawMax) && rawMax < effectiveMax ? { maxRent: rawMax } : {};
     return {
@@ -233,22 +232,6 @@ export class ListingFilters extends LitElement {
 
   private get priceInput(): HTMLInputElement | null {
     return this.renderRoot.querySelector<HTMLInputElement>('#max-rent');
-  }
-
-  private get locationValue(): string {
-    if (this.options.regionId && this.options.areaName) {
-      return `${this.options.regionId}||${this.options.areaName}`;
-    }
-    if (this.options.regionId) return `${this.options.regionId}||ALL`;
-    return 'ALL';
-  }
-
-  private get allLocationsOptions(): readonly { value: string; label: string }[] {
-    return this.locationGroups.find((group) => group.regionId === 'ALL')?.options ?? [];
-  }
-
-  private get regionGroups(): readonly ListingLocationGroup[] {
-    return this.locationGroups.filter((group) => group.regionId !== 'ALL');
   }
 }
 
